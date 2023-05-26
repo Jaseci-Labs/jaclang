@@ -12,3 +12,5 @@ Go to `/docs` base dir and run
 yarn install
 yarn start
 ```
+
+For instructions on installing `yarn`, start on that journey with [their instructions](https://yarnpkg.com/getting-started/install).
