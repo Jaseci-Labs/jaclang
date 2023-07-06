@@ -329,7 +329,7 @@ Jac introduces a robust system of access modifiers, unlike Python which relies o
 
 In this example, we have a `Person` object with two properties: `name` and `age`. The `prot` keyword before `age` indicates that `age` is a protected property (only visible to it's class members and sub class members). Similarly, the `pub` keyword before `name` indicates that `name` is a public property (can be accessed via `.name` everywhere).
 
-The constructor function is declared using `priv: can init(name: str, age: int) -> None`. This `init` function initializes the `Person` object's state. The `priv` keyword denotes that `init` is a private method, meaning it can only be accessed within the `Person` object. The method takes two arguments: `name` and `age`.
+The constructor function is declared using `can:priv init(name: str, age: int) -> None`. This `init` function initializes the `Person` object's state. The `priv` keyword denotes that `init` is a private method, meaning it can only be accessed within the `Person` object. The method takes two arguments: `name` and `age`.
 
 Inside the `init` method, we use the `here` keyword instead of `self`, which is traditionally used in Python. The `here` keyword refers to the instance of the `Person` object being manipulated, similar to how `self` works in Python.
 
@@ -385,7 +385,7 @@ The `raise` keyword is used to trigger an exception manually and can be followed
 --8<-- "exceptions.jac"
 ```
 
-### Code Statements amd Expressions in Jac
+### Code Statements and Expressions in Jac
 
 For general code statements and expression, we provide an equivalency set that mirrors Python's structures. We've also expanded on the capabilities described here with the new language features that add additional functionality and flexibility to the Jac programming language. These are discussed in the next section (Purple Pill). Here we describe the basic equivalency set.
 
@@ -750,16 +750,16 @@ For now simply note that spawn contexts are functionally intertwined with the us
 
 The **freestyle ability** is the simplest data spatial programming construct in Jac and a keystone starting place to introduce Jac's innovative perspective on the treatment of data. An ability is a variation on a typical function that we cover in detail later. A freestyle ability is unattached to any object, node, or walker, resides at the module level, can be called from anywhere in the module, and can return a value. As such they are essentially functions, except unlike conventional functions, which receive data through parameters, a freestyle ability is spawned on an object and directly accesses the data they need from the object. It is conceptually a region of code that jumps to the data in some location, operates on it there, and then may return a value. In this sense, a freestyle ability is dispatched to the data it needs, leaping from one location to another when taking a spatial view of data.
 
-The fundamental aspect of a freestyle ability is its reliance on the `here` reference. `here` allows a freestyle ability to interact with the data present at the "location" (data object) it was spawned from. As mentioned in the Blue Pill section `here` is analogously to the `self` keyword in the context of a class in python, and in this context, it allows the freestyle ability to access and manipulate the data it resides on.
+The fundamental aspect of a freestyle ability is its reliance on the `<here>` reference. `<here>` allows a freestyle ability to interact with the data present at the "location" (data object) it was spawned from. As mentioned in the Blue Pill section `<here>` is analogously to the `self` keyword in the context of a class in python, and in this context, it allows the freestyle ability to access and manipulate the data it resides on.
 
 Here is a basic freestyle ability definition:
 
 ```jac
 can calculate_avg with float {
     sum = 0
-    for i in here.array:
+    for i in <here>.array:
         sum += i
-    return sum/len(here.array)
+    return sum/len(<here>.array)
 }
 ```
 In this example, the ability `calculate_avg` is designed to calculate the average of an array and return a float value. Note that it does not take parameters but uses `here` to reference the object it is currently residing on. This freestyle ability expects the object it's being spawned on to have a field named `array`.
