@@ -51,32 +51,3 @@ class ModuleLoader:
                 self.namespace.__module_info__ = __module_info__
             except Exception as e:
                 self.namespace.error = str(e)
-
-
-# # Example usage
-# if __name__ == "__main__":
-
-#     # Load the 'math' module
-#     loader = ModuleLoader()
-
-#     math = loader("math")
-#     print(type(math))
-#     entities = math._jac_ent_
-#     print(entities)
-
-#     result = math.pow(2, 3)
-#     print(result)
-
-#     log = math.log
-#     result = log(10)
-#     print(result)
-
-#     random = loader("random")
-
-#     entities = random.entities
-#     print(entities)
-
-#     print(math.entities)
-#     print(math.pi)
-#     math.pi = 10
-#     print(math.pi)
