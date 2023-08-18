@@ -2,7 +2,7 @@
 import re
 
 import jaclang.jac.absyntree as ast
-from jaclang.jac.parser import JacLexer
+from jaclang.jac.lexer import JacLexer #fixed 1 error
 
 
 def get_all_jac_keywords() -> str:

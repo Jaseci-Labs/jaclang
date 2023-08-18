@@ -134,7 +134,7 @@ def test_error_return():
 
 class ModernCalcLexer(Lexer):
     # Set of token names.   This is always required
-    tokens = {ID, NUMBER, PLUS, MINUS, TIMES, DIVIDE, ASSIGN, LT, LE, IF, ELSE}
+    tokens = {"ID", "NUMBER", "PLUS", "MINUS", "TIMES", "DIVIDE", "ASSIGN", "LT", "LE", "IF", "ELSE"}
     literals = {"(", ")"}
 
     # String containing ignored characters between tokens

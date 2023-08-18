@@ -5,7 +5,7 @@ from jaclang.utils.sly import Lexer, Parser
 
 class CalcLexer(Lexer):
     # Set of token names.   This is always required
-    tokens = {ID, NUMBER, PLUS, MINUS, TIMES, DIVIDE, ASSIGN, COMMA}
+    tokens = {"ID","NUMBER", "PLUS", "MINUS", "TIMES", "DIVIDE", "ASSIGN", "COMMA"} #fixed error
     literals = {"(", ")"}
 
     # String containing ignored characters between tokens
@@ -44,9 +44,9 @@ class CalcParser(Parser):
     tokens = CalcLexer.tokens
 
     precedence = (
-        ("left", PLUS, MINUS),
-        ("left", TIMES, DIVIDE),
-        ("right", UMINUS),
+        ("left", "PLUS", "MINUS"),
+        ("left", "TIMES", "DIVIDE"),
+        ("right", "UMINUS"),
     )
 
     def __init__(self):
