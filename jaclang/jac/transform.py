@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Optional
+from typing import Optional,List
 
 
 from jaclang.jac.absyntree import AstNode
@@ -34,8 +34,8 @@ class Transform(ABC):
     ) -> None:
         """Initialize pass."""
         self.logger = logging.getLogger(self.__class__.__module__)
-        self.errors_had = [] if not prior else prior.errors_had
-        self.warnings_had = [] if not prior else prior.warnings_had
+        self.errors_had: List[str] =[] if not prior else prior.errors_had #fixed it
+        self.warnings_had: List[str] =[] if not prior else prior.warnings_had #fixed it
         self.cur_line = 0
         self.mod_path = mod_path
         self.rel_mod_path = (

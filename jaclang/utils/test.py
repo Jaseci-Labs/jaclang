@@ -85,6 +85,7 @@ class TestCaseMicroSuite(ABC, TestCase):
                     self.assertIn(method_name, dir(self))
 
         cls.test_micro_jac_files_fully_tested = test_micro_jac_files_fully_tested
+        
 
     @abstractmethod
     def micro_suite_test(self, filename: str) -> None:

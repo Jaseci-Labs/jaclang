@@ -119,7 +119,7 @@ class TypeAnalyzePass(Pass, SymbolTable):
                     self.sym_tab.set(
                         TypedSymbol(
                             name=i.alias.value,
-                            typ=Any,  # TODO: Backpatch analysis for module itmes
+                            typ=ModuleType,  # TODO: Backpatch analysis for module itmes #fixed it
                             node=node,
                         ),
                         fresh_only=True,
@@ -128,7 +128,7 @@ class TypeAnalyzePass(Pass, SymbolTable):
                     self.sym_tab.set(
                         TypedSymbol(
                             name=i.name.value,
-                            typ=Any,  # TODO: Backpatch analysis for module itmes
+                            typ=ModuleType,  # TODO: Backpatch analysis for module itmes #fixed it
                             node=node,
                         ),
                         fresh_only=True,
@@ -137,7 +137,7 @@ class TypeAnalyzePass(Pass, SymbolTable):
             self.sym_tab.set(
                 TypedSymbol(
                     name=node.path.path[-1].value,
-                    typ=ModuleType,
+                    typ=ModuleType, 
                     node=node,
                 ),
                 fresh_only=True,

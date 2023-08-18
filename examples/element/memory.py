@@ -1,10 +1,11 @@
 """Element memory class for Jac."""
 import sys
-from typing import Optional, TypeVar
+from typing import Optional
 from uuid import UUID
+from element import Element
 
 
-Element = TypeVar("Element")
+#Element = TypeVar("Element") #Fixed 4 errors
 
 
 class Memory:
@@ -32,14 +33,14 @@ class Memory:
         """Save item to memory."""
         if item.is_writable(caller_id):
             self.mem[item.id] = item
-            if item._persist:
+            if item.persist: #fixed 1 more errors
                 self.save_obj_list.add(item)
 
     def destroy_obj(self, caller_id: UUID, item: "Element") -> None:
         """Destroy item from memory."""
         if item.is_writable(caller_id):
             self.mem.pop(item.id)
-            if item._persist:
+            if item.persist: #fixed 1 more errors
                 self.save_obj_list.remove(item)
 
     # Utility functions
