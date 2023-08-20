@@ -5,7 +5,7 @@ from jaclang.utils.sly import Lexer, Parser
 
 class CalcLexer(Lexer):
     # Set of token names.   This is always required
-    tokens = {"ID","NUMBER", "PLUS", "MINUS", "TIMES", "DIVIDE", "ASSIGN", "COMMA"} #fixed error
+    tokens = {"ID","NUMBER",m "PLUS", "MINUS", "TIMES", "DIVIDE", "ASSIGN", "COMMA"} #fixed error
     literals = {"(", ")"}
 
     # String containing ignored characters between tokens

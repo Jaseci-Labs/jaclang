@@ -4,8 +4,6 @@ from __future__ import annotations
 import os
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Optional,List
-
-
 from jaclang.jac.absyntree import AstNode
 from jaclang.utils.log import logging
 from jaclang.utils.sly.lex import LexerMeta
