@@ -132,3 +132,10 @@ def jac_purple_import(
 ) -> Optional[types.ModuleType]:
     """Jac Purple Imports."""
     return import_jac_module(transpile_jac_purple, target, base_path, save_file)
+
+
+def jac_red_import(
+    target: str, base_path: Optional[str] = None, save_file: bool = False
+) -> Optional[types.ModuleType]:
+    """Jac Red Imports."""
+    return import_jac_module(transpile_jac_purple, target, base_path, save_file)

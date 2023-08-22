@@ -16,9 +16,6 @@ setup(
         "console_scripts": [
             "jac = jaclang.cli:cli.start_cli",
         ],
-        "jaclang.plugins": [
-            "smartimport = jaclang_smartimporter.jaclang_smartimport:ModuleLoader",
-        ],
     },
     author="Jason Mars",
     author_email="jason@jaseci.org",
