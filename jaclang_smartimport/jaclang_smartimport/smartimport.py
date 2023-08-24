@@ -81,6 +81,12 @@ class ModuleLoader:
                 return self.get_entities_info()
             return getattr(self.module, attr_name)
 
+        def __setattr__(self, attr_name, value):
+            if attr_name in ["module", "valid", "_module_info"]:
+                super().__setattr__(attr_name, value)
+            else:
+                setattr(self.module, attr_name, value)
+
         def get_entities_info(self):
             if self._module_info is None:
                 self._module_info = {}
