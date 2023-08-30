@@ -5,7 +5,7 @@ import multiprocessing
 import logging
 import queue
 
-logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logging
+logging.basicConfig(level=logging.INFO) 
 
 
 class ModuleLoader:
@@ -29,6 +29,9 @@ class ModuleLoader:
             # Check for any startup errors
             startup_status = response_queue.get()
             if startup_status != "success":
+                logging.error(
+                    f"Error while starting subprocess for module {module_name}: {startup_status}" # noqa 
+                )
                 raise ImportError(
                     f"Failed to import module {module_name}: {startup_status}"
                 )
@@ -90,7 +93,7 @@ class ModuleLoader:
                     }
                     response_queue.put(info)
         except Exception as e:
-            logging.error(f"Error in subprocess for module {module_name}: {e}")
+            logging.exception(f"Error in subprocess for module {module_name}.")
             response_queue.put(str(e))
 
     class ModuleProxy:
