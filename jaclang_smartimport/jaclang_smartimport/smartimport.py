@@ -5,7 +5,7 @@ import multiprocessing
 import logging
 import queue
 
-logging.basicConfig(level=logging.INFO) 
+logging.basicConfig(level=logging.INFO)
 
 
 class ModuleLoader:
@@ -30,7 +30,7 @@ class ModuleLoader:
             startup_status = response_queue.get()
             if startup_status != "success":
                 logging.error(
-                    f"Error while starting subprocess for module {module_name}: {startup_status}" # noqa 
+                    f"Error while starting subprocess for module {module_name}: {startup_status}"  # noqa
                 )
                 raise ImportError(
                     f"Failed to import module {module_name}: {startup_status}"
@@ -82,9 +82,17 @@ class ModuleLoader:
                     response_queue.put("success")
                 elif operation == "call":
                     func_name, func_args, func_kwargs = args
-                    func = getattr(module, func_name)
-                    result = func(*func_args, **func_kwargs)
-                    response_queue.put(result)
+                    if hasattr(module, func_name):  # Check if method exists
+                        func = getattr(module, func_name)
+                        result = func(*func_args, **func_kwargs)
+                        response_queue.put(result)
+                    else:
+                        logging.debug(f"Method {func_name} not found")
+                        response_queue.put(
+                            AttributeError(
+                                f"'{module_name}' has no method '{func_name}'"
+                            )
+                        )
                 elif operation == "info":
                     info = {
                         "name": module_name,
@@ -92,6 +100,9 @@ class ModuleLoader:
                         "attributes": dir(module),
                     }
                     response_queue.put(info)
+                elif operation == "exception":
+                    # Handle the exception command and continue execution
+                    continue
         except Exception as e:
             logging.exception(f"Error in subprocess for module {module_name}.")
             response_queue.put(str(e))
@@ -145,10 +156,20 @@ class ModuleLoader:
             ]:
                 self.__dict__[attr_name] = value
             else:
-                self.command_queue.put(("set", attr_name, value))
-                result = self.response_queue.get()
-                if isinstance(result, Exception):
-                    raise result
+                # Check if attribute exists before setting
+                if hasattr(self, attr_name):
+                    self.command_queue.put(("set", attr_name, value))
+                    result = self.response_queue.get()
+                    if isinstance(result, Exception):
+                        # Send an exception command to the subprocess
+                        self.command_queue.put(("exception",))
+                        raise result
+                else:
+                    # Send an exception command to the subprocess
+                    self.command_queue.put(("exception",))
+                    raise AttributeError(
+                        f"'{self.module_name}' has no attribute '{attr_name}'"
+                    )
 
 
 def jac_red_import_override(
