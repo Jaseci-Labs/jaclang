@@ -1,11 +1,16 @@
 import os
 import os.path as op
 import tempfile
+import subprocess
 
-from IPython.utils.process import getoutput
 from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
 from jaclang import jac_purple_import as jac_import
+
+from pygments import lexer
+from syntax_hilighter import JacLexer
+
+lexer.add_lexer("jac_lexer", JacLexer())
 
 
 def exec_jac(code):
@@ -24,13 +29,26 @@ def exec_jac(code):
         )  # import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
         # this folder contains the python file that we want to execute, I want to execute the file that is named temp.py.
 
-        script_path = op.join(os.getcwd(), "jac/__jac_gen__/temp.py")
+    script_path = op.join(os.getcwd(), "jac/__jac_gen__/temp.py")
 
-        try:
-            output = os.popen("python {0:s}".format(script_path)).read()
-        except Exception as e:
-            output = str(e)
+    output = os.popen("python {0:s}".format(script_path)).read()
 
+    if "Traceback" in output:
+        # Extract the exception message from the output
+        lines = output.splitlines()
+        exception_message = ""
+        exception_found = False
+
+        for line in lines:
+            if line.startswith("Traceback"):
+                exception_found = True
+                exception_message = line
+            elif exception_found and line.strip() != "":
+                exception_message += "\n" + line
+
+        return exception_message
+    else:
+        # No exception occurred
         return output
 
 
@@ -46,7 +64,7 @@ class JacKernel(Kernel):
     language_info = {
         "name": "python",
         "mimetype": "text/plain",
-        "pygments_lexer": "python",
+        "pygments_lexer": "jac_lexer",
         "file_extension": ".jac",
     }
 
@@ -63,11 +81,26 @@ class JacKernel(Kernel):
     ):
         """called when a code cell is executed."""
         if not silent:
-            output = exec_jac(code)
+            try:
+                output = exec_jac(code)
+                # send back the result to the frontend.
+                stream_content = {"name": "stdout", "text": output}
+                self.send_response(self.iopub_socket, "stream", stream_content)
+            except Exception as e:
+                # Send the exception as an error message to the frontend.
+                error_content = {
+                    "ename": type(e).__name__,
+                    "evalue": str(e),
+                    "traceback": [],
+                }
+                self.send_response(self.iopub_socket, "error", error_content)
 
-            # send back the result to the frontend.
-            stream_content = {"name": "stdout", "text": output}
-            self.send_response(self.iopub_socket, "stream", stream_content)
+                return {
+                    "status": "error",
+                    "execution_count": self.execution_count,
+                }
+
+        # return the execution result.
         return {
             "status": "ok",
             # The base class increments the execution
