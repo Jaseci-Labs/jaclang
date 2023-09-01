@@ -1,11 +1,14 @@
 import os
 import os.path as op
 import tempfile
-import subprocess
+import sys
+import contextlib
+from io import StringIO
+
 
 from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
-from jaclang import jac_purple_import as jac_import
+from jaclang import jac_blue_import as jac_import
 
 from pygments import lexer
 from syntax_hilighter import JacLexer
@@ -24,32 +27,36 @@ def exec_jac(code):
         with open(source_path, "w") as f:
             f.write(code)
 
-        jac_import(
-            op.join(tmpdir, "temp")
-        )  # import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
-        # this folder contains the python file that we want to execute, I want to execute the file that is named temp.py.
+        try:
+            jac_import(
+                op.join(tmpdir, "temp")
+            )  # import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
+            # this folder contains the python file that we want to execute.
+
+        except Exception as e:
+            print("Exception: " + str(e))
+
+        finally:
+            pass
 
     script_path = op.join(os.getcwd(), "jac/__jac_gen__/temp.py")
 
-    output = os.popen("python {0:s}".format(script_path)).read()
+    captured_output = None
 
-    if "Traceback" in output:
-        # Extract the exception message from the output
-        lines = output.splitlines()
-        exception_message = ""
-        exception_found = False
+    try:
+        with open(script_path, "r") as script_file:
+            script_code = script_file.read()
+            stdout_capture = StringIO()  # You need to import StringIO from io module
 
-        for line in lines:
-            if line.startswith("Traceback"):
-                exception_found = True
-                exception_message = line
-            elif exception_found and line.strip() != "":
-                exception_message += "\n" + line
+            with contextlib.redirect_stdout(stdout_capture):
+                exec(script_code)
 
-        return exception_message
-    else:
-        # No exception occurred
-        return output
+            captured_output = stdout_capture.getvalue()
+
+    except Exception as e:
+        captured_output = "Exception: " + str(e)
+
+    return captured_output
 
 
 """Jac wrapper kernel."""
@@ -83,9 +90,9 @@ class JacKernel(Kernel):
         if not silent:
             try:
                 output = exec_jac(code)
-                # send back the result to the frontend.
                 stream_content = {"name": "stdout", "text": output}
                 self.send_response(self.iopub_socket, "stream", stream_content)
+
             except Exception as e:
                 # Send the exception as an error message to the frontend.
                 error_content = {
@@ -99,6 +106,9 @@ class JacKernel(Kernel):
                     "status": "error",
                     "execution_count": self.execution_count,
                 }
+
+            finally:
+                pass
 
         # return the execution result.
         return {
