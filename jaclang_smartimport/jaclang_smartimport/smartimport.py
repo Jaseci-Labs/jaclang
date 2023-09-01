@@ -1,19 +1,24 @@
-from typing import Optional
-import types
+"""Provide a mechanism to load Python modules in separate processes."""
 import importlib
-import multiprocessing
 import logging
+import multiprocessing
 import queue
+import types
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 
 
 class ModuleLoader:
-    def __init__(self):
+    """A class responsible for loading Python modules in separate processes."""
+
+    def __init__(self: "ModuleLoader") -> None:
+        """Initialize the ModuleLoader instance."""
         self.modules_data = {}
         self.proxy = None
 
-    def __call__(self, module_name):
+    def __call__(self: "ModuleLoader", module_name: str) -> "ModuleProxy":
+        """Load the specified module."""
         if module_name not in self.modules_data:
             command_queue = multiprocessing.Queue()
             response_queue = multiprocessing.Queue()
@@ -38,7 +43,8 @@ class ModuleLoader:
 
         return self.modules_data[module_name][0]
 
-    def unload_module(self, module_name):
+    def unload_module(self: "ModuleLoader", module_name: str) -> None:
+        """Load the module in a subprocess."""
         if module_name in self.modules_data:
             _, process = self.modules_data[module_name]
             process.terminate()
@@ -46,7 +52,13 @@ class ModuleLoader:
             self.proxy.is_alive = False
             del self.modules_data[module_name]
 
-    def _load_module_subprocess(self, module_name, command_queue, response_queue):
+    def _load_module_subprocess(
+        self: "ModuleLoader",
+        module_name: str,
+        command_queue: multiprocessing.Queue,
+        response_queue: multiprocessing.Queue,
+    ) -> None:
+        """Load the module in a subprocess."""
         try:
             module = importlib.import_module(module_name)
             logging.debug(f"Successfully loaded module {module_name} in subprocess.")
@@ -108,14 +120,24 @@ class ModuleLoader:
             response_queue.put(str(e))
 
     class ModuleProxy:
-        def __init__(self, module_name, command_queue, response_queue):
+        """Initialize the ModuleProxy instance."""
+
+        def __init__(
+            self: "ModuleLoader.ModuleProxy",
+            module_name: str,
+            command_queue: multiprocessing.Queue,
+            response_queue: multiprocessing.Queue,
+        ) -> None:
+            """Initialize the ModuleProxy with the given module name and queues."""
             self.module_name = module_name
             self.command_queue = command_queue
             self.response_queue = response_queue
             self.is_alive = True
 
-        def __getattr__(self, attr_name):
-
+        def __getattr__(
+            self: "ModuleLoader.ModuleProxy", attr_name: str
+        ) -> types.ModuleType:
+            """Retrieve the specified attribute from the module."""
             if not self.is_alive:
                 raise ModuleNotFoundError(
                     f"Module {self.module_name} has been unloaded."
@@ -146,7 +168,10 @@ class ModuleLoader:
                 )
             return result
 
-        def __setattr__(self, attr_name, value):
+        def __setattr__(
+            self: "ModuleLoader.ModuleProxy", attr_name: str, value: types.ModuleType
+        ) -> None:
+            """Set the specified attribute for the module."""
             # Directly set the attributes for internal attributes to avoid recursion
             if attr_name in [
                 "module_name",
