@@ -8,13 +8,13 @@ from os import makedirs, path
 from typing import Callable, Optional
 
 from jaclang.jac.constant import Constants as Con, Values as Val
-from jaclang.jac.transpiler import transpile_jac_blue, transpile_jac_purple
+from jaclang.jac.transpiler import Transpiler
 from jaclang.jac.utils import add_line_numbers, clip_code_section
 
 
 def import_jac_module(
-    transpiler_func: Callable,
     target: str,
+    import_type: str = "blue",
     base_path: Optional[str] = None,
     cachable: bool = False,
 ) -> Optional[types.ModuleType]:
@@ -40,6 +40,8 @@ def import_jac_module(
     dev_dir = path.join(caller_dir, "__jac_gen__")
     makedirs(dev_dir, exist_ok=True)
     py_file_path = path.join(dev_dir, module_name + ".py")
+
+    transpiler = Transpiler()
     if (
         cachable
         and path.exists(py_file_path)
@@ -48,7 +50,11 @@ def import_jac_module(
         with open(py_file_path, "r") as f:
             code_string = f.read()
     else:
-        code_string = transpiler_func(file_path=full_target, base_dir=caller_dir)
+        if import_type == "blue":
+            from jaclang.jac.passes.blue import BluePygenPass as pygen_pass, pass_schedule
+        elif import_type == "purple":
+            from jaclang.jac.passes.purple import PurplePygenPass as pygen_pass, pass_schedule
+        code_string = transpiler(file_path=full_target, base_dir=caller_dir, target=pygen_pass, pass_schedule=pass_schedule)
 
     with open(py_file_path, "w") as f:
         f.write(code_string)
@@ -121,11 +127,11 @@ def jac_blue_import(
     target: str, base_path: Optional[str] = None, save_file: bool = False
 ) -> Optional[types.ModuleType]:
     """Jac Blue Imports."""
-    return import_jac_module(transpile_jac_blue, target, base_path, save_file)
+    return import_jac_module("blue", target, base_path, save_file)
 
 
 def jac_purple_import(
     target: str, base_path: Optional[str] = None, save_file: bool = False
 ) -> Optional[types.ModuleType]:
     """Jac Purple Imports."""
-    return import_jac_module(transpile_jac_purple, target, base_path, save_file)
+    return import_jac_module("purple", target, base_path, save_file)
