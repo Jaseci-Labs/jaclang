@@ -1,6 +1,6 @@
 """Test pass module."""
 from jaclang.jac.passes.blue import ImportPass
-from jaclang.jac.transpiler import jac_file_to_pass
+from jaclang.jac.transpiler import Transpiler
 from jaclang.utils.test import TestCase
 
 
@@ -13,6 +13,6 @@ class ImportPassPassTests(TestCase):
 
     def test_pygen_jac_cli(self) -> None:
         """Basic test for pass."""
-        state = jac_file_to_pass(self.fixture_abs_path("base.jac"), "", ImportPass)
+        state = Transpiler.to_pass(self.fixture_abs_path("base.jac"), "", ImportPass)
         self.assertFalse(state.errors_had)
         self.assertIn("56", str(state.ir.to_dict()))

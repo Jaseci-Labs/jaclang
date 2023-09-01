@@ -12,7 +12,8 @@ from jaclang.jac.transform import Transform
 T = TypeVar("T", bound=Pass)
 
 class Transpiler:
-    def _to_parse_tree(self, file_path: str, base_dir: str) -> Transform:
+    @staticmethod
+    def _to_parse_tree(file_path: str, base_dir: str) -> Transform:
         """Convert a Jac file to an AST."""
         with open(file_path) as file:
             lex = JacLexer(mod_path=file_path, input_ir=file.read(), base_path=base_dir)
@@ -21,9 +22,10 @@ class Transpiler:
             )
             return prse
     
-    def to_pass(self, file_path: str, base_dir: str, target: Type[T], pass_schedule: List[Type[T]])-> T:
+    @staticmethod
+    def to_pass(file_path: str, base_dir: str = '', target: Type[T] = BluePygenPass, pass_schedule: List[Type[T]] = blue_pass_schedule)-> T:
         """Convert a Jac file to an AST."""
-        ast_ret = self._to_parse_tree(file_path, base_dir)
+        ast_ret = Transpiler._to_parse_tree(file_path, base_dir)
         for i in pass_schedule:
             if i == target:
                 break
@@ -34,68 +36,12 @@ class Transpiler:
             mod_path=file_path, input_ir=ast_ret.ir, base_path=base_dir, prior=ast_ret
         )
         return ast_ret
-
-    def __call__(self, file_path: str, base_dir: str, pass_schedule: List[Type[T]] = blue_pass_schedule, target: Type[T] = BluePygenPass) -> Transform:
+    
+    @staticmethod
+    def transpile(file_path: str, base_dir: str = '', pass_schedule: List[Type[T]] = blue_pass_schedule, target: Type[T] = BluePygenPass) -> Transform:
         """Transpiler Jac file and return python code as string."""
-        code = self.to_pass(file_path=file_path, base_dir=base_dir, target=target, pass_schedule = pass_schedule)
+        code = Transpiler.to_pass(file_path=file_path, base_dir=base_dir, target=target, pass_schedule = pass_schedule)
         if isinstance(code.ir, ast.Module):
             return code.ir.meta["py_code"]
         else:
             raise code.gen_exception("Transpilation of Jac file failed.")
-
-
-
-def jac_file_to_parse_tree(self, file_path: str, base_dir: str) -> Transform:
-        """Convert a Jac file to an AST."""
-        with open(file_path) as file:
-            lex = JacLexer(mod_path=file_path, input_ir=file.read(), base_path=base_dir)
-            prse = JacParser(
-                mod_path=file_path, input_ir=lex.ir, base_path=base_dir, prior=lex
-            )
-            return prse
-
-def transpile_jac_blue(file_path: str, base_dir: str) -> str:
-    """Transpiler Jac file and return python code as string."""
-    code = jac_file_to_pass(
-        file_path=file_path, base_dir=base_dir, target=BluePygenPass
-    )
-    if isinstance(code.ir, ast.Module):
-        return code.ir.meta["py_code"]
-    else:
-        raise code.gen_exception("Transpilation of Jac file failed.")
-
-
-def transpile_jac_purple(file_path: str, base_dir: str) -> str:
-    """Transpiler Jac file and return python code as string."""
-    from jaclang.jac.passes.purple import pass_schedule, PurplePygenPass
-
-    code = jac_file_to_pass(
-        file_path=file_path,
-        base_dir=base_dir,
-        target=PurplePygenPass,
-        schedule=pass_schedule,
-    )
-    if isinstance(code.ir, ast.Module):
-        return code.ir.meta["py_code"]
-    else:
-        raise code.gen_exception("Transpilation of Jac file failed.")
-
-
-def jac_file_to_pass(
-    file_path: str,
-    base_dir: str = "",
-    target: Type[T] = BluePygenPass,
-    schedule: list[Type[T]] = blue_pass_schedule,
-) -> T:
-    """Convert a Jac file to an AST."""
-    ast_ret = jac_file_to_parse_tree(file_path, base_dir)
-    for i in schedule:
-        if i == target:
-            break
-        ast_ret = i(
-            mod_path=file_path, input_ir=ast_ret.ir, base_path=base_dir, prior=ast_ret
-        )
-    ast_ret = target(
-        mod_path=file_path, input_ir=ast_ret.ir, base_path=base_dir, prior=ast_ret
-    )
-    return ast_ret

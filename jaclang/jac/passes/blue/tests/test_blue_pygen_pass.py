@@ -110,7 +110,7 @@ class BluePygenPassTests(TestCaseMicroSuite):
 
     def micro_suite_test(self, filename: str) -> None:
         """Parse micro jac file."""
-        code_gen = Transpiler()(self.fixture_abs_path(filename), target=BluePygenPass, pass_schedule=blue_pass_schedule)
+        code_gen = Transpiler.transpile(self.fixture_abs_path(filename), target=BluePygenPass, pass_schedule=blue_pass_schedule)
         self.assertGreater(len(code_gen), 10)
 
 

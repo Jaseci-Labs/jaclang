@@ -48,7 +48,7 @@ class ImportPass(Pass):
 
     def import_module(self, node: ast.Import, mod_path: str) -> ast.AstNode:
         """Import a module."""
-        from jaclang.jac.transpiler import jac_file_to_pass
+        from jaclang.jac.transpiler import Transpiler
         from jaclang.jac.passes.blue.ast_build_pass import AstBuildPass
 
         base_dir = path.dirname(mod_path)
@@ -63,7 +63,7 @@ class ImportPass(Pass):
 
         if not path.exists(target):
             self.error(f"Could not find module {target}")
-        mod = jac_file_to_pass(
+        mod = Transpiler.to_pass(
             file_path=target, base_dir=base_dir, target=AstBuildPass
         ).ir
         if isinstance(mod, ast.Module):

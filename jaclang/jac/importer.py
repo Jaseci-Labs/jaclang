@@ -5,7 +5,7 @@ import sys
 import traceback
 import types
 from os import makedirs, path
-from typing import Callable, Optional
+from typing import Optional
 
 from jaclang.jac.constant import Constants as Con, Values as Val
 from jaclang.jac.transpiler import Transpiler
@@ -13,8 +13,8 @@ from jaclang.jac.utils import add_line_numbers, clip_code_section
 
 
 def import_jac_module(
+    import_type: str,
     target: str,
-    import_type: str = "blue",
     base_path: Optional[str] = None,
     cachable: bool = False,
 ) -> Optional[types.ModuleType]:
@@ -41,7 +41,6 @@ def import_jac_module(
     makedirs(dev_dir, exist_ok=True)
     py_file_path = path.join(dev_dir, module_name + ".py")
 
-    transpiler = Transpiler()
     if (
         cachable
         and path.exists(py_file_path)
@@ -54,7 +53,7 @@ def import_jac_module(
             from jaclang.jac.passes.blue import BluePygenPass as pygen_pass, pass_schedule
         elif import_type == "purple":
             from jaclang.jac.passes.purple import PurplePygenPass as pygen_pass, pass_schedule
-        code_string = transpiler(file_path=full_target, base_dir=caller_dir, target=pygen_pass, pass_schedule=pass_schedule)
+        code_string = Transpiler.transpile(file_path=full_target, base_dir=caller_dir, target=pygen_pass, pass_schedule=pass_schedule)
 
     with open(py_file_path, "w") as f:
         f.write(code_string)
