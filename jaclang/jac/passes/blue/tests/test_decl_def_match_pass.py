@@ -1,6 +1,6 @@
 """Test pass module."""
 from jaclang.jac.passes.blue import DeclDefMatchPass
-from jaclang.jac.transpiler import jac_file_to_pass
+from jaclang.jac.transpiler import Transpiler
 from jaclang.utils.test import TestCase
 
 
@@ -13,7 +13,7 @@ class DeclDefMatchPassTests(TestCase):
 
     def test_import_values_avail(self) -> None:
         """Basic test for pass."""
-        state = jac_file_to_pass(
+        state = Transpiler.to_pass(
             self.fixture_abs_path("base.jac"), "", DeclDefMatchPass
         )
         self.assertFalse(state.errors_had)
@@ -22,7 +22,7 @@ class DeclDefMatchPassTests(TestCase):
 
     def test_ability_connected_to_decl(self) -> None:
         """Basic test for pass."""
-        state = jac_file_to_pass(
+        state = Transpiler.to_pass(
             self.fixture_abs_path("base.jac"), "", DeclDefMatchPass
         )
         self.assertFalse(state.errors_had)
@@ -33,7 +33,7 @@ class DeclDefMatchPassTests(TestCase):
 
     def test_ability_connected_to_decl_post(self) -> None:
         """Basic test for pass."""
-        state = jac_file_to_pass(
+        state = Transpiler.to_pass(
             self.fixture_abs_path("base2.jac"), "", DeclDefMatchPass
         )
         self.assertFalse(state.errors_had)
@@ -44,7 +44,7 @@ class DeclDefMatchPassTests(TestCase):
 
     def test_collision_error_correct(self) -> None:
         """Basic test for multi defs."""
-        state = jac_file_to_pass(
+        state = Transpiler.to_pass(
             self.fixture_abs_path("decls.jac"), "", DeclDefMatchPass
         )
         self.assertTrue(state.errors_had)

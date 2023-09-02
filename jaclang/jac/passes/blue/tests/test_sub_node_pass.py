@@ -1,7 +1,7 @@
 """Test sub node pass module."""
 
 from jaclang.jac.passes.blue import SubNodeTabPass
-from jaclang.jac.transpiler import jac_file_to_pass
+from jaclang.jac.transpiler import Transpiler
 from jaclang.utils.test import TestCase
 
 
@@ -14,7 +14,7 @@ class SubNodePassTests(TestCase):
 
     def test_sub_node_pass(self) -> None:
         """Basic test for pass."""
-        code_gen = jac_file_to_pass(
+        code_gen = Transpiler.to_pass(
             file_path=self.fixture_abs_path("../../../../../cli/cli.jac"),
             base_dir="",
             target=SubNodeTabPass,

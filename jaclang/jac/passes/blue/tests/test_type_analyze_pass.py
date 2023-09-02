@@ -2,7 +2,7 @@
 import inspect
 
 from jaclang.jac.passes.blue import BluePygenPass, TypeAnalyzePass
-from jaclang.jac.transpiler import jac_file_to_pass
+from jaclang.jac.transpiler import Transpiler
 from jaclang.jac.utils import get_ast_nodes_as_snake_case as ast_snakes
 from jaclang.utils.test import TestCaseMicroSuite
 
@@ -16,7 +16,7 @@ class TypeAnalyzePassTests(TestCaseMicroSuite):
 
     def test_pygen_jac_cli(self) -> None:
         """Basic test for pass."""
-        code_gen = jac_file_to_pass(
+        code_gen = Transpiler.to_pass(
             self.fixture_abs_path("../../../../../cli/cli.jac"), target=BluePygenPass
         )
         # print(code_gen.ir.meta["py_code"])
@@ -45,7 +45,7 @@ class TypeAnalyzePassTests(TestCaseMicroSuite):
 
     def micro_suite_test(self, filename: str) -> None:
         """Parse micro jac file."""
-        ast = jac_file_to_pass(filename, "", target=BluePygenPass).ir
+        ast = Transpiler.to_pass(filename, "", target=BluePygenPass).ir
         typed_ast = TypeAnalyzePass(mod_path=filename, input_ir=ast).ir
         self.assertGreater(len(str(typed_ast.to_dict())), 10)
 
