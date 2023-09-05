@@ -50,10 +50,21 @@ def import_jac_module(
             code_string = f.read()
     else:
         if import_type == "blue":
-            from jaclang.jac.passes.blue import BluePygenPass as pygen_pass, pass_schedule
+            from jaclang.jac.passes.blue import (
+                BluePygenPass as pygen_pass,
+                pass_schedule,
+            )
         elif import_type == "purple":
-            from jaclang.jac.passes.purple import PurplePygenPass as pygen_pass, pass_schedule
-        code_string = Transpiler.transpile(file_path=full_target, base_dir=caller_dir, target=pygen_pass, pass_schedule=pass_schedule)
+            from jaclang.jac.passes.purple import (
+                PurplePygenPass as pygen_pass,
+                pass_schedule,
+            )
+        code_string = Transpiler.transpile(
+            file_path=full_target,
+            base_dir=caller_dir,
+            target=pygen_pass,
+            pass_schedule=pass_schedule,
+        )
 
     with open(py_file_path, "w") as f:
         f.write(code_string)
