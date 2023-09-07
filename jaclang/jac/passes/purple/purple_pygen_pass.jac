@@ -3,6 +3,7 @@ import:py jaclang.jac.absyntree as ast;
 import:py from jaclang.jac.passes.blue, BluePygenPass;
 import:py from jaclang.core, Object, Node, Edge, Walker;
 
+import:py from jaclang.jac.passes import Pass;
 
 include:jac impl.purple_pygen_pass_impl;
 
@@ -41,6 +42,6 @@ object AnalyzePass:Pass{
     #*
     These add functions generate necessary imports]
     *#
-    
+
     can exit_arch_block(nd: ast.ArchBlock);
 }
