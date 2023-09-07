@@ -274,8 +274,10 @@ edge_dir: EdgeDir,
 
 :object:AnalyzePass:ability:exit_arch_block
 (nd: ast.ArchBlock) {
-    if nd.decorators {
-        (nd, nd.decorators.meta["py_code"]) |> <self>.emit_ln;
+    if nd.architype {
+        (nd, nd.architype.meta["py_code"]) |> <self>.emit_ln;
     }
-    (nd, nd.body.meta["py_code"]) |> <self>.emit_ln;
+    if nd.abilities {
+        (nd, nd.abilities.meta["py_code"]) |> <self>.emit_ln;
+    }
 }
