@@ -1,11 +1,10 @@
-"""Type Analyze Pass."""
-from types import ModuleType
+"""Analyze Pass."""
 from typing import Any
 
 import jaclang.jac.absyntree as ast
 from jaclang.jac.constant import Tokens as Tok
 from jaclang.jac.passes import Pass
-from jaclang.jac.sym_table import SymbolTable, TypedSymbol
+from jaclang.jac.sym_table import SymbolTable
 
 
 class AnalyzePass(Pass, SymbolTable):
