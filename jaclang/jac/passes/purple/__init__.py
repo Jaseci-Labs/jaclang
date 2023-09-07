@@ -5,6 +5,7 @@ from jaclang.jac.passes.blue import pass_schedule
 
 purple = jac_blue_import("purple_pygen_pass")
 PurplePygenPass = purple.PurplePygenPass  # type: ignore
+AnalyzePass = purple.AnalyzePass  # type: ignore
 
 __all__ = [
     "PurplePygenPass",
@@ -13,5 +14,6 @@ __all__ = [
 
 pass_schedule = [
     *pass_schedule[:-1],
+    AnalyzePass,
     PurplePygenPass,
 ]

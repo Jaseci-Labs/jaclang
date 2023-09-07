@@ -36,3 +36,11 @@ object PurplePygenPass:BluePygenPass {
     can exit_connect_op(nd: ast.ConnectOp);
     can exit_disconnect_op(nd: ast.DisconnectOp);
 }
+
+object AnalyzePass:Pass{
+    #*
+    These add functions generate necessary imports]
+    *#
+    
+    can exit_arch_block(nd: ast.ArchBlock);
+}
