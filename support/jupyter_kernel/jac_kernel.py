@@ -1,24 +1,24 @@
+import contextlib
 import os
 import os.path as op
 import tempfile
-import sys
-import contextlib
 from io import StringIO
 
-
-from ipykernel.kernelbase import Kernel
 from ipykernel.kernelapp import IPKernelApp
+from ipykernel.kernelbase import Kernel
+
 from jaclang import jac_blue_import as jac_import
 
 from pygments import lexer
+
 from syntax_hilighter import JacLexer
 
+"""Register the lexer."""
 lexer.add_lexer("jac_lexer", JacLexer())
 
 
-def exec_jac(code):
+def exec_jac(code: str):
     """Compile, jac code, and return the standard py."""
-
     with tempfile.TemporaryDirectory() as tmpdir:
         # define the source and executable filenames. temp.jac is the file that we want to execute.
         source_path = op.join(tmpdir, "temp.jac")
@@ -34,14 +34,13 @@ def exec_jac(code):
             # this folder contains the python file that we want to execute.
 
         except Exception as e:
-            print("Exception: " + str(e))
+            captured_output = "Exception: " + str(e)
+            return captured_output
 
         finally:
             pass
 
     script_path = op.join(os.getcwd(), "jac/__jac_gen__/temp.py")
-
-    captured_output = None
 
     try:
         with open(script_path, "r") as script_file:
@@ -59,11 +58,9 @@ def exec_jac(code):
     return captured_output
 
 
-"""Jac wrapper kernel."""
-
-
 class JacKernel(Kernel):
-    # Kernel information.
+    """Jac wrapper kernel."""
+
     implementation = "jac"
     implementation_version = "0.0"
     language = "python"  # for syntax hilighting
