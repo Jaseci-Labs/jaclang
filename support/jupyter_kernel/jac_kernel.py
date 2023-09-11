@@ -18,12 +18,11 @@ from ipykernel.kernelbase import Kernel
 
 from jaclang import jac_blue_import as jac_import
 
-from pygments import lexer
+from pygments import lexers
 
-from syntax_hilighter import JacLexer
-
-# Register the lexer.
-lexer.add_lexer("jac_lexer", JacLexer())
+jac_lexer = lexers.load_lexer_from_file(
+    "jupyter_kernel/syntax_hilighter.py", "JacLexer"
+)
 
 
 def exec_jac(code: str) -> str:
@@ -36,9 +35,8 @@ def exec_jac(code: str) -> str:
             f.write(code)
 
         try:
-            jac_import(
-                op.join(tmpdir, "temp")
-            )  # Import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
+            jac_import(op.join(tmpdir, "temp"))
+            # Import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
             # This folder contains the python file that we want to execute.
 
         except Exception as e:
@@ -48,7 +46,7 @@ def exec_jac(code: str) -> str:
         finally:
             pass
 
-    script_path = op.join(os.getcwd(), "__jac_gen__/temp.py")
+    script_path = op.join(os.getcwd(), "jupyter_kernel/__jac_gen__/temp.py")
 
     try:
         with open(script_path, "r") as script_file:

@@ -1,7 +1,7 @@
 {
     "argv": [
         "python",
-        "jac_kernel.py",
+        "jupyter_kernel/jac_kernel.py",
         "-f",
         "{connection_file}"
     ],
