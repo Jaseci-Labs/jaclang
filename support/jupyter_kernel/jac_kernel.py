@@ -1,3 +1,12 @@
+"""
+Jac Kernel for Jupyter.
+
+This module provides a Jupyter kernel for the Jac programming language. It allows you to execute Jac code
+in Jupyter notebooks and captures and displays the output.
+
+Version: 1.0.0
+"""
+
 import contextlib
 import os
 import os.path as op
@@ -13,14 +22,13 @@ from pygments import lexer
 
 from syntax_hilighter import JacLexer
 
-"""Register the lexer."""
+# Register the lexer.
 lexer.add_lexer("jac_lexer", JacLexer())
 
 
-def exec_jac(code: str):
-    """Compile, jac code, and return the standard py."""
+def exec_jac(code: str) -> str:
+    """Compile, jac code, and execute and return the output."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # define the source and executable filenames. temp.jac is the file that we want to execute.
         source_path = op.join(tmpdir, "temp.jac")
 
         # Write the code to the jac file.
@@ -30,8 +38,8 @@ def exec_jac(code: str):
         try:
             jac_import(
                 op.join(tmpdir, "temp")
-            )  # import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
-            # this folder contains the python file that we want to execute.
+            )  # Import the jac file, this generates the __jac_gen__ folder at the same level as the jac file,
+            # This folder contains the python file that we want to execute.
 
         except Exception as e:
             captured_output = "Exception: " + str(e)
@@ -40,7 +48,7 @@ def exec_jac(code: str):
         finally:
             pass
 
-    script_path = op.join(os.getcwd(), "jac/__jac_gen__/temp.py")
+    script_path = op.join(os.getcwd(), "__jac_gen__/temp.py")
 
     try:
         with open(script_path, "r") as script_file:
@@ -63,7 +71,7 @@ class JacKernel(Kernel):
 
     implementation = "jac"
     implementation_version = "0.0"
-    language = "python"  # for syntax hilighting
+    language = "python"  # For syntax hilighting
     language_version = "1.0"
     language_info = {
         "name": "python",
@@ -76,14 +84,14 @@ class JacKernel(Kernel):
 
     def do_execute(
         self,
-        code,
-        silent,
-        store_history=True,
-        user_expressions=None,
-        allow_stdin=False,
-        stop_on_error=False,
-    ):
-        """called when a code cell is executed."""
+        code: str,
+        silent: bool,
+        store_history: bool = True,
+        user_expressions: dict = None,
+        allow_stdin: bool = False,
+        stop_on_error: bool = False,
+    ) -> dict:
+        """Execute the code and return the result."""
         if not silent:
             try:
                 output = exec_jac(code)
@@ -107,11 +115,9 @@ class JacKernel(Kernel):
             finally:
                 pass
 
-        # return the execution result.
+        # Return the execution result.
         return {
             "status": "ok",
-            # The base class increments the execution
-            # count
             "execution_count": self.execution_count,
             "payload": [],
             "user_expressions": {},
