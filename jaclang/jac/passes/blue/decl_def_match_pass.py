@@ -2,15 +2,11 @@
 import jaclang.jac.absyntree as ast
 from jaclang.jac.passes import Pass
 from jaclang.jac.passes.blue import SubNodeTabPass
-from jaclang.jac.sym_table import DefDeclSymbol, SymbolTable
+from jaclang.jac.sym_table import DefDeclSymbol
 
 
-class DeclDefMatchPass(Pass, SymbolTable):
+class DeclDefMatchPass(Pass):
     """Decls and Def matching pass."""
-
-    def before_pass(self) -> None:
-        """Initialize pass."""
-        self.sym_tab = SymbolTable(scope_name="global")
 
     def after_pass(self) -> None:
         """Rebuild sub node table."""
@@ -25,7 +21,9 @@ class DeclDefMatchPass(Pass, SymbolTable):
         """
         for i in self.get_all_sub_nodes(node, ast.Assignment):
             if not isinstance(i.target, ast.Name):
-                self.ice("Only name targets should be possible to in global vars.")
+                self.ice(
+                    "Only name targets should be possible to assign in global vars."
+                )
             else:
                 decl = self.sym_tab.lookup(i.target.value)
                 if decl:
