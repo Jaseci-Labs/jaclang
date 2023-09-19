@@ -20,9 +20,7 @@ from jaclang import jac_blue_import as jac_import
 
 from pygments import lexers
 
-jac_lexer = lexers.load_lexer_from_file(
-    "jupyter_kernel/syntax_hilighter.py", "JacLexer"
-)
+jac_lexer = lexers.load_lexer_from_file("kernel/syntax_hilighter.py", "JacLexer")
 
 
 def exec_jac(code: str) -> str:
