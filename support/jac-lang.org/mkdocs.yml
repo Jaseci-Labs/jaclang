@@ -7,16 +7,24 @@ nav:
     - ~/start$: 'start.md'
     - ~/learn$:
       - 'learn/learn.md'
-      - 'learn/py_to_jac_example.md'
-    - ~/book$:
-      - book/main.md
-      - book/general.md
-      - book/blue.md
-      - book/purple.md
-      - book/red.md
+      - ~/for_coders:
+        - 'learn/coders/no_indent.md'
+        - 'learn/coders/defs_decls.md'
+      - ~/for_noobs:
+        - 'learn/contrib.md'
+      - ~/for_contributors:
+        - 'learn/contrib.md'
+      - ~/w.i.p$:
+        - 'learn/py_to_jac_example.md'
+        - 'learn/ast_doc.md'
+        - ~/book$:
+          - book/main.md
+          - book/general.md
+          - book/blue.md
+          - book/purple.md
+          - book/red.md
 
     - ~/why$: 'why.md'
-    - ~/blog$: 'blog.md'
     - ~/roadmap$: 'roadmap.md'
     - ~/github$: https://github.com/Jaseci-Labs/jaclang
 
@@ -24,10 +32,11 @@ theme:
     logo: 'assets/logo.png'
     name: 'material'
     palette:
-        primary: 'brown'
+        scheme: 'slate'
+        primary: 'black'
         accent: 'orange'
     font:
-        text: 'Short Stack'
+        text: 'Roboto'
         code: 'Roboto Mono'
     features:
     - content.code.copy
@@ -37,14 +46,18 @@ theme:
     - navigation.path
 
 markdown_extensions:
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
       pygments_style: 'autumn'
   - pymdownx.inlinehilite
+  # - codehilite:
+  #     linenums: true
   - pymdownx.snippets:
-      base_path: ['.', '../../examples']
+      base_path: ['.', '../../']
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid

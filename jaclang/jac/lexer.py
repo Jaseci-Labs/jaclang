@@ -2,7 +2,7 @@
 from typing import Generator
 
 from jaclang.jac.transform import ABCLexerMeta, Transform
-from jaclang.utils.sly.lex import Lexer, Token
+from jaclang.vendor.sly.lex import Lexer, Token
 
 
 class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
@@ -14,8 +14,10 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
         input_ir: str,
         base_path: str = "",
         prior: Transform | None = None,
+        fstr_override: bool = False,
     ) -> None:
         """Initialize lexer."""
+        self.fstr_override = fstr_override
         Transform.__init__(self, mod_path, input_ir, base_path, prior)  # type: ignore
         self.ir: Generator = self.ir
 
@@ -23,6 +25,7 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
         "FLOAT",
         "STRING",
         "DOC_STRING",
+        "PYNLINE",
         "FSTRING",
         "BOOL",
         "INT",
@@ -44,6 +47,7 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
         "TYP_ANY",
         "TYP_TYPE",
         "KW_FREEZE",
+        "KW_ABSTRACT",
         "KW_OBJECT",
         "KW_ENUM",
         "KW_NODE",
@@ -186,6 +190,7 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
     # Regular expression rules for tokens
     FLOAT = r"(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"
     DOC_STRING = r'"""(.|\n|\r)*?"""|\'\'\'(.|\n|\r)*?\'\'\''  # type: ignore
+    PYNLINE = r"::py::(.|\n|\r)*?::py::"  # type: ignore
     FSTRING = r'f"[^"\r\n]*"|f\'[^\'\r\n]*\''
     STRING = r'"[^"\r\n]*"|\'[^\'\r\n]*\''
     BOOL = r"True|False"
@@ -211,7 +216,8 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
     NAME["bytes"] = "TYP_BYTES"  # type: ignore
     NAME["any"] = "TYP_ANY"  # type: ignore
     NAME["type"] = "TYP_TYPE"  # type: ignore
-    NAME["freeze"] = "KW_FREEZE"  # type: ignore
+    NAME["froz"] = "KW_FREEZE"  # type: ignore
+    NAME["abstract"] = "KW_ABSTRACT"  # type: ignore
     NAME["object"] = "KW_OBJECT"  # type: ignore
     NAME["enum"] = "KW_ENUM"  # type: ignore
     NAME["node"] = "KW_NODE"  # type: ignore
@@ -269,9 +275,9 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
     ARROW_R = r"-->"
     ARROW_BI = r"<-->"
     ARROW_L_p1 = r"<-\["
+    ARROW_R_p2 = r"]->"
     ARROW_L_p2 = r"]-"
     ARROW_R_p1 = r"-\["
-    ARROW_R_p2 = r"]->"
     CARROW_L = r"<\+\+"
     CARROW_R = r"\+\+>"
     CARROW_L_p1 = r"<\+\["
@@ -351,18 +357,24 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
     LSQUARE = r"\["
     RSQUARE = r"\]"
 
-    def ignore_newline(self, t: Token) -> Token:
+    def ignore_newline(self, t: Token) -> Token:  # noqa
         """Increment line number."""
         self.lineno += len(t.value)
         return t
 
-    def ignore_comment(self, t: Token) -> Token:  # noqa: N802
+    def ignore_comment(self, t: Token) -> Token:  # noqa
         """Add docstring to lexer."""
         self.lineno += t.value.count("\n")
         self.lineno += t.value.count("\r")
         return t
 
-    def DOC_STRING(self, t: Token) -> Token:  # noqa: N802
+    def DOC_STRING(self, t: Token) -> Token:  # noqa
+        """Add docstring to lexer."""
+        self.lineno += t.value.count("\n")
+        self.lineno += t.value.count("\r")
+        return t
+
+    def PYNLINE(self, t: Token) -> Token:  # noqa
         """Add docstring to lexer."""
         self.lineno += t.value.count("\n")
         self.lineno += t.value.count("\r")
@@ -373,6 +385,26 @@ class JacLexer(Lexer, Transform, metaclass=ABCLexerMeta):
     def transform(self, ir: str) -> Generator:
         """Tokenize the input."""
         return self.tokenize(ir)
+
+    def tokenize(self, text: str) -> Generator:
+        """Tokenize override for no module level docstring."""
+        has_doc_string_start = False
+        for tok in super().tokenize(text):
+            if (
+                tok.type != "DOC_STRING"
+                and not has_doc_string_start
+                and not self.fstr_override
+            ):
+                dtok = Token()
+                dtok.type = "DOC_STRING"
+                dtok.value = '""""""'
+                dtok.lineno = 1
+                dtok.lineidx = 0
+                dtok.index = 0
+                dtok.end = 0
+                yield dtok
+            has_doc_string_start = True
+            yield tok
 
     def error(self, t: Token) -> None:
         """Raise an error for illegal characters."""

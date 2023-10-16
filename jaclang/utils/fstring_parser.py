@@ -1,7 +1,7 @@
 # type: ignore
 """Python Like F-String Parser."""
-from jaclang.utils.sly.lex import Lexer
-from jaclang.utils.sly.yacc import Parser, YaccProduction
+from jaclang.vendor.sly.lex import Lexer
+from jaclang.vendor.sly.yacc import Parser, YaccProduction
 
 _ = None  # For flake8 linting and sly compatibility
 
@@ -66,8 +66,10 @@ if __name__ == "__main__":
             break
         if text:
             tokens = lexer.tokenize(text)
+            print("Tokens:")
             for i in tokens:
                 print(i, end=", ")
             tokens = lexer.tokenize(text)
             result = parser.parse(tokens)
+            print("\nParse Result:")
             print(result)

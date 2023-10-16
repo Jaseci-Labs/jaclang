@@ -2,7 +2,7 @@
 from os import path
 
 import jaclang.jac.absyntree as ast
-from jaclang.jac.absyntree import replace_node
+from jaclang.jac.absyntree import append_node, replace_node
 from jaclang.jac.constant import EdgeDir
 from jaclang.jac.constant import Tokens as Tok
 from jaclang.jac.passes import Pass
@@ -40,7 +40,7 @@ class AstBuildPass(Pass):
         module -> DOC_STRING element_list
         module -> DOC_STRING
         """
-        if type(self.ir) == ast.Module:
+        if isinstance(self.ir, ast.Module):
             self.ir.doc = node.kid[0]
             self.ir.body = node.kid[1] if len(node.kid) == 2 else None
         else:
@@ -68,31 +68,40 @@ class AstBuildPass(Pass):
     def exit_element(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        element -> enum
-        element -> ability
-        element -> architype
-        element -> include_stmt
-        element -> import_stmt
-        element -> mod_code
-        element -> test
-        element -> global_var
+        Rule 5     element -> python_code_block
+        Rule 6     element -> doc_tag ability
+        Rule 7     element -> doc_tag architype
+        Rule 8     element -> include_stmt
+        Rule 9     element -> import_stmt
+        Rule 10    element -> doc_tag mod_code
+        Rule 11    element -> doc_tag test
+        Rule 12    element -> doc_tag global_var
         """
-        replace_node(node, node.kid[0])
+        if len(node.kid) == 2:
+            doc = node.kid[0]
+            new_node = replace_node(node, node.kid[1])
+            if new_node and hasattr(new_node, "doc"):
+                new_node.doc = doc  # type: ignore
+                append_node(new_node, doc, front=True)
+            else:
+                self.ice("Expected node to have doc attribute!")
+        else:
+            replace_node(node, node.kid[0])
 
     def exit_global_var(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        global_var -> doc_tag KW_FREEZE access_tag assignment_list SEMI
-        global_var -> doc_tag KW_GLOBAL access_tag assignment_list SEMI
+        global_var -> KW_FREEZE access_tag assignment_list SEMI
+        global_var -> KW_GLOBAL access_tag assignment_list SEMI
         """
-        is_frozen = node.kid[1].name == Tok.KW_FREEZE
-        node.kid = [node.kid[0], node.kid[2], node.kid[3]]
+        is_frozen = node.kid[0].name == Tok.KW_FREEZE
+        node.kid = [node.kid[1], node.kid[2]]
         replace_node(
             node,
             ast.GlobalVars(
-                doc=node.kid[0],
-                access=node.kid[1],
-                assignments=node.kid[2],
+                doc=None,
+                access=node.kid[0],
+                assignments=node.kid[1],
                 is_frozen=is_frozen,
                 parent=node.parent,
                 mod_link=self.mod_link,
@@ -121,40 +130,71 @@ class AstBuildPass(Pass):
     def exit_test(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        test -> doc_tag KW_TEST NAME multistring code_block
+        test -> KW_TEST code_block
+        test -> KW_TEST NAME code_block
         """
-        del node.kid[1]
-        replace_node(
-            node,
-            ast.Test(
-                doc=node.kid[0],
-                name=node.kid[1],
-                description=node.kid[2],
-                body=node.kid[3],
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
+        if len(node.kid) == 3:
+            del node.kid[0]
+            replace_node(
+                node,
+                ast.Test(
+                    doc=None,
+                    name=node.kid[0],
+                    body=node.kid[1],
+                    parent=node.parent,
+                    mod_link=self.mod_link,
+                    kid=node.kid,
+                    line=node.line,
+                ),
+            )
+        else:
+            replace_node(
+                node,
+                ast.Test(
+                    doc=None,
+                    name=node.kid[0],
+                    body=node.kid[1],
+                    parent=node.parent,
+                    mod_link=self.mod_link,
+                    kid=node.kid,
+                    line=node.line,
+                ),
+            )
 
     def exit_mod_code(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        mod_code -> doc_tag KW_WITH KW_ENTRY code_block
+        mod_code -> KW_WITH KW_ENTRY sub_name code_block
+        mod_code -> KW_WITH KW_ENTRY code_block
         """
-        node.kid = [node.kid[0], node.kid[-1]]
-        replace_node(
-            node,
-            ast.ModuleCode(
-                doc=node.kid[0],
-                body=node.kid[1],
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
+        if len(node.kid) == 4:
+            node.kid = [node.kid[-2], node.kid[-1]]
+            replace_node(
+                node,
+                ast.ModuleCode(
+                    doc=None,
+                    name=node.kid[0],
+                    body=node.kid[1],
+                    parent=node.parent,
+                    mod_link=self.mod_link,
+                    kid=node.kid,
+                    line=node.line,
+                ),
+            )
+        else:
+            node.kid = [node.kid[-1]]
+            replace_node(
+                node,
+                ast.ModuleCode(
+                    doc=None,
+                    name=None,
+                    body=node.kid[0],
+                    parent=node.parent,
+                    mod_link=self.mod_link,
+                    kid=node.kid,
+                    line=node.line,
+                ),
+            )
 
     def exit_doc_tag(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -163,6 +203,22 @@ class AstBuildPass(Pass):
         doc_tag -> empty
         """
         replace_node(node, node.kid[0])
+
+    def exit_python_code_block(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        python_code_block -> PYNLINE
+        """
+        replace_node(
+            node,
+            ast.PyInlineCode(
+                code=node.kid[0],
+                kid=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                line=node.line,
+            ),
+        )
 
     def exit_import_stmt(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -279,7 +335,7 @@ class AstBuildPass(Pass):
         import_items -> NAME
         """
         this_item = None
-        if type(node.kid[0]) == ast.Name:
+        if isinstance(node.kid[0], ast.Name):
             this_item = ast.ModuleItem(
                 name=node.kid[0],
                 alias=node.kid[2] if len(node.kid) == 3 else None,
@@ -315,55 +371,70 @@ class AstBuildPass(Pass):
     def exit_architype(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        architype -> architype_def
-        architype -> architype_decl
-        architype -> architype_inline_spec
+        Rule 41    architype -> decorator architype
+        Rule 42    architype -> enum
+        Rule 43    architype -> architype_def
+        Rule 44    architype -> architype_decl
         """
-        replace_node(node, node.kid[0])
+        if len(node.kid) == 1:
+            replace_node(node, node.kid[0])
+        else:
+            dec = node.kid[0]
+            new_node = replace_node(node, node.kid[1])
+            if isinstance(new_node, ast.Architype) and new_node.decorators:
+                new_node.decorators.calls.insert(0, dec)
+                append_node(new_node.decorators, dec, front=True)
+            elif isinstance(new_node, ast.Architype):
+                new_node.decorators = ast.Decorators(
+                    calls=[dec],
+                    parent=new_node,
+                    mod_link=self.mod_link,
+                    kid=[dec],
+                    line=node.line,
+                )
+                append_node(new_node, new_node.decorators, front=True)
+            else:
+                self.ice("Expected node to be architype!")
 
     def exit_architype_decl(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        architype_decl -> doc_tag decorators arch_type access_tag NAME inherited_archs member_block
-        architype_decl -> doc_tag arch_type access_tag NAME inherited_archs member_block
-        architype_decl -> doc_tag decorators arch_type access_tag NAME inherited_archs SEMI
-        architype_decl -> doc_tag arch_type access_tag NAME inherited_archs SEMI
+        Rule 45    architype_decl -> arch_type access_tag NAME inherited_archs member_block
+        Rule 46    architype_decl -> arch_type access_tag NAME inherited_archs SEMI
         """
         replace_node(
             node,
             ast.Architype(
-                doc=node.kid[0],
-                decorators=node.kid[1] if len(node.kid) == 7 else None,
-                arch_type=node.kid[2] if len(node.kid) == 7 else node.kid[1],
-                access=node.kid[3] if len(node.kid) == 7 else node.kid[2],
-                name=node.kid[4] if len(node.kid) == 7 else node.kid[3],
-                base_classes=node.kid[5] if len(node.kid) == 7 else node.kid[4],
-                body=node.kid[-1] if type(node.kid[-1]) == ast.ArchBlock else None,
+                doc=None,
+                decorators=None,
+                arch_type=node.kid[0],
+                access=node.kid[1],
+                name=node.kid[2],
+                base_classes=node.kid[3],
+                body=node.kid[-1] if isinstance(node.kid[-1], ast.ArchBlock) else None,
                 parent=node.parent,
                 mod_link=self.mod_link,
                 kid=node.kid,
                 line=node.line,
             ),
         )
-        if type(node.kid[-1]) == ast.Token:
+        if isinstance(node.kid[-1], ast.Token):
             del node.kid[-1]
 
     def exit_architype_def(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        architype_def -> doc_tag dotted_name strict_arch_ref member_block
-        architype_def -> doc_tag strict_arch_ref member_block
+        architype_def -> abil_to_arch_chain member_block
         """
         replace_node(
             node,
             ast.ArchDef(
-                doc=node.kid[0],
-                mod=node.kid[1] if len(node.kid) == 4 else None,
-                arch=node.kid[2] if len(node.kid) == 4 else node.kid[1],
-                body=node.kid[-1],
+                doc=None,
+                target=node.kid[0],
+                body=node.kid[1],
                 parent=node.parent,
                 mod_link=self.mod_link,
-                kid=node.kid,
+                kid=[node.kid[1]],
                 line=node.line,
             ),
         )
@@ -378,26 +449,12 @@ class AstBuildPass(Pass):
         """
         replace_node(node, node.kid[0])
 
-    def exit_decorators(self, node: ast.AstNode) -> None:
+    def exit_decorator(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        decorators -> decorators DECOR_OP atom
-        decorators -> DECOR_OP atom
+        decorator -> DECOR_OP atom
         """
-        if len(node.kid) == 3:
-            node.kid = node.kid[0].kid + [node.kid[2]]
-        else:
-            node.kid = [node.kid[1]]
-        replace_node(
-            node,
-            ast.Decorators(
-                calls=node.kid,
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
+        replace_node(node, node.kid[1])
 
     def exit_inherited_archs(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -444,7 +501,7 @@ class AstBuildPass(Pass):
             node.kid = node.kid[0].kid + [node.kid[2]]
         replace_node(
             node,
-            ast.NameList(
+            ast.DottedNameList(
                 names=node.kid,
                 parent=node.parent,
                 mod_link=self.mod_link,
@@ -472,8 +529,8 @@ class AstBuildPass(Pass):
     def exit_named_refs(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        named_refs -> NAME
-        named_refs -> arch_ref
+        Rule 63    named_refs -> global_ref
+        Rule 64    named_refs -> esc_name
         """
         replace_node(node, node.kid[0])
 
@@ -497,43 +554,162 @@ class AstBuildPass(Pass):
             ),
         )
 
+    def exit_enum(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        enum -> enum_def
+        enum -> enum_decl
+        """
+        replace_node(node, node.kid[0])
+
+    def exit_enum_decl(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        Rule 72    enum_decl -> KW_ENUM access_tag NAME inherited_archs enum_block
+        Rule 73    enum_decl -> KW_ENUM access_tag NAME inherited_archs SEMI
+        """
+        del node.kid[0]
+        replace_node(
+            node,
+            ast.Enum(
+                doc=None,
+                decorators=None,
+                access=node.kid[0],
+                name=node.kid[1],
+                base_classes=node.kid[2],
+                body=node.kid[-1] if isinstance(node.kid[-1], ast.EnumBlock) else None,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+        if isinstance(node.kid[-1], ast.Token):
+            del node.kid[-1]
+
+    def exit_enum_def(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        Rule 74    enum_def -> arch_to_enum_chain enum_block
+        """
+        replace_node(
+            node,
+            ast.EnumDef(
+                doc=None,
+                target=node.kid[0],
+                body=node.kid[-1],
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
+    def exit_enum_block(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        enum_block -> LBRACE enum_stmt_list RBRACE
+        enum_block -> LBRACE RBRACE
+        """
+        if len(node.kid) == 3:
+            ret = replace_node(node, node.kid[1])
+            node = ret if ret else node
+        else:
+            node.kid = []
+        replace_node(
+            node,
+            ast.EnumBlock(
+                stmts=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
+    def exit_enum_stmt_list(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        enum_stmt_list -> enum_stmt_list COMMA enum_op_assign
+        enum_stmt_list -> enum_stmt_list COMMA NAME
+        enum_stmt_list -> enum_op_assign
+        enum_stmt_list -> NAME
+        """
+        if len(node.kid) == 3:
+            node.kid = node.kid[0].kid + [node.kid[2]]
+
+    def exit_enum_op_assign(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        enum_op_assign -> NAME EQ expression
+        """
+        del node.kid[1]
+        replace_node(
+            node,
+            ast.Assignment(
+                target=node.kid[0],
+                value=node.kid[1],
+                mutable=False,
+                is_static=False,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
     def exit_ability(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        ability -> ability_def
-        ability -> KW_ASYNC ability_decl
-        ability -> ability_decl
+        Rule 82    ability -> decorator ability
+        Rule 83    ability -> ability_def
+        Rule 84    ability -> KW_ASYNC ability_decl
+        Rule 85    ability -> ability_decl
         """
-        if len(node.kid) == 2:
+        if len(node.kid) == 2 and isinstance(node.kid[0], ast.Token):
             new_node = replace_node(node, node.kid[1])
-            if type(new_node) == ast.Ability:
+            if isinstance(new_node, ast.Ability):
                 new_node.is_async = True
+        elif len(node.kid) == 2:
+            dec = node.kid[0]
+            new_node = replace_node(node, node.kid[1])
+            if isinstance(new_node, ast.Ability) and new_node.decorators:
+                new_node.decorators.calls.insert(0, dec)
+                append_node(new_node.decorators, dec, front=True)
+            elif isinstance(new_node, ast.Ability):
+                new_node.decorators = ast.Decorators(
+                    calls=[dec],
+                    parent=new_node,
+                    mod_link=self.mod_link,
+                    kid=[dec],
+                    line=node.line,
+                )
+                append_node(new_node, new_node.decorators, front=True)
+            else:
+                self.ice("Expected node to be ability!")
         else:
             replace_node(node, node.kid[0])
 
     def exit_ability_decl(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        ability_decl -> ability_decl_decor
-        ability_decl -> doc_tag static_tag KW_CAN access_tag all_refs func_decl code_block
-        ability_decl -> doc_tag static_tag KW_CAN access_tag all_refs event_clause code_block
-        ability_decl -> doc_tag static_tag KW_CAN access_tag all_refs func_decl SEMI
-        ability_decl -> doc_tag static_tag KW_CAN access_tag all_refs event_clause SEMI
+        Rule 86    ability_decl -> static_tag KW_CAN access_tag all_refs func_decl code_block
+        Rule 87    ability_decl -> static_tag KW_CAN access_tag all_refs event_clause code_block
+        Rule 88    ability_decl -> static_tag KW_CAN access_tag all_refs func_decl SEMI
+        Rule 89    ability_decl -> static_tag KW_CAN access_tag all_refs event_clause SEMI
         """
-        if len(node.kid) == 1:
-            replace_node(node, node.kid[0])
-            return
-        del node.kid[2]
+        del node.kid[1]
         replace_node(
             node,
             ast.Ability(
-                doc=node.kid[0],
-                access=node.kid[2],
-                is_static=node.kid[1],
-                name_ref=node.kid[3],
-                body=node.kid[-1] if type(node.kid[-1]) == ast.CodeBlock else None,
+                doc=None,
+                access=node.kid[1],
+                is_static=node.kid[0],
+                is_abstract=False,
+                name_ref=node.kid[2],
+                body=node.kid[-1] if isinstance(node.kid[-1], ast.CodeBlock) else None,
                 signature=node.kid[-2],
-                is_func=type(node.kid[-2]) == ast.FuncSignature,
+                is_func=isinstance(node.kid[-2], ast.FuncSignature),
                 is_async=False,
                 decorators=None,
                 parent=node.parent,
@@ -542,55 +718,50 @@ class AstBuildPass(Pass):
                 line=node.line,
             ),
         )
-        if type(node.kid[-1]) == ast.Token:
+        if isinstance(node.kid[-1], ast.Token):
             del node.kid[-1]
 
-    def exit_ability_decl_decor(self, node: ast.AstNode) -> None:
+    def exit_ability_def(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        ability_decl_decor -> doc_tag decorators static_tag KW_CAN access_tag all_refs func_decl code_block
-        ability_decl_decor -> doc_tag decorators static_tag KW_CAN access_tag all_refs event_clause code_block
-        ability_decl_decor -> doc_tag decorators static_tag KW_CAN access_tag all_refs func_decl SEMI
-        ability_decl_decor -> doc_tag decorators static_tag KW_CAN access_tag all_refs event_clause SEMI
+        Rule 90    ability_def -> arch_to_abil_chain func_decl code_block
+        Rule 91    ability_def -> arch_to_abil_chain event_clause code_block
         """
-        del node.kid[3]
         replace_node(
             node,
-            ast.Ability(
-                doc=node.kid[0],
-                decorators=node.kid[1],
-                is_static=node.kid[2],
-                access=node.kid[3],
-                name_ref=node.kid[4],
-                body=node.kid[-1] if type(node.kid[-1]) == ast.CodeBlock else None,
+            ast.AbilityDef(
+                doc=None,
+                target=node.kid[0],
                 signature=node.kid[-2],
-                is_func=type(node.kid[-2]) == ast.FuncSignature,
-                is_async=False,
+                body=node.kid[-1],
                 parent=node.parent,
                 mod_link=self.mod_link,
                 kid=node.kid,
                 line=node.line,
             ),
         )
-        if type(node.kid[-1]) == ast.Token:
-            del node.kid[-1]
 
-    def exit_ability_def(self, node: ast.AstNode) -> None:
+    def exit_abstract_ability(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        ability_def -> doc_tag dotted_name ability_ref func_decl code_block
-        ability_def -> doc_tag ability_ref func_decl code_block
-        ability_def -> doc_tag dotted_name ability_ref event_clause code_block
-        ability_def -> doc_tag ability_ref event_clause code_block
+        Rule 92    abstract_ability -> static_tag KW_CAN access_tag all_refs func_decl KW_ABSTRACT SEMI
+        Rule 93    abstract_ability -> static_tag KW_CAN access_tag all_refs event_clause KW_ABSTRACT SEMI
         """
+        del node.kid[1]
+        del node.kid[-2:]
         replace_node(
             node,
-            ast.AbilityDef(
-                doc=node.kid[0],
-                target=node.kid[1] if len(node.kid) == 5 else None,
-                ability=node.kid[2] if len(node.kid) == 5 else node.kid[1],
-                signature=node.kid[-2],
-                body=node.kid[-1],
+            ast.Ability(
+                doc=None,
+                access=node.kid[1],
+                is_static=node.kid[0],
+                is_abstract=True,
+                name_ref=node.kid[2],
+                body=None,
+                signature=node.kid[-1],
+                is_func=isinstance(node.kid[-1], ast.FuncSignature),
+                is_async=False,
+                decorators=None,
                 parent=node.parent,
                 mod_link=self.mod_link,
                 kid=node.kid,
@@ -723,131 +894,6 @@ class AstBuildPass(Pass):
             ),
         )
 
-    def exit_enum(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum -> enum_def
-        enum -> enum_decl
-        """
-        replace_node(node, node.kid[0])
-
-    def exit_enum_decl(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum_decl -> doc_tag decorators KW_ENUM access_tag NAME inherited_archs enum_block
-        enum_decl -> doc_tag decorators KW_ENUM access_tag NAME inherited_archs SEMI
-        enum_decl -> doc_tag KW_ENUM access_tag NAME inherited_archs enum_block
-        enum_decl -> doc_tag KW_ENUM access_tag NAME inherited_archs SEMI
-        """
-        if type(node.kid[1]) == ast.Token:
-            del node.kid[1]
-            replace_node(
-                node,
-                ast.Enum(
-                    doc=node.kid[0],
-                    decorators=None,
-                    access=node.kid[1],
-                    name=node.kid[2],
-                    base_classes=node.kid[3],
-                    body=node.kid[-1] if type(node.kid[-1]) == ast.EnumBlock else None,
-                    parent=node.parent,
-                    mod_link=self.mod_link,
-                    kid=node.kid,
-                    line=node.line,
-                ),
-            )
-        else:
-            replace_node(
-                node,
-                ast.Enum(
-                    doc=node.kid[0],
-                    decorators=node.kid[1],
-                    access=node.kid[2],
-                    name=node.kid[3],
-                    base_classes=node.kid[4],
-                    body=node.kid[-1] if type(node.kid[-1]) == ast.EnumBlock else None,
-                    parent=node.parent,
-                    mod_link=self.mod_link,
-                    kid=node.kid,
-                    line=node.line,
-                ),
-            )
-        if type(node.kid[-1]) == ast.Token:
-            del node.kid[-1]
-
-    def exit_enum_def(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum_def -> doc_tag dotted_name enum_ref enum_block
-        enum_def -> doc_tag enum_ref enum_block
-        """
-        replace_node(
-            node,
-            ast.EnumDef(
-                doc=node.kid[0],
-                enum=node.kid[-2],
-                mod=node.kid[1] if len(node.kid) == 4 else None,
-                body=node.kid[-1],
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
-
-    def exit_enum_block(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum_block -> LBRACE enum_stmt_list RBRACE
-        enum_block -> LBRACE RBRACE
-        """
-        if len(node.kid) == 3:
-            ret = replace_node(node, node.kid[1])
-            node = ret if ret else node
-        else:
-            node.kid = []
-        replace_node(
-            node,
-            ast.EnumBlock(
-                stmts=node.kid,
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
-
-    def exit_enum_stmt_list(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum_stmt_list -> enum_stmt_list COMMA enum_op_assign
-        enum_stmt_list -> enum_stmt_list COMMA NAME
-        enum_stmt_list -> enum_op_assign
-        enum_stmt_list -> NAME
-        """
-        if len(node.kid) == 3:
-            node.kid = node.kid[0].kid + [node.kid[2]]
-
-    def exit_enum_op_assign(self, node: ast.AstNode) -> None:
-        """Grammar rule.
-
-        enum_op_assign -> NAME EQ expression
-        """
-        del node.kid[1]
-        replace_node(
-            node,
-            ast.Assignment(
-                target=node.kid[0],
-                value=node.kid[1],
-                mutable=False,
-                is_static=False,
-                parent=node.parent,
-                mod_link=self.mod_link,
-                kid=node.kid,
-                line=node.line,
-            ),
-        )
-
     def exit_member_block(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
@@ -882,26 +928,38 @@ class AstBuildPass(Pass):
     def exit_member_stmt(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        member_stmt -> ability
-        member_stmt -> has_stmt
+        Rule 113   member_stmt -> python_code_block
+        Rule 114   member_stmt -> doc_tag abstract_ability
+        Rule 115   member_stmt -> doc_tag ability
+        Rule 116   member_stmt -> doc_tag architype
+        Rule 117   member_stmt -> doc_tag has_stmt
         """
-        replace_node(node, node.kid[0])
+        if len(node.kid) == 2:
+            doc = node.kid[0]
+            new_node = replace_node(node, node.kid[-1])
+            if new_node and hasattr(new_node, "doc"):
+                new_node.doc = doc  # type: ignore
+                append_node(new_node, doc, front=True)
+            else:
+                self.ice("Expected node to have doc attribute!")
+        else:
+            replace_node(node, node.kid[0])
 
     def exit_has_stmt(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        has_stmt -> doc_tag static_tag KW_FREEZE access_tag has_assign_clause SEMI
-        has_stmt -> doc_tag static_tag KW_HAS access_tag has_assign_clause SEMI
+        Rule 119   has_stmt -> static_tag KW_FREEZE access_tag has_assign_clause SEMI
+        Rule 120   has_stmt -> static_tag KW_HAS access_tag has_assign_clause SEMI
         """
-        is_frozen = node.kid[2].name == Tok.KW_FREEZE
-        node.kid = [node.kid[0], node.kid[1], node.kid[3], node.kid[4]]
+        is_frozen = node.kid[1].name == Tok.KW_FREEZE
+        node.kid = [node.kid[0], node.kid[2], node.kid[3]]
         replace_node(
             node,
             ast.ArchHas(
-                doc=node.kid[0],
-                is_static=node.kid[1],
-                access=node.kid[2],
-                vars=node.kid[3],
+                doc=None,
+                is_static=node.kid[0],
+                access=node.kid[1],
+                vars=node.kid[2],
                 is_frozen=is_frozen,
                 parent=node.parent,
                 mod_link=self.mod_link,
@@ -986,10 +1044,10 @@ class AstBuildPass(Pass):
         if len(node.kid) == 3:
             node.kid = node.kid[0].kid + [node.kid[2]]
         if len(node.kid) == 2:
-            if type(node.kid[0]) == ast.TypeSpecList:
+            if isinstance(node.kid[0], ast.TypeSpecList):
                 node.kid[0].kid[0].null_ok = True
                 node.kid = node.kid[0].kid
-            elif type(node.kid[0]) == ast.TypeSpec:
+            elif isinstance(node.kid[0], ast.TypeSpec):
                 node.kid[0].null_ok = True
             else:
                 raise Exception(f"Invalid type spec{type(node.kid[0])}")
@@ -1091,27 +1149,57 @@ class AstBuildPass(Pass):
     def exit_statement(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        statement -> walker_stmt
-        statement -> await_stmt SEMI
-        statement -> yield_stmt SEMI
-        statement -> return_stmt SEMI
-        statement -> report_stmt SEMI
-        statement -> delete_stmt SEMI
-        statement -> ctrl_stmt SEMI
-        statement -> assert_stmt SEMI
-        statement -> raise_stmt SEMI
-        statement -> with_ctx_stmt
-        statement -> while_stmt
-        statement -> for_stmt
-        statement -> try_stmt
-        statement -> if_stmt
-        statement -> expression SEMI
-        statement -> static_assignment
-        statement -> assignment SEMI
-        statement -> ability_decl
-        statement -> architype_decl
+        Rule 155   statement -> python_code_block
+        Rule 156   statement -> walker_stmt
+        Rule 157   statement -> await_stmt SEMI
+        Rule 158   statement -> yield_stmt SEMI
+        Rule 159   statement -> return_stmt SEMI
+        Rule 160   statement -> report_stmt SEMI
+        Rule 161   statement -> delete_stmt SEMI
+        Rule 162   statement -> ctrl_stmt SEMI
+        Rule 163   statement -> assert_stmt SEMI
+        Rule 164   statement -> raise_stmt SEMI
+        Rule 165   statement -> with_stmt
+        Rule 166   statement -> while_stmt
+        Rule 167   statement -> for_stmt
+        Rule 168   statement -> try_stmt
+        Rule 169   statement -> if_stmt
+        Rule 170   statement -> expression SEMI
+        Rule 171   statement -> static_assignment
+        Rule 172   statement -> assignment SEMI
+        Rule 173   statement -> typed_ctx_block
+        Rule 174   statement -> doc_tag ability
+        Rule 175   statement -> doc_tag architype
+        Rule 176   statement -> import_stmt
         """
-        replace_node(node, node.kid[0])
+        if isinstance(
+            node.kid[-1],
+            (
+                ast.Architype,
+                ast.ArchDef,
+                ast.Enum,
+                ast.EnumDef,
+                ast.Ability,
+                ast.AbilityDef,
+            ),
+        ):
+            doc = node.kid[0]
+            new_node = replace_node(node, node.kid[-1])
+            if isinstance(
+                new_node,
+                (
+                    ast.Architype,
+                    ast.ArchDef,
+                    ast.Enum,
+                    ast.EnumDef,
+                    ast.Ability,
+                    ast.AbilityDef,
+                ),
+            ):
+                new_node.doc = doc
+                append_node(new_node, doc, front=True)
+        else:
+            replace_node(node, node.kid[0])
 
     def exit_typed_ctx_block(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -1154,7 +1242,7 @@ class AstBuildPass(Pass):
                     line=node.line,
                 ),
             )
-        elif len(node.kid) == 4 and type(node.kid[3]) == ast.ElseIfs:
+        elif len(node.kid) == 4 and isinstance(node.kid[3], ast.ElseIfs):
             node.kid = [node.kid[1], node.kid[2], node.kid[3]]
             replace_node(
                 node,
@@ -1270,7 +1358,7 @@ class AstBuildPass(Pass):
                     line=node.line,
                 ),
             )
-        elif len(node.kid) == 3 and type(node.kid[2]) == ast.ExceptList:
+        elif len(node.kid) == 3 and isinstance(node.kid[2], ast.ExceptList):
             node.kid = [node.kid[1], node.kid[2]]
             replace_node(
                 node,
@@ -1387,8 +1475,7 @@ class AstBuildPass(Pass):
     def exit_for_stmt(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        for_stmt -> KW_FOR NAME COMMA NAME KW_IN expression code_block
-        for_stmt -> KW_FOR NAME KW_IN expression code_block
+        for_stmt -> KW_FOR name_list KW_IN expression code_block
         for_stmt -> KW_FOR assignment KW_TO expression KW_BY expression code_block
         """
         if node.kid[2].name == Tok.KW_TO:
@@ -1406,12 +1493,12 @@ class AstBuildPass(Pass):
                     line=node.line,
                 ),
             )
-        elif node.kid[2].name == Tok.KW_IN:
+        else:
             node.kid = [node.kid[1], node.kid[3], node.kid[4]]
             replace_node(
                 node,
                 ast.InForStmt(
-                    name=node.kid[0],
+                    name_list=node.kid[0],
                     collection=node.kid[1],
                     body=node.kid[2],
                     parent=node.parent,
@@ -1420,21 +1507,25 @@ class AstBuildPass(Pass):
                     line=node.line,
                 ),
             )
-        else:
-            node.kid = [node.kid[1], node.kid[3], node.kid[5], node.kid[6]]
-            replace_node(
-                node,
-                ast.DictForStmt(
-                    k_name=node.kid[0],
-                    v_name=node.kid[1],
-                    collection=node.kid[2],
-                    body=node.kid[3],
-                    parent=node.parent,
-                    mod_link=self.mod_link,
-                    kid=node.kid,
-                    line=node.line,
-                ),
-            )
+
+    def exit_name_list(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        dotted_name -> name_list COMMA NAME
+        dotted_name -> NAME
+        """
+        if len(node.kid) == 3:
+            node.kid = node.kid[0].kid + [node.kid[2]]
+        replace_node(
+            node,
+            ast.NameList(
+                names=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
 
     def exit_while_stmt(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -1481,7 +1572,7 @@ class AstBuildPass(Pass):
         expr_as_list -> expression
         """
         this_item = None
-        if type(node.kid[0]) != ast.ExprAsItemList:
+        if not isinstance(node.kid[0], ast.ExprAsItemList):
             this_item = ast.ExprAsItem(
                 expr=node.kid[0],
                 alias=node.kid[2] if len(node.kid) == 3 else None,
@@ -1715,7 +1806,7 @@ class AstBuildPass(Pass):
         visit_stmt -> KW_VISIT expression SEMI
         """
         meta = {"typ": None, "else_body": None}
-        if type(node.kid[-1]) != ast.ElseStmt:
+        if not isinstance(node.kid[-1], ast.ElseStmt):
             if len(node.kid) == 4:
                 node.kid = [node.kid[1], node.kid[2]]
                 meta["typ"] = node.kid[0]
@@ -2406,7 +2497,7 @@ class AstBuildPass(Pass):
         list_compr -> LSQUARE inner_compr RSQUARE
         """
         ret = replace_node(node, node.kid[1])
-        if type(ret) == ast.InnerCompr:
+        if isinstance(ret, ast.InnerCompr):
             ret.is_list = True
         else:
             self.ice("Expected InnerCompr")
@@ -2417,7 +2508,7 @@ class AstBuildPass(Pass):
         gen_compr -> LPAREN inner_compr RPAREN
         """
         ret = replace_node(node, node.kid[1])
-        if type(ret) == ast.InnerCompr:
+        if isinstance(ret, ast.InnerCompr):
             ret.is_gen = True
         else:
             self.ice("Expected InnerCompr")
@@ -2428,7 +2519,7 @@ class AstBuildPass(Pass):
         set_compr -> LBRACE inner_compr RBRACE
         """
         ret = replace_node(node, node.kid[1])
-        if type(ret) == ast.InnerCompr:
+        if isinstance(ret, ast.InnerCompr):
             ret.is_set = True
         else:
             self.ice("Expected InnerCompr")
@@ -2436,12 +2527,12 @@ class AstBuildPass(Pass):
     def exit_inner_compr(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        inner_compr -> expression KW_FOR NAME KW_IN walrus_assign KW_IF expression
-        inner_compr -> expression KW_FOR NAME KW_IN walrus_assign
+        inner_compr -> expression KW_FOR name_list KW_IN walrus_assign KW_IF expression
+        inner_compr -> expression KW_FOR name_list KW_IN walrus_assign
         """
         meta = {
             "out_expr": node.kid[0],
-            "name": node.kid[2],
+            "name_list": node.kid[2],
             "collection": node.kid[4],
             "conditional": None,
         }
@@ -2455,7 +2546,7 @@ class AstBuildPass(Pass):
             node,
             ast.InnerCompr(
                 out_expr=meta["out_expr"],
-                name=meta["name"],
+                name_list=meta["name_list"],
                 collection=meta["collection"],
                 conditional=meta["conditional"],
                 is_list=False,
@@ -2471,45 +2562,29 @@ class AstBuildPass(Pass):
     def exit_dict_compr(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        dict_compr -> LBRACE expression COLON expression KW_FOR NAME COMMA NAME KW_IN walrus_assign KW_IF expression RBRACE # noqa
-        dict_compr -> LBRACE expression COLON expression KW_FOR NAME COMMA NAME KW_IN walrus_assign RBRACE
-        dict_compr -> LBRACE expression COLON expression KW_FOR NAME KW_IN walrus_assign KW_IF expression RBRACE
-        dict_compr -> LBRACE expression COLON expression KW_FOR NAME KW_IN walrus_assign RBRACE
+        dict_compr -> LBRACE expression COLON expression KW_FOR name_list KW_IN walrus_assign KW_IF expression RBRACE
+        dict_compr -> LBRACE expression COLON expression KW_FOR name_list KW_IN walrus_assign RBRACE
         """
         meta = {
             "outk_expr": node.kid[1],
             "outv_expr": node.kid[3],
-            "k_name": node.kid[5],
+            "name_list": node.kid[5],
             "conditional": None,
+            "collection": node.kid[7],
         }
-        if node.kid[6].name == Tok.COMMA:
-            meta["v_name"] = node.kid[7]
-            meta["collection"] = node.kid[9]
-        else:
-            meta["v_name"] = None
-            meta["collection"] = node.kid[7]
+
         if node.kid[-3].name == Tok.KW_IF:
             meta["conditional"] = node.kid[-2]
         if len(node.kid) == 9:
             node.kid = [node.kid[1], node.kid[3], node.kid[5], node.kid[7]]
         elif len(node.kid) == 11:
             node.kid = [node.kid[1], node.kid[3], node.kid[5], node.kid[7], node.kid[9]]
-        elif len(node.kid) == 13:
-            node.kid = [
-                node.kid[1],
-                node.kid[3],
-                node.kid[5],
-                node.kid[7],
-                node.kid[9],
-                node.kid[11],
-            ]
         replace_node(
             node,
             ast.DictCompr(
                 outk_expr=meta["outk_expr"],
                 outv_expr=meta["outv_expr"],
-                k_name=meta["k_name"],
-                v_name=meta["v_name"],
+                name_list=meta["name_list"],
                 collection=meta["collection"],
                 conditional=meta["conditional"],
                 parent=node.parent,
@@ -2555,7 +2630,6 @@ class AstBuildPass(Pass):
         """Grammar rule.
 
         atomic_chain_unsafe -> atom filter_compr
-        atomic_chain_unsafe -> atom arch_ref
         atomic_chain_unsafe -> atom index_slice
         atomic_chain_unsafe -> atom DOT NAME
         atomic_chain_unsafe -> atom DOT_FWD NAME
@@ -2563,7 +2637,7 @@ class AstBuildPass(Pass):
         """
         target = node.kid[0]
         right = node.kid[-1]
-        if type(node.kid[1]) == ast.Token and node.kid[1].name == Tok.DOT_FWD:
+        if isinstance(node.kid[1], ast.Token) and node.kid[1].name == Tok.DOT_FWD:
             target = node.kid[-1]
             right = node.kid[0]
         if len(node.kid) == 3:
@@ -2585,7 +2659,6 @@ class AstBuildPass(Pass):
         """Grammar rule.
 
         atomic_chain_safe -> atom NULL_OK filter_compr
-        atomic_chain_safe -> atom NULL_OK arch_ref
         atomic_chain_safe -> atom NULL_OK index_slice
         atomic_chain_safe -> atom NULL_OK DOT NAME
         atomic_chain_safe -> atom NULL_OK DOT_FWD NAME
@@ -2593,7 +2666,7 @@ class AstBuildPass(Pass):
         """
         target = node.kid[0]
         right = node.kid[-1]
-        if type(node.kid[1]) == ast.Token and node.kid[1].name == Tok.DOT_FWD:
+        if isinstance(node.kid[1], ast.Token) and node.kid[1].name == Tok.DOT_FWD:
             target = node.kid[-1]
             right = node.kid[0]
         if len(node.kid) == 3:
@@ -2647,7 +2720,7 @@ class AstBuildPass(Pass):
         param_list -> expr_list
         """
         if len(node.kid) == 1:
-            if type(node.kid[0]) == ast.ExprList:
+            if isinstance(node.kid[0], ast.ExprList):
                 replace_node(
                     node,
                     ast.ParamList(
@@ -2707,28 +2780,44 @@ class AstBuildPass(Pass):
     def exit_index_slice(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
+        index_slice -> LSQUARE COLON RSQUARE
         index_slice -> LSQUARE COLON expression RSQUARE
         index_slice -> LSQUARE expression COLON RSQUARE
         index_slice -> LSQUARE expression COLON expression RSQUARE
         index_slice -> LSQUARE expression RSQUARE
         """
         if len(node.kid) == 3:
-            node.kid = [node.kid[1]]
-            replace_node(
-                node,
-                ast.IndexSlice(
-                    start=node.kid[0],
-                    stop=None,
-                    is_range=False,
-                    parent=node.parent,
-                    mod_link=self.mod_link,
-                    kid=node.kid,
-                    line=node.line,
-                ),
-            )
+            if hasattr(node.kid[1], "name") and node.kid[1].name == Tok.COLON:
+                node.kid = []
+                replace_node(
+                    node,
+                    ast.IndexSlice(
+                        start=None,
+                        stop=None,
+                        is_range=True,
+                        parent=node.parent,
+                        mod_link=self.mod_link,
+                        kid=node.kid,
+                        line=node.line,
+                    ),
+                )
+            else:
+                node.kid = [node.kid[1]]
+                replace_node(
+                    node,
+                    ast.IndexSlice(
+                        start=node.kid[0],
+                        stop=None,
+                        is_range=False,
+                        parent=node.parent,
+                        mod_link=self.mod_link,
+                        kid=node.kid,
+                        line=node.line,
+                    ),
+                )
         elif len(node.kid) == 4:
-            start = node.kid[1] if type(node.kid[1]) != ast.Token else None
-            stop = node.kid[2] if type(node.kid[2]) != ast.Token else None
+            start = node.kid[1] if type(node.kid[1]) is not ast.Token else None
+            stop = node.kid[2] if type(node.kid[2]) is not ast.Token else None
             node.kid = [start if start else stop]
             if not isinstance(node.kid[0], ast.AstNode):
                 self.ice("Somethings wrong with the parser.")
@@ -2780,23 +2869,90 @@ class AstBuildPass(Pass):
     def exit_arch_ref(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        arch_ref -> ability_ref
-        arch_ref -> object_ref
-        arch_ref -> walker_ref
-        arch_ref -> edge_ref
-        arch_ref -> node_ref
+        Rule 392   arch_ref -> object_ref
+        Rule 393   arch_ref -> walker_ref
+        Rule 394   arch_ref -> edge_ref
+        Rule 395   arch_ref -> node_ref
         """
         replace_node(node, node.kid[0])
 
-    def exit_strict_arch_ref(self, node: ast.AstNode) -> None:
+    def exit_arch_or_ability_chain(self, node: ast.AstNode) -> None:
         """Grammar rule.
 
-        strict_arch_ref -> object_ref
-        strict_arch_ref -> walker_ref
-        strict_arch_ref -> edge_ref
-        strict_arch_ref -> node_ref
+        Rule 396   arch_or_ability_chain -> arch_or_ability_chain ability_ref
+        Rule 397   arch_or_ability_chain -> arch_or_ability_chain arch_ref
+        Rule 398   arch_or_ability_chain -> ability_ref
+        Rule 399   arch_or_ability_chain -> arch_ref
         """
-        replace_node(node, node.kid[0])
+        if len(node.kid) == 2:
+            node.kid = node.kid[0].kid + [node.kid[1]]
+        replace_node(
+            node,
+            ast.ArchRefChain(
+                archs=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
+    def exit_abil_to_arch_chain(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        Rule 400   abil_to_arch_chain -> arch_or_ability_chain arch_ref
+        Rule 401   abil_to_arch_chain -> arch_ref
+        """
+        if len(node.kid) == 2:
+            node.kid = node.kid[0].kid + [node.kid[1]]
+        replace_node(
+            node,
+            ast.ArchRefChain(
+                archs=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
+    def exit_arch_to_abil_chain(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        Rule 402   arch_to_abil_chain -> arch_or_ability_chain ability_ref
+        Rule 403   arch_to_abil_chain -> ability_ref
+        """
+        if len(node.kid) == 2:
+            node.kid = node.kid[0].kid + [node.kid[1]]
+        replace_node(
+            node,
+            ast.ArchRefChain(
+                archs=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
+
+    def exit_arch_to_enum_chain(self, node: ast.AstNode) -> None:
+        """Grammar rule.
+
+        Rule 404   arch_to_enum_chain -> arch_or_ability_chain enum_ref
+        Rule 405   arch_to_enum_chain -> enum_ref
+        """
+        if len(node.kid) == 2:
+            node.kid = node.kid[0].kid + [node.kid[1]]
+        replace_node(
+            node,
+            ast.ArchRefChain(
+                archs=node.kid,
+                parent=node.parent,
+                mod_link=self.mod_link,
+                kid=node.kid,
+                line=node.line,
+            ),
+        )
 
     def exit_node_ref(self, node: ast.AstNode) -> None:
         """Grammar rule.
@@ -2991,7 +3147,7 @@ class AstBuildPass(Pass):
         """
         ret = replace_node(node, node.kid[1])
         node = ret if ret else node
-        if type(node) == ast.EdgeOpRef:
+        if isinstance(node, ast.EdgeOpRef):
             replace_node(
                 node,
                 ast.DisconnectOp(

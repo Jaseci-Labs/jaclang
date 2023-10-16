@@ -3,7 +3,7 @@ from typing import Optional, TypeVar
 
 import jaclang.jac.absyntree as ast
 from jaclang.jac.transform import Transform
-from jaclang.jac.utils import pascal_to_snake
+from jaclang.utils.helpers import pascal_to_snake
 
 T = TypeVar("T", bound=ast.AstNode)
 
@@ -13,15 +13,16 @@ class Pass(Transform):
 
     def __init__(
         self,
+        prior: Transform,
         mod_path: str,
         input_ir: ast.AstNode,
         base_path: str = "",
-        prior: Optional[Transform] = None,
     ) -> None:
         """Initialize parser."""
         self.term_signal = False
         self.prune_signal = False
         self.cur_node = input_ir  # tracks current node during traversal
+        self.ir = input_ir
         Transform.__init__(self, mod_path, input_ir, base_path, prior)
 
     def before_pass(self) -> None:
@@ -88,13 +89,17 @@ class Pass(Transform):
     # -------------------------
     def transform(self, ir: ast.AstNode) -> ast.AstNode:
         """Run pass."""
+        # Only performs passes on proper ASTs
+        if not isinstance(ir, ast.AstNode):
+            return ir
         self.before_pass()
         if not isinstance(ir, ast.AstNode):
             raise ValueError("Current node is not an AstNode.")
         self.traverse(ir)
-        self.after_pass()
         # Checks if self.ir is created during traversal
-        return self.ir if hasattr(self, "ir") else ir
+        self.ir = self.ir if hasattr(self, "ir") else ir
+        self.after_pass()
+        return self.ir
 
     def traverse(self, node: ast.AstNode) -> ast.AstNode:
         """Traverse tree."""
@@ -112,25 +117,28 @@ class Pass(Transform):
         self.exit_node(node)
         return node
 
-    def update_code_loc(self) -> None:
+    def update_code_loc(self, node: Optional[ast.AstNode] = None) -> None:
         """Update code location."""
-        if not isinstance(self.cur_node, ast.AstNode):
+        if node is None:
+            node = self.cur_node
+        if not isinstance(node, ast.AstNode):
             self.ice("Current node is not an AstNode.")
-        self.cur_line = self.cur_node.line
-        if self.cur_node.mod_link:
-            self.rel_mod_path = self.cur_node.mod_link.rel_mod_path
+        self.cur_line = node.line
+        if node.mod_link:
+            self.rel_mod_path = node.mod_link.rel_mod_path
+            self.mod_path = node.mod_link.mod_path
 
-    def error(self, msg: str) -> None:
+    def error(self, msg: str, node_override: Optional[ast.AstNode] = None) -> None:
         """Pass Error."""
-        self.update_code_loc()
+        self.update_code_loc(node_override)
         self.log_error(f"{msg}")
 
-    def warning(self, msg: str) -> None:
+    def warning(self, msg: str, node_override: Optional[ast.AstNode] = None) -> None:
         """Pass Error."""
-        self.update_code_loc()
+        self.update_code_loc(node_override)
         self.log_warning(f"{msg}")
 
-    def ice(self, msg: str) -> None:
+    def ice(self, msg: str = "Something went horribly wrong!") -> None:
         """Pass Error."""
         if isinstance(self.cur_node, ast.AstNode):
             self.cur_line = self.cur_node.line

@@ -103,13 +103,13 @@ arch_attached: Optional["ArchBlock"] = None,
         nd.signature.event.name == Tok.KW_ENTRY {
         "Object" |> <self>.add_element_import;
         type_list = nd.signature.arch_tag_info?.meta?["py_code"] ?: "";
-        (nd, f"@{C.OBJECT_CLASS}._jac_on_entry([{type_list.replace('|', ', ')}])") |> <self>.emit_ln;
+        (nd, f"@{C.OBJECT_CLASS}.{C.ON_ENTRY}([{type_list.replace('|', ', ')}])") |> <self>.emit_ln;
     }
     elif nd.signature:>type == ast.EventSignature and nd.arch_attached and
         nd.signature.event.name == Tok.KW_EXIT {
         "Object" |> <self>.add_element_import;
         type_list = nd.signature.arch_tag_info?.meta?["py_code"] ?: "";
-        (nd, f"@{C.OBJECT_CLASS}._jac_on_exit([{type_list.replace('|', ', ')}])") |> <self>.emit_ln;
+        (nd, f"@{C.OBJECT_CLASS}.{C.ON_EXIT}([{type_list.replace('|', ', ')}])") |> <self>.emit_ln;
     }
     (nd) |> <super>.exit_ability;
 }
@@ -123,14 +123,11 @@ return_type: Optional["TypeSpec"],
 """
 :object:PurplePygenPass:ability:exit_event_signature
 (nd: ast.EventSignature) {
-    if (nd.parent|>type) == ast.Ability and nd.parent.arch_attached {
-        (nd, ", ") |> <self>.emit;
-    }
     if nd.arch_tag_info {
-        (nd, f"{C.HERE}: {nd.arch_tag_info.meta['py_code']})")
+        (nd, f"{C.HERE}: {nd.arch_tag_info.meta['py_code']}")
             |> <self>.emit;
     } else {
-        (nd, f"{C.HERE})") |> <self>.emit;
+        (nd, f"{C.HERE}") |> <self>.emit;
     }
     if nd.return_type {
         (nd, f" -> {nd.return_type.meta['py_code']}") |> <self>.emit;
@@ -154,6 +151,19 @@ ctrl: Token,
 
 """Sub objects.
 
+ctrl: Token,
+from_walker: bool = False,
+"""
+:object:PurplePygenPass:ability:exit_ignore_stmt
+(nd: ast.IgnoreStmt) {
+    loc = 'self' if nd.from_walker else C.HERE;
+    (nd, f"{loc}.{C.WALKER_IGNORE}({nd.target.meta['py_code']})" )
+        |> <self>.emit_ln;
+}
+
+
+"""Sub objects.
+
 vis_type: Optional[Token],
 target: ExprType,
 else_body: Optional["ElseStmt"],
@@ -162,7 +172,7 @@ from_walker: bool = False,
 :object:PurplePygenPass:ability:exit_visit_stmt
 (nd: ast.VisitStmt) {
     vis_type = nd.vis_type?.value ?: "";
-    loc = f"{'self' if nd.from_walker else C.HERE}";
+    loc = 'self' if nd.from_walker else C.HERE;
     (nd, f"if not {loc}.{C.WALKER_VISIT}({nd.target.meta['py_code']}): " )
         |> <self>.emit_ln;
     <self>.indent_level += 1;
@@ -180,7 +190,7 @@ from_walker: bool = False,
 """
 :object:PurplePygenPass:ability:exit_disengage_stmt
 (nd: ast.VisitStmt) {
-    loc = f"{'self' if nd.from_walker else C.HERE}";
+    loc = 'self' if nd.from_walker else C.HERE;
     (nd, f"return {loc}.{C.DISENGAGE}()") |> <self>.emit_ln;
 }
 
@@ -193,10 +203,15 @@ op: Token,
 """
 :object:PurplePygenPass:ability:exit_binary_expr
 (nd: ast.BinaryExpr) {
-    if (nd.op|>type) == ast.ConnectOp {
+    if (nd.op:>type) == ast.ConnectOp {
         (nd, f"{nd.left.meta['py_code']}.{C.CONNECT_NODE}({nd.right.meta['py_code']}, {nd.op.meta['py_code']})")
             |> <self>.emit;
-    } else {
+    } elif (nd.op:>type) == ast.DisconnectOp {
+        <self>.ds_feature_warn(); # TODO: Implement
+    } elif nd.op.name == Tok.PIPE_FWD and isinstance(nd.right, ast.TupleVal) {
+        <self>.ds_feature_warn(); # TODO: Implement
+    }
+    else {
         <super>.exit_binary_expr(nd);
     }
 }
@@ -207,25 +222,27 @@ op: Token,
 filter_type: Optional[ExprType],
 filter_cond: Optional[FilterCompr],
 edge_dir: EdgeDir,
+from_walker: bool = False,
 """
 :object:PurplePygenPass:ability:exit_edge_op_ref
 (nd: ast.EdgeOpRef) {
+    loc = C.HERE if nd.from_walker else 'self';
     edge_dir = f"{C.EDGE_DIR}.IN" if nd.edge_dir == EdgeDir.IN
                else f"{C.EDGE_DIR}.OUT" if nd.edge_dir == EdgeDir.OUT
                else f"{C.EDGE_DIR}.ANY";
     if nd.filter_type and nd.filter_cond {
-        (nd, f"[{C.JAC_TMP} for {C.JAC_TMP} in {C.HERE}.{C.EDGES_TO_NODE}({edge_dir})"
+        (nd, f"[{C.JAC_TMP} for {C.JAC_TMP} in {loc}.{C.EDGES_TO_NODE}({edge_dir})"
             f" if isinstance({C.JAC_TMP}, {nd.filter_type.meta['py_code']})"
             f" and {nd.filter_cond.meta['py_code'].replace(C.PATCH, C.JAC_TMP)}]")
             |> <self>.emit;
     }
     elif nd.filter_type {
-        (nd, f"[{C.JAC_TMP} for {C.JAC_TMP} in {C.HERE}.{C.EDGES_TO_NODE}({edge_dir})"
+        (nd, f"[{C.JAC_TMP} for {C.JAC_TMP} in {loc}.{C.EDGES_TO_NODE}({edge_dir})"
             f" if isinstance({C.JAC_TMP}, {nd.filter_type.meta['py_code']})]")
             |> <self>.emit;
     }
     else {
-        (nd, f"{C.HERE}.{C.EDGES_TO_NODE}({edge_dir})")
+        (nd, f"{loc}.{C.EDGES_TO_NODE}({edge_dir})")
             |> <self>.emit;
     }
 }
