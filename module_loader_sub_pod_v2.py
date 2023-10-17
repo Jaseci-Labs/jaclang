@@ -1,5 +1,8 @@
 """Module for loading Python modules in separate Kubernetes pods."""
 
+import asyncio
+import functools
+import logging
 import pickle
 import socket
 import subprocess
@@ -8,6 +11,9 @@ import time
 import httpx
 
 from kubernetes import client, config
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     config.load_incluster_config()
@@ -24,21 +30,19 @@ NAMESPACE = "default"
 class ModuleLoader:
     """A class responsible for loading Python modules in separate Kubernetes pods."""
 
-    def __init__(self: "ModuleLoader") -> None:
+    def __init__(self) -> None:
         """Initialize the ModuleLoader."""
         self.modules_data = {}
 
-    def __call__(
-        self: "ModuleLoader", module_name: str, server_ip: str = None
-    ) -> "ModuleLoader.ModuleProxy":
-        """Call method to load a module."""
+    async def __call__(self, module_name: str, server_ip: str = None) -> "ModuleLoader":
+        """Call the ModuleLoader."""
         if module_name not in self.modules_data:
-            self.load_module(module_name, server_ip=server_ip)
+            await self.load_module(module_name, server_ip=server_ip)
         return self.modules_data[module_name]
 
-    def load_module(
-        self: "ModuleLoader", module_name: str, server_ip: str = None
-    ) -> None:
+    async def load_module(
+        self, module_name: str, server_ip: str = None
+    ) -> "ModuleLoader":
         """Load a module."""
         pod_name = f"{module_name}-server"
         try:
@@ -48,8 +52,9 @@ class ModuleLoader:
                     proxy = self.ModuleProxy(module_name, server_ip=server_ip)
                     self.modules_data[module_name] = proxy
                 return self.modules_data[module_name]
-        except client.exceptions.ApiException:
-            pass
+        except client.exceptions.ApiException as e:
+            if e.status != 404:
+                logging.error(f"Error reading namespaced pod: {e}")
 
         # If not, create the pod
         pod_spec = client.V1Pod(
@@ -71,11 +76,22 @@ class ModuleLoader:
 
         kube_client.create_namespaced_pod(body=pod_spec, namespace=NAMESPACE)
 
-        while True:
-            pod = kube_client.read_namespaced_pod(pod_name, namespace=NAMESPACE)
-            if pod.status.phase == "Running":
-                break
-            time.sleep(1)
+        # Introduce a timeout for waiting for the pod to be in the "Running" state
+        retries = 30  # Number of retries
+        delay = 10  # Delay in seconds between retries
+        for _ in range(retries):
+            try:
+                pod = kube_client.read_namespaced_pod(pod_name, namespace=NAMESPACE)
+                if pod.status.phase == "Running":
+                    break
+            except client.exceptions.ApiException as e:
+                logging.error(f"Error reading namespaced pod: {e}")
+            await asyncio.sleep(delay)
+        else:
+            logging.error(
+                f"Pod {pod_name} did not start after {retries * delay} seconds."
+            )
+            return
 
         # Create a proxy for the module
         proxy = self.ModuleProxy(module_name, server_ip=server_ip)
@@ -105,21 +121,29 @@ class ModuleLoader:
             """Install a missing module."""
             try:
                 response = httpx.post(
-                    f"http://{self.server_ip}:{self.local_port}/install_dependency/",
+                    f"http://{self.server_ip}:{self.local_port}/install_module/",
                     json={"module_name": module_name},
                 )
-                if response.status_code == 200:
-                    if response.json().get("status") == "success":
-                        print(f"Successfully installed {module_name}")
-                    else:
-                        print(
-                            f"Failed to install {module_name}. Reason: {response.text}"
-                        )
+                task_id = response.json().get("task_id")
+                print(f"Received task ID: {task_id}")  # Add logging
+                # Wait for the installation to complete
+
+                while True:
+                    status_response = httpx.get(
+                        f"http://{self.server_ip}:{self.local_port}/install_status/{task_id}/"  # noqa
+                    )
+                    status = status_response.json().get("status")
+                    if status == "completed":
+                        break
+                    elif status.startswith("error"):
+                        print(f"Error during installation: {status}")
+                        break
+                    time.sleep(10)  # Wait for 10 seconds before checking again
             except Exception as install_e:
                 print(f"Error while trying to install {module_name}: {install_e}")
 
         def wait_for_server(
-            self: "ModuleLoader.ModuleProxy", timeout: int = 20
+            self: "ModuleLoader.ModuleProxy", timeout: int = 10
         ) -> bool:
             """Wait for the server to be available."""
             start_time = time.time()
@@ -137,7 +161,7 @@ class ModuleLoader:
 
         def start_port_forwarding(self: "ModuleLoader.ModuleProxy") -> None:
             """Start port forwarding."""
-            max_retries = 5
+            max_retries = 10
             retry_delay = 10  # seconds
             for _ in range(max_retries):
                 try:
@@ -171,7 +195,7 @@ class ModuleLoader:
                 self.start_port_forwarding()
             try:
                 # Construct the request URL using the full module path
-                request_url = f"http://{self.server_ip}:{self.local_port}/{self.module_name}/{attr_name}"
+                request_url = f"http://{self.server_ip}:{self.local_port}/{self.module_name}/{attr_name}"  # noqa
                 response = httpx.get(request_url)
                 response.raise_for_status()
 
@@ -181,6 +205,12 @@ class ModuleLoader:
                 except Exception:
                     # If unpickling fails, try to interpret it as JSON
                     response_data = response.json()
+                if response_data.get("status") == "error":
+                    if "PyTorch" in response_data.get("message"):
+                        self.install_missing_module("torch")
+                        return self.__getattr__(attr_name)
+                    else:
+                        raise ImportError(response_data.get("message"))
 
                 if "module" in response_data.get("result", ""):
                     full_module_path = f"{self.module_name}.{attr_name}"
@@ -188,19 +218,31 @@ class ModuleLoader:
                         full_module_path, local_port=self.local_port
                     )
                     return module_proxy
-                elif response_data.get("type") == "function":
-                    # Return a callable that makes an HTTP request to execute the function
-                    def remote_function(
-                        self: "ModuleLoader.ModuleProxy", *args: any, **kwargs: any
+                elif response_data.get("type") == "class":
+                    # Return a new instance of the ModuleProxy for the class
+                    class_module_path = f"{self.module_name}.{attr_name}"
+                    return type(self)(class_module_path, local_port=self.local_port)
+
+                elif response_data.get("type") in ["function", "classmethod"]:
+                    # Return a callable that makes an HTTP request to execute the function or class method # noqa
+                    def remote_callable(
+                        module_name: str,
+                        server_ip: str,
+                        local_port: int,
+                        attr_name: str,
+                        *args: any,
+                        **kwargs: any,
                     ) -> any:
+                        """Remote callable."""
                         pickled_data = pickle.dumps({"args": args, "kwargs": kwargs})
+                        request_url = f"http://{server_ip}:{local_port}/{module_name}/{attr_name}/execute"  # noqa
                         exec_response = httpx.post(
-                            f"http://{self.server_ip}:{self.local_port}/{self.module_name}/{attr_name}/execute",
+                            request_url,
                             content=pickled_data,
                         )
                         if exec_response.status_code != 200:
                             print(
-                                f"Server returned an error: {exec_response.status_code} - {exec_response.text}"
+                                f"Server returned an error: {exec_response.status_code} - {exec_response.text}"  # noqa
                             )
                             return
 
@@ -220,7 +262,7 @@ class ModuleLoader:
                                     response_data["missing_modules"]
                                 )
                                 raise Exception(
-                                    f"Missing module dependencies: {missing_modules}. Consider installing them."
+                                    f"Missing module dependencies: {missing_modules}. Consider installing them."  # noqa
                                 )
                             else:
                                 raise Exception(
@@ -229,7 +271,14 @@ class ModuleLoader:
                                     )
                                 )
 
-                    return remote_function
+                    bound_remote_callable = functools.partial(
+                        remote_callable,
+                        self.module_name,
+                        self.server_ip,
+                        self.local_port,
+                        attr_name,
+                    )
+                    return bound_remote_callable
                 else:
                     return response_data.get("result")
             except httpx.RequestError as e:
