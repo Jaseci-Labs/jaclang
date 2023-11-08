@@ -442,11 +442,13 @@ class ArchDef(AstSymbolNode, AstAccessNode, AstDocNode, AstImplOnlyNode):
         kid: Sequence[AstNode],
         doc: Optional[String] = None,
         decorators: Optional[SubNodeList[ExprType]] = None,
+        decl_link: Optional[Architype] = None,
     ) -> None:
         """Initialize arch def node."""
         self.decorators = decorators
         self.target = target
         self.body = body
+        self.decl_link = decl_link
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
@@ -497,11 +499,13 @@ class EnumDef(AstSymbolNode, AstDocNode, AstImplOnlyNode):
         kid: Sequence[AstNode],
         doc: Optional[String] = None,
         decorators: Optional[SubNodeList[ExprType]] = None,
+        decl_link: Optional[Enum] = None,
     ) -> None:
         """Initialize arch def node."""
         self.target = target
         self.body = body
         self.decorators = decorators
+        self.decl_link = decl_link
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
@@ -667,6 +671,12 @@ class ArchRefChain(AstNode):
         """Resolve name."""
         return ".".join(
             [f"({x.arch.value[1]}){x.py_resolve_name()}" for x in self.archs]
+        )
+
+    def flat_name(self) -> str:
+        """Resolve name for python gen."""
+        return (
+            self.py_resolve_name().replace(".", "_").replace("(", "").replace(")", "")
         )
 
 

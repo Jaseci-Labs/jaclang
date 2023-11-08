@@ -221,15 +221,15 @@ class PyastGenPass(Pass):
                 *[
                     x.gen.py_ast
                     for x in node.body
-                    if not isinstance(x, ast.AstImplOnlyNode)
+                    if not (
+                        isinstance(x, ast.AstImplOnlyNode)
+                        and not isinstance(x, ast.AbilityDef)
+                    )
                 ],
             ]
             if node.doc
             else [*self.preamble, *[x.gen.py_ast for x in node.body]]
         )
-        for x in node.body:
-            if isinstance(x, ast.Import) and x.is_absorb:
-                print(x, x.gen.py_ast, x.loc.mod_path)
         new_body = []
         for i in body:
             if isinstance(i, list):
@@ -553,6 +553,70 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
+        if isinstance(node.body, ast.AbilityDef):
+            node.name_ref.gen.py_ast.ctx = ast3.Store()
+            node.gen.py_ast = self.sync(
+                ast3.FunctionDef(
+                    name=node.name_ref.gen.py_ast.id,
+                    args=self.sync(
+                        ast3.arguments(
+                            posonlyargs=[],
+                            kwonlyargs=[],
+                            args=[
+                                self.sync(ast3.arg(arg="*args")),
+                                self.sync(ast3.arg(arg="**kwargs")),
+                            ],
+                            vararg=None,
+                            kwarg=None,
+                            defaults=[],
+                            kw_defaults=[],
+                        )
+                    ),
+                    body=[
+                        self.sync(
+                            ast3.Return(
+                                self.sync(
+                                    ast3.Call(
+                                        func=self.sync(
+                                            ast3.Name(
+                                                id=node.body.target.flat_name(),
+                                                ctx=ast3.Load(),
+                                            )
+                                        ),
+                                        args=[
+                                            self.sync(
+                                                ast3.Starred(
+                                                    value=self.sync(
+                                                        ast3.Name(
+                                                            id="args", ctx=ast3.Load()
+                                                        )
+                                                    ),
+                                                    ctx=ast3.Load(),
+                                                )
+                                            )
+                                        ],
+                                        keywords=[
+                                            self.sync(
+                                                ast3.keyword(
+                                                    arg=None,
+                                                    value=self.sync(
+                                                        ast3.Name(
+                                                            id="kwargs", ctx=ast3.Load()
+                                                        )
+                                                    ),
+                                                )
+                                            )
+                                        ],
+                                    )
+                                )
+                            )
+                        )
+                    ],
+                    decorator_list=[],
+                    returns=None,
+                )
+            )
+            return
         func_type = ast3.AsyncFunctionDef if node.is_async else ast3.FunctionDef
         body = (
             [self.sync(ast3.Pass(), node.body)]
@@ -584,7 +648,15 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
-        node.gen.py_ast = node.body.gen.py_ast
+        body = self.resolve_stmt_block(node.body)
+        node.gen.py_ast = self.sync(
+            ast3.FunctionDef(
+                name=node.target.flat_name(),
+                args=node.signature.gen.py_ast if node.signature else [],
+                body=body,
+                decorator_list=node.decorators.gen.py_ast if node.decorators else [],
+            )
+        )
 
     def exit_func_signature(self, node: ast.FuncSignature) -> None:
         """Sub objects.
