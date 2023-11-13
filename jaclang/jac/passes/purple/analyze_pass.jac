@@ -10,16 +10,12 @@ import:py jaclang.jac.absyntree as ast;
 import:py from jaclang.jac.passes, Pass;
 import:py from jaclang.jac.constant, Tokens as Tok;
 
-
-object AnalyzePass:Pass: {
-    can <init>(input_ir: ast.AstNode, prior: Optional[Transform]);
-    can enter_architype(nd: ast.Architype);
-}
-
 :object:AnalyzePass:ability:<init>
 (input_ir: ast.AstNode, prior: Optional[Transform]) {
         <super>.<init>(input_ir, prior);
     }
+
+
 
 :object:AnalyzePass:ability:enter_architype(nd:ast.Architype) {
     if (
@@ -38,4 +34,9 @@ object AnalyzePass:Pass: {
             i.from_walker = True;
         }
     }
+}
+
+object AnalyzePass:Pass: {
+    can <init>(input_ir: ast.AstNode, prior: Optional[Transform]);
+    can enter_architype(nd: ast.Architype);
 }

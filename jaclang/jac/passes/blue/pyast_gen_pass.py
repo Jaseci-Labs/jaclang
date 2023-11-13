@@ -556,66 +556,73 @@ class PyastGenPass(Pass):
         if isinstance(node.body, ast.AbilityDef):
             node.name_ref.gen.py_ast.ctx = ast3.Store()
             node.gen.py_ast = self.sync(
-                ast3.FunctionDef(
-                    name=node.name_ref.gen.py_ast.id,
-                    args=self.sync(
-                        ast3.arguments(
-                            posonlyargs=[],
-                            kwonlyargs=[],
-                            args=[
-                                self.sync(ast3.arg(arg="*args")),
-                                self.sync(ast3.arg(arg="**kwargs")),
-                            ],
-                            vararg=None,
-                            kwarg=None,
-                            defaults=[],
-                            kw_defaults=[],
-                        )
+                ast3.Assign(
+                    targets=[node.name_ref.gen.py_ast],
+                    value=self.sync(
+                        ast3.Name(id=node.body.target.flat_name(), ctx=ast3.Load())
                     ),
-                    body=[
-                        self.sync(
-                            ast3.Return(
-                                self.sync(
-                                    ast3.Call(
-                                        func=self.sync(
-                                            ast3.Name(
-                                                id=node.body.target.flat_name(),
-                                                ctx=ast3.Load(),
-                                            )
-                                        ),
-                                        args=[
-                                            self.sync(
-                                                ast3.Starred(
-                                                    value=self.sync(
-                                                        ast3.Name(
-                                                            id="args", ctx=ast3.Load()
-                                                        )
-                                                    ),
-                                                    ctx=ast3.Load(),
-                                                )
-                                            )
-                                        ],
-                                        keywords=[
-                                            self.sync(
-                                                ast3.keyword(
-                                                    arg=None,
-                                                    value=self.sync(
-                                                        ast3.Name(
-                                                            id="kwargs", ctx=ast3.Load()
-                                                        )
-                                                    ),
-                                                )
-                                            )
-                                        ],
-                                    )
-                                )
-                            )
-                        )
-                    ],
-                    decorator_list=[],
-                    returns=None,
                 )
             )
+            #     ast3.FunctionDef(
+            #         name=node.name_ref.gen.py_ast.id,
+            #         args=self.sync(
+            #             ast3.arguments(
+            #                 posonlyargs=[],
+            #                 kwonlyargs=[],
+            #                 args=[
+            #                     self.sync(ast3.arg(arg="*args")),
+            #                     self.sync(ast3.arg(arg="**kwargs")),
+            #                 ],
+            #                 vararg=None,
+            #                 kwarg=None,
+            #                 defaults=[],
+            #                 kw_defaults=[],
+            #             )
+            #         ),
+            #         body=[
+            #             self.sync(
+            #                 ast3.Return(
+            #                     self.sync(
+            #                         ast3.Call(
+            #                             func=self.sync(
+            #                                 ast3.Name(
+            #                                     id=node.body.target.flat_name(),
+            #                                     ctx=ast3.Load(),
+            #                                 )
+            #                             ),
+            #                             args=[
+            #                                 self.sync(
+            #                                     ast3.Starred(
+            #                                         value=self.sync(
+            #                                             ast3.Name(
+            #                                                 id="args", ctx=ast3.Load()
+            #                                             )
+            #                                         ),
+            #                                         ctx=ast3.Load(),
+            #                                     )
+            #                                 )
+            #                             ],
+            #                             keywords=[
+            #                                 self.sync(
+            #                                     ast3.keyword(
+            #                                         arg=None,
+            #                                         value=self.sync(
+            #                                             ast3.Name(
+            #                                                 id="kwargs", ctx=ast3.Load()
+            #                                             )
+            #                                         ),
+            #                                     )
+            #                                 )
+            #                             ],
+            #                         )
+            #                     )
+            #                 )
+            #             )
+            #         ],
+            #         decorator_list=[],
+            #         returns=None,
+            #     )
+            # )
             return
         func_type = ast3.AsyncFunctionDef if node.is_async else ast3.FunctionDef
         body = (

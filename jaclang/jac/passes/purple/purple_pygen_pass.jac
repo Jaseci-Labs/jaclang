@@ -5,6 +5,10 @@ import:py from jaclang.core, Object, Node, Edge, Walker;
 
 
 include:jac impl.purple_pygen_pass_impl;
+:object:PurplePygenPass:ability:<init>
+(input_ir: ast.AstNode, prior: Optional[Transform]) {
+    <super>.<init>(input_ir, prior);
+}
 
 """
 This pass leverages data spacial lib to provide code
@@ -38,7 +42,3 @@ object PurplePygenPass:BluePygenPass: {
     can exit_disconnect_op(nd: ast.DisconnectOp);
 }
 
-:object:PurplePygenPass:ability:<init>
-(input_ir: ast.AstNode, prior: Optional[Transform]) {
-    <super>.<init>(input_ir, prior);
-}
