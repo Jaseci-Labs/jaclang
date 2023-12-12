@@ -1,6 +1,6 @@
 """This is a RPG game built using Jaclang"""
 
-# Import python modules
+# This game is built using the pygame module which is imported here
 import:py pygame;
 import:py sys;
 
@@ -9,6 +9,9 @@ include:jac Sprites;
 include:jac Config;
 include:jac Map;
 
+"""
+The Game base class
+"""
 obj Game {
     can <init>(){
         pygame.init();
@@ -193,6 +196,9 @@ obj Game {
     }
 }
 
+""" 
+The implementation of the game
+"""
 glob g = Game();
 with entry {
     g.intro_screen();
