@@ -3,8 +3,8 @@ import:py from pygame.sprite, AbstractGroup;
 import:py random;
 import:py math;
 
-include:jac Config;
-include:jac Map;
+include:jac config;
+include:jac map;
 
 obj Spritesheet {
     can <init>(file: str) {

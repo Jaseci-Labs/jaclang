@@ -5,9 +5,9 @@ import:py pygame;
 import:py sys;
 
 # Importing Jac codebase
-include:jac Sprites;
-include:jac Config;
-include:jac Map;
+include:jac sprites;
+include:jac config;
+include:jac map;
 
 """
 The Game base class
