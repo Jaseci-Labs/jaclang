@@ -21,6 +21,8 @@ obj Game {
         self.font = pygame.font.Font('8bitoperator_jve.ttf', 32);
         self.running = True;
         self.won = False;
+        self.score = 0;
+        self.deaths = 0;
 
         self.character_spritesheet = Spritesheet('img/character.png');
         self.terrain_spritesheet = Spritesheet('img/terrain.png');
@@ -30,6 +32,7 @@ obj Game {
         self.go_background = pygame.image.load('./img/gameover.png');
     }
 
+    # Generate the map according to the tilemap variable in map.jac
     can createTilemap(){
         for (i, row) in enumerate(tilemap){
             for (j, column) in enumerate(row){
@@ -47,9 +50,11 @@ obj Game {
         }
     }
 
+    # Start a new game 
     can new(){
         self.playing = True;
         self.won = False;
+        
 
         self.all_sprites = pygame.sprite.LayeredUpdates();
         self.blocks = pygame.sprite.LayeredUpdates();
@@ -59,6 +64,7 @@ obj Game {
         self.createTilemap();
     }
 
+    # Update pygame events to check if the game is quitted or attacked.
     can events(){
         for events in pygame.event.get(){
             if events.type == pygame.QUIT{
@@ -77,10 +83,12 @@ obj Game {
 
     }
 
+    # Update all sprites
     can update(){
         self.all_sprites.update();
     }
 
+    # Display the game
     can draw(){
         self.screen.fill(BLACK);
         self.all_sprites.draw(self.screen);
@@ -88,6 +96,7 @@ obj Game {
         pygame.display.update();
     }
 
+    # Game runtime
     can main(){
         while self.playing {
             self.events();
@@ -104,7 +113,13 @@ obj Game {
         }
     }
 
+    # Game over screen
     can game_over(){
+
+        
+        self.score -= 2;
+        print(self.score);
+        
         text = self.font.render('GaMe OvEr', True, RED);
         text_rect = text.get_rect(center = (WIN_WIDTH/2, WIN_HEIGHT/2));
 
@@ -133,8 +148,10 @@ obj Game {
             self.clock.tick(FPS);
             pygame.display.update();
         }
+
     }
 
+    # Introduction Screen
     can intro_screen() {
         intro = True;
 
@@ -165,7 +182,12 @@ obj Game {
         }
     }
 
+    # Game won
     can game_won {
+
+        self.score += 5;
+        print(self.score);
+
         text = self.font.render('YOU WON!', True, BLUE);
         text_rect = text.get_rect(center = (WIN_WIDTH/2, WIN_HEIGHT/2));
 
@@ -193,23 +215,24 @@ obj Game {
             self.clock.tick(FPS);
             pygame.display.update();
         }
+
+        
     }
 }
 
 """ 
 The implementation of the game
 """
-glob g = Game();
+
 with entry {
+    g = Game();
     g.intro_screen();
     g.new();
     while g.running {
         g.main();
         if g.won == True{
-            print(g.won);
             g.game_won();
         } else {
-            print(g.won);
             g.game_over();
         }
     }
