@@ -32,7 +32,6 @@ obj Game {
         pygame.init();
         
         <self>.font = pygame.font.Font('8bitoperator_jve.ttf', 32);
-        print(type(<self>.font));
     }
      
     # Generate the map according to the tilemap variable in map.jac
