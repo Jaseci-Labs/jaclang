@@ -1,6 +1,10 @@
+:enum:x {
+    a_b=67,
+     y="aaa" +f"b{a_b}bbcc"
+   }
+ glob  c=(3,4,5);
 with entry{
-    x = 10;
-    y = 20;
-    max_value = x ? x > y : y;
-    print(max_value);
+    #do we need to give example for what are atoms?
+   enum x;
+   print(x.y.value);
 }
