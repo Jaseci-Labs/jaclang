@@ -1,47 +1,15 @@
-with entry{
+with entry {
+  squares = {num: num**2 for num in range(1, 6)};
+  even_squares_set = {num**2 for num in range(1, 11) if num % 2 == 0};
+  squares_generator = (num**2 for num in range(1, 6));
+  squares_list = [num**2 for num in squares_generator];
+  # BREAKS: squares_list = [num**2 for num in squares_generator if num != 9];
 
-  # List 
-  frameworks = ["TensorFlow", "PyTorch", "Scikit-Learn", "Keras", "Theano", "MXNet"];
-  popular_frameworks = [framework for framework in frameworks if framework.startswith("T")];
-  print(popular_frameworks);
+  # TODO: Issure with '\n' below, its being escaped
+  print("\n".join([str(squares), str(even_squares_set), str(squares_list)]));
 
-#   # List comprehension: Squaring numbers greater than 100 using the walrus operator
-#   numbers = [90, 110, 120, 130, 140, 150];
-#   squared_numbers = [num_squared for num in numbers if (num_squared := num ** 2) > 100];
-#   print(squared_numbers);
-
-  # List comprehension: Incrementing version numbers
-  version_numbers = [1.0, 2.0, 3.0, 4.0];
-  incremented_versions = [version + 0.1 for version in version_numbers];
-  print(incremented_versions);
-
-  # Generator expression: Multiplying by 3
-  multiplied_numbers = (x * 3 for x in range(5));
-  print(list(multiplied_numbers));
-
-  # Set comprehension: Creating a set of ML tasks
-  ml_tasks = {"classification", "regression", "clustering", "feature_extraction", "reinforcement_learning"};
-  popular_ml_tasks = {task for task in ml_tasks};
-  print(popular_ml_tasks);
-
-#   Dict comprehension: Creating a dictionary with ML libraries and their popularity
-  ml_libraries = {'TensorFlow': 90, 'PyTorch': 85, 'Scikit-Learn': 80, 'Keras': 75};
-  popular_ml_libraries = {library for library in ml_libraries };
-  print(popular_ml_libraries);
-
-  # Dictionary value: Student information with AI context
-  student_info = {'name': 'AI Bot', 'age': 100, 'role': 'Learning Agent'};
-  print(student_info);
-
-  # List value: Different AI models
-  ai_models = ["Neural Network", "Decision Tree", "Random Forest", ["Support Vector Machine", "K-Nearest Neighbors"], "Gradient Boosting"];
-  print(ai_models);
-
-  # Tuple value: AI research coordinates
-  ai_research_coordinates = (3.14, ["Deep Learning", "Natural Language Processing"], 2.71);
-  print(ai_research_coordinates);
-
-  # Set value: Unique AI algorithms
-  unique_algorithms = {"Linear Regression", "Convolutional Neural Network", "K-Means Clustering"};
-  print(unique_algorithms);
+  print({"a": "b", "c": "d"}, # Dictionary value
+        {"a"}, # Set value
+        ("a",), # Tuple value
+        ['a']); # List value
 }
