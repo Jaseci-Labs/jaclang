@@ -285,18 +285,6 @@ class AstTool:
         else:
             return "Not a .jac file."
 
-    def del_check(self):
-        u = os.path.join(
-            os.path.split(os.path.dirname(__file__))[0],
-            "../support/jac-lang.org/docs/learn/jac_ref.md",
-        )
-        with open(
-            u,
-            "r",
-        ) as x:
-            y = x.read()
-        return y
-
     def automate_ref(self):
         def extract_headings(file_path):
             with open(file_path, "r") as file:
