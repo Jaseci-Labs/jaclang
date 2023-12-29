@@ -12,6 +12,31 @@ def pascal_to_snake(pascal_string: str) -> str:
     return snake_string
 
 
+def heading_to_snake(heading: str) -> str:
+    return heading.strip().replace("-", "_").replace("/", "_").replace(" ", "_").lower()
+
+
+def extract_headings(file_path: str) -> dict[str, tuple[int, int]]:
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+    headings = {}
+    current_heading = None
+    start_line = 0
+    for idx, line in enumerate(lines, start=1):
+        if line.strip().startswith("//"):
+            if current_heading is not None:
+                headings[current_heading] = (
+                    start_line,
+                    idx - 2,
+                )  # Subtract 1 to get the correct end line
+            current_heading = line.strip()[2:]
+            start_line = idx + 1
+    # Add the last heading
+    if current_heading is not None:
+        headings[current_heading] = (start_line, len(lines))
+    return headings
+
+
 def add_line_numbers(s: str) -> str:
     """Add line numbers to a string."""
     lines = s.split("\n")

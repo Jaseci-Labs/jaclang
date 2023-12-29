@@ -3,6 +3,7 @@ import os
 
 from jaclang.utils.lang_tools import AstTool
 from jaclang.utils.test import TestCase
+from jaclang.utils.helpers import heading_to_snake, extract_headings
 
 
 class JacFormatPassTests(TestCase):
@@ -33,3 +34,18 @@ class JacFormatPassTests(TestCase):
                     forbidden_strings = ["<<", ">>", "<init>", "<super>"]
                     for i in forbidden_strings:
                         self.assertNotIn(i, out)
+
+    def test_automated(self):
+        """ "Testing for py, jac, md files for each content in Jac Grammer"""
+        lark_path = os.path.join(os.getcwd(), "jaclang/compiler/jac.lark")
+        headings_ = extract_headings(lark_path)
+        snake_case_headings = [heading_to_snake(key) for key in headings_.keys()]
+        refr_path = os.path.join(os.getcwd(), "examples/reference")
+        file_extensions = [".py", ".jac", ".md"]
+        for heading_name in snake_case_headings:
+            for extension in file_extensions:
+                file_name = heading_name + extension
+                file_path = os.path.join(refr_path, file_name)
+                self.assertTrue(
+                    os.path.exists(file_path), f"File '{file_path}' does not exist."
+                )
