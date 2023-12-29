@@ -13,12 +13,10 @@ def pascal_to_snake(pascal_string: str) -> str:
 
 
 def heading_to_snake(heading: str) -> str:
-    """convert to snakecase (replace / ,- ,whitespace )."""
     return heading.strip().replace("-", "_").replace("/", "_").replace(" ", "_").lower()
 
 
 def extract_headings(file_path: str) -> dict[str, tuple[int, int]]:
-    """Extract content heading from Jac Lark."""
     with open(file_path, "r") as file:
         lines = file.readlines()
     headings = {}
