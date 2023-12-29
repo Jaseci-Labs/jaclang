@@ -35,8 +35,8 @@ class JacFormatPassTests(TestCase):
                     for i in forbidden_strings:
                         self.assertNotIn(i, out)
 
-    def test_automated(self):
-        """ "Testing for py, jac, md files for each content in Jac Grammer"""
+    def test_automated(self) -> None:
+        """Testing for py, jac, md files for each content in Jac Grammer."""
         lark_path = os.path.join(os.getcwd(), "jaclang/compiler/jac.lark")
         headings_ = extract_headings(lark_path)
         snake_case_headings = [heading_to_snake(key) for key in headings_.keys()]

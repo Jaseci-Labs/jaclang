@@ -13,10 +13,12 @@ def pascal_to_snake(pascal_string: str) -> str:
 
 
 def heading_to_snake(heading: str) -> str:
+    """Convert string to snakecase including replacing(/ ,- )."""
     return heading.strip().replace("-", "_").replace("/", "_").replace(" ", "_").lower()
 
 
 def extract_headings(file_path: str) -> dict[str, tuple[int, int]]:
+    """Extract headings of contetnts in Jac grammer."""
     with open(file_path, "r") as file:
         lines = file.readlines()
     headings = {}
