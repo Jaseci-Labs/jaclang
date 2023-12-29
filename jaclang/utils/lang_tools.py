@@ -17,7 +17,7 @@ from jaclang.compiler.passes.tool.schedules import (
     sym_tab_print,
 )
 from jaclang.compiler.transpiler import jac_file_to_pass
-from jaclang.utils.helpers import pascal_to_snake, heading_to_snake, extract_headings
+from jaclang.utils.helpers import extract_headings, heading_to_snake, pascal_to_snake
 
 
 class AstKidInfo:
