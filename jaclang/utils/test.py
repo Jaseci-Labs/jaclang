@@ -2,8 +2,8 @@
 
 import inspect
 import os
-from abc import ABC, abstractmethod
 import subprocess
+from abc import ABC, abstractmethod
 from typing import Callable, Optional
 from unittest import TestCase as _TestCase
 
