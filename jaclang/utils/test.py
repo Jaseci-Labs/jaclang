@@ -5,6 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 from unittest import TestCase as _TestCase
+import subprocess
 
 
 import jaclang
@@ -143,3 +144,28 @@ class AstSyncTestMixin:
             self.assertIn(name, ast_func_names)  # type: ignore
         for name in ast_func_names:
             self.assertIn(name, pygen_func_names)  # type: ignore
+
+class TestCaseReference(TestCase):
+    def test_jac_python_outputs(self):
+
+        jac_directory = './../../examples/reference/'
+
+
+        jac_files = [f for f in os.listdir(jac_directory) if f.endswith(".jac")]
+        
+
+        excludes_files = []
+
+        for jac_file in jac_files:
+            if jac_file in excludes_files:
+                continue
+
+            py_file = jac_file.replace(".jac", ".py")
+            py_out = subprocess.run(['python', py_file], capture_output=True).stdout.decode("utf-8").strip()
+            jac_out = subprocess.run(['jac', 'run', jac_file], capture_output=True).stdout.decode("utf-8").strip()
+
+
+            msg = f'{jac_file}, {py_file} do not have the same output'
+            self.assertEqual(py_out, jac_out, msg)
+            
+
