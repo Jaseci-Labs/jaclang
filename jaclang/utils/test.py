@@ -3,10 +3,9 @@
 import inspect
 import os
 from abc import ABC, abstractmethod
+import subprocess
 from typing import Callable, Optional
 from unittest import TestCase as _TestCase
-import subprocess
-
 
 import jaclang
 from jaclang.compiler.passes import Pass
@@ -145,14 +144,15 @@ class AstSyncTestMixin:
         for name in ast_func_names:
             self.assertIn(name, pygen_func_names)  # type: ignore
 
+
 class TestCaseReference(TestCase):
-    def test_jac_python_outputs(self):
+    """Test case for reference folder."""
 
-        jac_directory = './../../examples/reference/'
-
+    def test_jac_python_outputs(self) -> None:
+        """Compare Python and JAC outputs for files in the reference directory."""
+        jac_directory = "./../../examples/reference/"
 
         jac_files = [f for f in os.listdir(jac_directory) if f.endswith(".jac")]
-        
 
         excludes_files = []
 
@@ -161,11 +161,16 @@ class TestCaseReference(TestCase):
                 continue
 
             py_file = jac_file.replace(".jac", ".py")
-            py_out = subprocess.run(['python', py_file], capture_output=True).stdout.decode("utf-8").strip()
-            jac_out = subprocess.run(['jac', 'run', jac_file], capture_output=True).stdout.decode("utf-8").strip()
+            py_out = (
+                subprocess.run(["python", py_file], capture_output=True)
+                .stdout.decode("utf-8")
+                .strip()
+            )
+            jac_out = (
+                subprocess.run(["jac", "run", jac_file], capture_output=True)
+                .stdout.decode("utf-8")
+                .strip()
+            )
 
-
-            msg = f'{jac_file}, {py_file} do not have the same output'
+            msg = f"{jac_file}, {py_file} do not have the same output"
             self.assertEqual(py_out, jac_out, msg)
-            
-
