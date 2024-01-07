@@ -58,6 +58,53 @@ class NodeAnchor(ObjectAnchor):
                     ret_nodes.append(i._jac_.source)
         return ret_nodes
 
+    def gen_dot(self, dot_file: str) -> str:
+        """Generate Dot file for visualizing nodes and edges."""
+        visited_nodes = set()
+        connections = set()
+        turn_table = {}
+        nodes_listm = []
+
+        def dfs(current_node: NodeArchitype) -> None:
+            if current_node not in visited_nodes:
+                visited_nodes.add(current_node)
+                out_edges = current_node.edges.get(EdgeDir.OUT, [])
+                in_edges = current_node.edges.get(EdgeDir.IN, [])
+
+                for edge_ in out_edges:
+                    target__ = edge_._jac_.target
+                    if target__ not in nodes_listm:
+                        nodes_listm.append(target__)
+                    gen_edge_info(current_node, target__._jac_)
+                    dfs(target__._jac_)
+
+                for edge_ in in_edges:
+                    source__ = edge_._jac_.source
+                    if source__ not in nodes_listm:
+                        nodes_listm.append(source__)
+                    gen_edge_info(source__._jac_, current_node)
+
+                    dfs(source__._jac_)
+
+        def gen_edge_info(source_: NodeArchitype, target_: NodeArchitype) -> None:
+            connections.add((source_.obj, target_.obj))
+
+        dfs(self)
+        for idx, i in enumerate(nodes_listm):
+            turn_table[i] = str(idx)
+
+        print("table ", turn_table, "\n connections\n", connections)
+        dot_content = "\ndigraph {"
+        print("\ndigraph {")
+        for pair in list(set(connections)):
+            cont = turn_table.get(pair[0]) + " -> " + turn_table.get(pair[1]) + ";"
+            print(turn_table.get(pair[0]), " -> ", turn_table.get(pair[1]), ";")
+            dot_content = dot_content + cont
+        dot_content += "}"
+        print("}")
+        with open(dot_file, "w") as f:
+            f.write(dot_content)
+
 
 @dataclass(eq=False)
 class EdgeAnchor(ObjectAnchor):
