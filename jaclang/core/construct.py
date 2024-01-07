@@ -63,7 +63,7 @@ class NodeAnchor(ObjectAnchor):
         visited_nodes = set()
         connections = set()
         turn_table = {}
-        nodes_listm = []
+        nodes_list = []
 
         def dfs(current_node: NodeArchitype) -> None:
             if current_node not in visited_nodes:
@@ -73,15 +73,15 @@ class NodeAnchor(ObjectAnchor):
 
                 for edge_ in out_edges:
                     target__ = edge_._jac_.target
-                    if target__ not in nodes_listm:
-                        nodes_listm.append(target__)
+                    if target__ not in nodes_list:
+                        nodes_list.append(target__)
                     gen_edge_info(current_node, target__._jac_)
                     dfs(target__._jac_)
 
                 for edge_ in in_edges:
                     source__ = edge_._jac_.source
-                    if source__ not in nodes_listm:
-                        nodes_listm.append(source__)
+                    if source__ not in nodes_list:
+                        nodes_list.append(source__)
                     gen_edge_info(source__._jac_, current_node)
 
                     dfs(source__._jac_)
@@ -90,14 +90,14 @@ class NodeAnchor(ObjectAnchor):
             connections.add((source_.obj, target_.obj))
 
         dfs(self)
-        for idx, i in enumerate(nodes_listm):
+        for idx, i in enumerate(nodes_list):
             turn_table[i] = str(idx)
 
         print("table ", turn_table, "\n connections\n", connections)
-        dot_content = "\ndigraph {"
+        dot_content = "digraph {\n"
         print("\ndigraph {")
         for pair in list(set(connections)):
-            cont = turn_table.get(pair[0]) + " -> " + turn_table.get(pair[1]) + ";"
+            cont = turn_table.get(pair[0]) + " -> " + turn_table.get(pair[1]) + ";\n"
             print(turn_table.get(pair[0]), " -> ", turn_table.get(pair[1]), ";")
             dot_content = dot_content + cont
         dot_content += "}"
