@@ -1,12 +1,13 @@
+"""Test Jac DS features."""
 import io
 from contextlib import redirect_stdout
-
-# import pytest
 
 from jaclang.compiler.transpiler import jac_file_to_pass
 
 
-def test_dot_node():
+def test_dot_gen() -> None:
+    """Test the dot gen of nodes and edges."""
+
     def execute_and_capture_output(code: str) -> str:
         f = io.StringIO()
         with redirect_stdout(f):
