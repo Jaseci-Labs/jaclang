@@ -5,8 +5,8 @@ import types
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-
 from jaclang.compiler.constant import EdgeDir
+from jaclang.core.helpers_construct import dfs
 
 
 @dataclass(eq=False)
@@ -58,52 +58,29 @@ class NodeAnchor(ObjectAnchor):
                     ret_nodes.append(i._jac_.source)
         return ret_nodes
 
-    def gen_dot(self, dot_file: str) -> str:
+    def gen_dot(self, dot_file: Optional[str] = None) -> str:
         """Generate Dot file for visualizing nodes and edges."""
         visited_nodes = set()
         connections = set()
         turn_table = {}
         nodes_list = []
 
-        def dfs(current_node: NodeArchitype) -> None:
-            if current_node not in visited_nodes:
-                visited_nodes.add(current_node)
-                out_edges = current_node.edges.get(EdgeDir.OUT, [])
-                in_edges = current_node.edges.get(EdgeDir.IN, [])
-
-                for edge_ in out_edges:
-                    target__ = edge_._jac_.target
-                    if target__ not in nodes_list:
-                        nodes_list.append(target__)
-                    gen_edge_info(current_node, target__._jac_)
-                    dfs(target__._jac_)
-
-                for edge_ in in_edges:
-                    source__ = edge_._jac_.source
-                    if source__ not in nodes_list:
-                        nodes_list.append(source__)
-                    gen_edge_info(source__._jac_, current_node)
-
-                    dfs(source__._jac_)
-
-        def gen_edge_info(source_: NodeArchitype, target_: NodeArchitype) -> None:
-            connections.add((source_.obj, target_.obj))
-
-        dfs(self)
-        for idx, i in enumerate(nodes_list):
-            turn_table[i] = str(idx)
-
-        print("table ", turn_table, "\n connections\n", connections)
+        dfs(self, visited_nodes, nodes_list, connections)
         dot_content = "digraph {\n"
-        print("\ndigraph {")
+        for idx, i in enumerate(nodes_list):
+            turn_table[i] = (i.__class__.__name__, str(idx))
+            dot_content += f'{idx} [label="{i}"];' + "\n"
+
         for pair in list(set(connections)):
-            cont = turn_table.get(pair[0]) + " -> " + turn_table.get(pair[1]) + ";\n"
-            print(turn_table.get(pair[0]), " -> ", turn_table.get(pair[1]), ";")
-            dot_content = dot_content + cont
-        dot_content += "}"
-        print("}")
-        with open(dot_file, "w") as f:
-            f.write(dot_content)
+            dot_content += (
+                f"{turn_table.get(pair[0])[1]} -> {turn_table.get(pair[1])[1]} ;" + "\n"
+            )
+
+        if dot_file:
+            with open(dot_file, "w") as f:
+                f.write(dot_content + "}")
+        else:
+            print(dot_content + "}")
 
 
 @dataclass(eq=False)
