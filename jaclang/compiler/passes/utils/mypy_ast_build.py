@@ -293,7 +293,7 @@ class State(myb.State):
 class ASTConverter(myfp.ASTConverter):
     """Overrides to mypy AST converter for direct AST pass through."""
 
-    def visit(self, node: ast.AST | None) -> myfp.Any:  # noqa: ANN401
+    def visit(self, node: ast.AST | list[ast.AST] | None) -> myfp.Any:  # noqa: ANN401
         """Override to mypy AST converter for direct AST pass through."""
         if node is None:
             return None
