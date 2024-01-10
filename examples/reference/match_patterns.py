@@ -2,6 +2,7 @@ class Point:
     def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
+    __match_args__ = ('x', 'y')
 
 
 def match_example(data: dict):
@@ -28,6 +29,7 @@ def match_example(data: dict):
 
         # MatchMapping
         case {"key1": 1, "key2": 2, **rest}:
+            rest = {}
             print(f"Matched a mapping with key1 and key2. Rest: {rest}")
 
         # MatchClass
