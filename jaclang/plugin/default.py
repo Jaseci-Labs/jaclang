@@ -64,7 +64,7 @@ class JacFeatureDefaults:
                 inner_init(self, *args, **kwargs)
                 arch_cls.__init__(self)
 
-            cls.__init__ = new_init
+            setattr(cls, "__init__", new_init)
             return cls
 
         return decorator
