@@ -20,9 +20,10 @@ class ElementAnchor:
 class ObjectAnchor(ElementAnchor):
     """Object Anchor."""
 
-    def spawn_call(self, walk: WalkerArchitype) -> None:
+    def spawn_call(self, walk: WalkerArchitype | Architype | None) -> None:
         """Invoke data spatial call."""
-        walk._jac_.spawn_call(self.obj)
+        if walk is not None:
+            walk._jac_.spawn_call(self.obj)
 
 
 @dataclass(eq=False)
@@ -87,9 +88,9 @@ class EdgeAnchor(ObjectAnchor):
             self.target._jac_.edges[EdgeDir.IN].append(self.obj)
         return self
 
-    def spawn_call(self, walk: WalkerArchitype) -> None:
+    def spawn_call(self, walk: WalkerArchitype | Architype | None) -> None:
         """Invoke data spatial call."""
-        if self.target:
+        if self.target and walk is not None:
             walk._jac_.spawn_call(self.target)
 
 
@@ -151,10 +152,11 @@ class WalkerAnchor(ObjectAnchor):
         """Disengage walker from traversal."""
         self.disengaged = True
 
-    def spawn_call(self, nd: Architype) -> None:
+    def spawn_call(self, nd: WalkerArchitype | Architype | None) -> None:
         """Invoke data spatial call."""
         self.path = []
-        self.next = [nd]
+        if isinstance(nd, Architype):
+            self.next = [nd]
         while len(self.next):
             nd = self.next.pop(0)
             for i in nd._jac_entry_funcs_:

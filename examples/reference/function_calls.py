@@ -1,4 +1,4 @@
-def foo(x: int, v: int, u: int) -> int:
+def foo(x: int, v: int, u: int) -> str:
     return f"The result is: {x|v * u }"
 
 
