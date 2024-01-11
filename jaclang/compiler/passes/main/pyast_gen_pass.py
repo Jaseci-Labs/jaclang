@@ -150,7 +150,7 @@ class PyastGenPass(Pass):
                 i.col_offset = jac_node.loc.col_start
                 i.end_lineno = jac_node.loc.last_line
                 i.end_col_offset = jac_node.loc.col_end
-                i.jac_link = jac_node
+                setattr(i,'jac_link',jac_node)
         return py_node
 
     def resolve_stmt_block(
