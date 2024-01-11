@@ -209,6 +209,9 @@
 						{
 							"name": "entity.name.function.jac",
 							"match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+						},
+						{
+							"include": "#string"
 						}
 					]
 				}
