@@ -12,6 +12,8 @@ walker Creator {
 
     can create with `<root> | Item entry {
         <here> ++> Item();
+        x = <self>._jac_.path;
+        print(x);
         <self>.count+=1;
         if <self>.count < 10 {
             visit-->;

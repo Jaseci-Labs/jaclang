@@ -184,6 +184,7 @@ class WalkerAnchor(ObjectAnchor):
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
                         i.func(nd, self.obj)
+                        self.path.append(nd)
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -192,6 +193,7 @@ class WalkerAnchor(ObjectAnchor):
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
                         i.func(self.obj, nd)
+                        self.path.append(nd)
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -200,6 +202,7 @@ class WalkerAnchor(ObjectAnchor):
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
                         i.func(self.obj, nd)
+                        self.path.append(nd)
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -208,6 +211,7 @@ class WalkerAnchor(ObjectAnchor):
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
                         i.func(nd, self.obj)
+                        self.path.append(nd)
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
