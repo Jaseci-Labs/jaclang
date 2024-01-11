@@ -3,8 +3,8 @@ obj MyObj {
 }
 
 with entry {
-        x=MyObj(); 
-        y=MyObj(); 
+        x=MyObj();
+        y=MyObj();
 
         mvar = [x, y](* apple=5, banana=7);
         print(mvar);
