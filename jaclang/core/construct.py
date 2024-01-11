@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 from jaclang.compiler.constant import EdgeDir
-from jaclang.core.helpers_construct import dfs
+from jaclang.core.utils import collect_node_connections
 
 
 @dataclass(eq=False)
@@ -62,20 +62,19 @@ class NodeAnchor(ObjectAnchor):
         """Generate Dot file for visualizing nodes and edges."""
         visited_nodes = set()
         connections = set()
-        turn_table = {}
-        nodes_list = []
+        unique_node_id_dict = {}
 
-        dfs(self, visited_nodes, nodes_list, connections)
+        collect_node_connections(self, visited_nodes, connections)
         dot_content = "digraph {\n"
-        for idx, i in enumerate(nodes_list):
-            turn_table[i] = (i.__class__.__name__, str(idx))
+        for idx, i in enumerate([nodes_.obj for nodes_ in visited_nodes]):
+            unique_node_id_dict[i] = (i.__class__.__name__, str(idx))
             dot_content += f'{idx} [label="{i}"];' + "\n"
 
         for pair in list(set(connections)):
             dot_content += (
-                f"{turn_table.get(pair[0])[1]} -> {turn_table.get(pair[1])[1]} ;" + "\n"
+                f"{unique_node_id_dict.get(pair[0])[1]} -> {unique_node_id_dict.get(pair[1])[1]} ;"
+                + "\n"
             )
-
         if dot_file:
             with open(dot_file, "w") as f:
                 f.write(dot_content + "}")
