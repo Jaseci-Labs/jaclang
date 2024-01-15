@@ -12,6 +12,34 @@ from jaclang.compiler.passes import Pass
 
 T = TypeVar("T", bound=ast3.AST)
 
+class JacLinkedAST(ast3.AST):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.jac_link: Any = None 
+
+# T = TypeVar("T", bound=ast3.AST)
+# V = TypeVar("T", bound=ast.JacLinkedAST)
+
+def smart_ast(t: Type[ast3.AST], jac: ast.AstNode | None) -> Type[ast3.AST]:
+   cls: Type[JacLinkedAST] = type(t.__name__, (t, JacLinkedAST), {})
+   #cls = type(t.__name__, (t, ast.JacLinkedAST), {})
+   cls.jac_link = jac
+   return cls
+#    cls = ast.JacLinkedAST()
+#    print(cls)
+#    cls.jac_link = jac
+   return cls
+s=0
+a=0
+for name, obj in ast3.__dict__.items():
+    a+=1
+    if isinstance(obj,type) and issubclass(obj, ast3.AST):
+        s+=1
+        #print(name, obj)
+        jac_node: Optional[ast.AstNode]=None
+        new_ast_class = smart_ast(obj, jac_node)
+print('---------no of attr:',a,'no of subclass:',s)
+
 
 class PyastGenPass(Pass):
     """Jac blue transpilation to python pass."""
