@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import os
+import types
 from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Callable, Optional, Type
 
-from jaclang import jac_import
+from jaclang.core.importer import j_import
 from jaclang.plugin.spec import (
     ArchBound,
     Architype,
@@ -96,10 +97,27 @@ class JacFeatureDefaults:
             base = base if base else "./"
             mod_name = mod_name[:-4]
             JacTestCheck.reset()
-            jac_import(target=mod_name, base_path=base)
+            j_import(target=mod_name, base_path=base)
             JacTestCheck.run_test()
         else:
             print("Not a .jac file.")
+
+    @staticmethod
+    @hookimpl
+    def jac_import(
+        target: str,
+        base_path: Optional[str] = None,
+        cachable: bool = True,
+        override_name: Optional[str] = None,
+    ) -> Optional[types.ModuleType]:
+        """Core Import Process."""
+        mdle = j_import(
+            target=target,
+            base_path=base_path,
+            cachable=cachable,
+            override_name=override_name,
+        )
+        return mdle
 
     @staticmethod
     @hookimpl
