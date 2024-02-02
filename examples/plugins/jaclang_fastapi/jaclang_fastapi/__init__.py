@@ -33,21 +33,22 @@ class FastAPI:
         _run(cls.get(), host=host, port=port, **kwargs)
 
 
-def options(
-    path: str = "", allowed_methods: list[str] = [], as_query: Union[str, list] = []
+def specs(
+    path: str = "", methods: list[str] = [], as_query: Union[str, list] = []
 ) -> Callable:
-    def wrapper(func: T) -> T:
-        func.__options__ = {
+    def wrapper(cls: T) -> T:
+        cls._jac_specs_ = {
             "path": path,
-            "allowed_methods": allowed_methods,
+            "methods": methods,
             "as_query": as_query,
         }
-        return func
+        return cls
 
     return wrapper
 
 
-FastAPI.post = FastAPI.get().post
 start = FastAPI.start
 
-__all__ = ["FastAPI", "options", "start"]
+__all__ = ["FastAPI", "specs", "start"]
+
+FastAPI.get()
