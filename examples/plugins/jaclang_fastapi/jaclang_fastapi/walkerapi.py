@@ -3,7 +3,7 @@ from jaclang.plugin.spec import ArchBound, WalkerArchitype, DSFunc
 
 from dataclasses import dataclass, Field
 from functools import wraps
-from typing import Type, Callable
+from typing import Type, Callable, Union
 from pydantic import create_model
 from pydoc import locate
 from re import compile
@@ -11,9 +11,14 @@ from re import compile
 from fastapi import Depends
 from jaclang_fastapi import FastAPI
 
-DEFAULT_ALLOWED_METHODS = ["post"]
-DEFAULT_OPTIONS = {"methods": DEFAULT_ALLOWED_METHODS}
+
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
+
+
+class DefaultSpecs:
+    path: str = ""
+    methods: list[str] = ["post"]
+    as_query: Union[str, list[str]] = []
 
 
 class JacFeature:
@@ -49,11 +54,19 @@ class JacFeature:
         return decorator
 
 
+def get_specs(cls):
+    specs = getattr(cls, "Specs", DefaultSpecs)
+    if not issubclass(specs, DefaultSpecs):
+        specs = type(specs.__name__, (specs, DefaultSpecs), {})
+
+    return specs
+
+
 def populate_apis(cls):
-    options: dict = getattr(cls, "_jac_specs_", DEFAULT_OPTIONS)
-    methods: list = options.get("methods") or []
-    as_query: dict = options.get("as_query") or []
-    path: str = options.get("path") or ""
+    specs = get_specs(cls)
+    path: str = specs.path or ""
+    methods: list = specs.methods or []
+    as_query: dict = specs.as_query or []
 
     query = {}
     body = {}
@@ -67,18 +80,17 @@ def populate_apis(cls):
 
     fields: dict[str, Field] = cls.__dataclass_fields__
     for key, val in fields.items():
-        if not key.startswith("_"):
-            consts = [locate(val.type)]
-            if callable(val.default_factory):
-                consts.append(val.default_factory())
-            else:
-                consts.append(...)
-            consts = tuple(consts)
+        consts = [locate(val.type)]
+        if callable(val.default_factory):
+            consts.append(val.default_factory())
+        else:
+            consts.append(...)
+        consts = tuple(consts)
 
-            if as_query == "*" or key in as_query:
-                query[key] = consts
-            else:
-                body[key] = consts
+        if as_query == "*" or key in as_query:
+            query[key] = consts
+        else:
+            body[key] = consts
 
     QueryModel = create_model(f"{cls.__name__.lower()}_query_model", **query)
     BodyModel = create_model(f"{cls.__name__.lower()}_body_model", **body)

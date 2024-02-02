@@ -37,11 +37,16 @@ def specs(
     path: str = "", methods: list[str] = [], as_query: Union[str, list] = []
 ) -> Callable:
     def wrapper(cls: T) -> T:
-        cls._jac_specs_ = {
-            "path": path,
-            "methods": methods,
-            "as_query": as_query,
-        }
+        p = path
+        m = methods
+        aq = as_query
+
+        class Specs:
+            path: str = p
+            methods: list[str] = m
+            as_query: Union[str, list] = aq
+
+        cls.Specs = Specs
         return cls
 
     return wrapper

@@ -34,7 +34,7 @@ walker post_path_var {
     has a: str;
 }
 
-@specs(path = "/{a}", methods=["post", "get"], as_query=["b"])
+@specs(path = "/{a}", methods=["post", "get", "put", "patch", "delete", "head", "trace", "options"], as_query=["b"])
 walker combination2 {
     has a: str;
     has b: str;
