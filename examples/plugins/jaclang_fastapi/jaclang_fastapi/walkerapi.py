@@ -12,7 +12,7 @@ from fastapi import Depends
 from jaclang_fastapi import FastAPI
 
 DEFAULT_ALLOWED_METHODS = ["post"]
-DEFAULT_OPTIONS = {"allowed_methods": DEFAULT_ALLOWED_METHODS}
+DEFAULT_OPTIONS = {"methods": DEFAULT_ALLOWED_METHODS}
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
 
 
@@ -50,8 +50,8 @@ class JacFeature:
 
 
 def populate_apis(cls):
-    options: dict = getattr(cls, "__options__", DEFAULT_OPTIONS)
-    allowed_methods: list = options.get("allowed_methods") or []
+    options: dict = getattr(cls, "_jac_specs_", DEFAULT_OPTIONS)
+    methods: list = options.get("methods") or []
     as_query: dict = options.get("as_query") or []
     path: str = options.get("path") or ""
 
@@ -67,17 +67,18 @@ def populate_apis(cls):
 
     fields: dict[str, Field] = cls.__dataclass_fields__
     for key, val in fields.items():
-        consts = [locate(val.type)]
-        if callable(val.default_factory):
-            consts.append(val.default_factory())
-        else:
-            consts.append(...)
-        consts = tuple(consts)
+        if not key.startswith("_"):
+            consts = [locate(val.type)]
+            if callable(val.default_factory):
+                consts.append(val.default_factory())
+            else:
+                consts.append(...)
+            consts = tuple(consts)
 
-        if as_query == "*" or key in as_query:
-            query[key] = consts
-        else:
-            body[key] = consts
+            if as_query == "*" or key in as_query:
+                query[key] = consts
+            else:
+                body[key] = consts
 
     QueryModel = create_model(f"{cls.__name__.lower()}_query_model", **query)
     BodyModel = create_model(f"{cls.__name__.lower()}_body_model", **body)
@@ -102,7 +103,7 @@ def populate_apis(cls):
         def api():
             return "ok"
 
-    for method in allowed_methods:
+    for method in methods:
         method = method.lower()
 
         walker_method = getattr(FastAPI, f"walker_{method}")

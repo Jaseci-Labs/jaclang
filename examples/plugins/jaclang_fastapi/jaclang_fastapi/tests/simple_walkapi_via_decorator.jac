@@ -1,40 +1,40 @@
 """Example of simple walker walking nodes."""
-import:py from jaclang_fastapi, FastAPI, options, start;
+import:py from jaclang_fastapi, FastAPI, specs, start;
 
 walker post_no_body {}
 walker post_with_body {
     has a: str;
 }
 
-@options(allowed_methods=["get"])
+@specs(methods=["get"])
 walker get_no_body {}
 
-@options(allowed_methods=["get"], as_query=["a"])
+@specs(methods=["get"], as_query=["a"])
 walker get_with_query {
     # @query - future improvements instead of adding manually on as_query
     has a: str;
 }
 
-@options(allowed_methods=["get"], as_query="*")
+@specs(methods=["get"], as_query="*")
 walker get_all_query {
     # @query - future improvements instead of adding manually on as_query
     has a: str;
     has b: str;
 }
 
-@options(allowed_methods=["post", "get"], as_query=["a", "b"])
+@specs(methods=["post", "get"], as_query=["a", "b"])
 walker combination {
     has a: str;
     has b: str;
     has c: str;
 }
 
-@options(path = "/{a}", allowed_methods=["post"])
+@specs(path = "/{a}", methods=["post"])
 walker post_path_var {
     has a: str;
 }
 
-@options(path = "/{a}", allowed_methods=["post", "get"], as_query=["b"])
+@specs(path = "/{a}", methods=["post", "get"], as_query=["b"])
 walker combination2 {
     has a: str;
     has b: str;
