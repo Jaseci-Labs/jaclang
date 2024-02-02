@@ -550,49 +550,48 @@ class PyastGenPass(Pass):
             node.body.body if isinstance(node.body, ast.ArchDef) else node.body,
             doc=node.doc,
         )
-        decorators = (
-            node.decorators.gen.py_ast
-            if isinstance(node.decorators, ast.SubNodeList)
-            else []
-        )
+
         ds_on_entry, ds_on_exit = self.collect_events(node)
-        if isinstance(decorators, list):
-            decorators.append(
-                self.sync(
-                    ast3.Call(
-                        func=self.sync(
-                            ast3.Attribute(
+
+        decorators = []
+        decorators.append(
+            self.sync(
+                ast3.Call(
+                    func=self.sync(
+                        ast3.Attribute(
+                            value=self.sync(
+                                ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                            ),
+                            attr=f"make_{node.arch_type.value}",
+                            ctx=ast3.Load(),
+                        )
+                    ),
+                    args=[],
+                    keywords=[
+                        self.sync(
+                            ast3.keyword(
+                                arg="on_entry",
                                 value=self.sync(
-                                    ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                                    ast3.List(elts=ds_on_entry, ctx=ast3.Load())
                                 ),
-                                attr=f"make_{node.arch_type.value}",
-                                ctx=ast3.Load(),
                             )
                         ),
-                        args=[],
-                        keywords=[
-                            self.sync(
-                                ast3.keyword(
-                                    arg="on_entry",
-                                    value=self.sync(
-                                        ast3.List(elts=ds_on_entry, ctx=ast3.Load())
-                                    ),
-                                )
-                            ),
-                            self.sync(
-                                ast3.keyword(
-                                    arg="on_exit",
-                                    value=self.sync(
-                                        ast3.List(elts=ds_on_exit, ctx=ast3.Load())
-                                    ),
-                                )
-                            ),
-                        ],
-                    )
+                        self.sync(
+                            ast3.keyword(
+                                arg="on_exit",
+                                value=self.sync(
+                                    ast3.List(elts=ds_on_exit, ctx=ast3.Load())
+                                ),
+                            )
+                        ),
+                    ],
                 )
             )
-        else:
-            raise self.ice()
+        )
+
+        if isinstance(node.decorators, ast.SubNodeList):
+            decorators += node.decorators.gen.py_ast
+
         base_classes = node.base_classes.gen.py_ast if node.base_classes else []
         if node.is_abstract:
             self.needs_jac_feature()
