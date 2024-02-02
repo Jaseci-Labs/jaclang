@@ -7,19 +7,18 @@ walker post_with_body {
 }
 
 walker get_no_body {
-    static has _jac_specs_: dict = {
-        "methods": ["get"]
-    };
+    obj Specs {
+        static has methods: list = ["get"];
+    }
 }
 
 walker get_with_query {
     # @query - future improvements instead of adding manually on as_query
     has a: str;
 
-    static has _jac_specs_: dict = {
-        "methods": ["get"],
-        "as_query": ["a"]
-    };
+    obj Specs {
+        static has methods: list = ["get"], as_query: list = ["a"];
+    }
 }
 
 walker get_all_query {
@@ -27,10 +26,9 @@ walker get_all_query {
     has a: str;
     has b: str;
 
-    static has _jac_specs_: dict = {
-        "methods": ["get"],
-        "as_query": "*"
-    };
+    obj Specs {
+        static has methods: list = ["get"], as_query: list = "*";
+    }
 }
 
 walker combination {
@@ -38,19 +36,17 @@ walker combination {
     has b: str;
     has c: str;
 
-    static has _jac_specs_: dict = {
-        "methods": ["post", "get"],
-        "as_query": ["a", "b"]
-    };
+    obj Specs {
+        static has methods: list = ["post", "get"], as_query: list = ["a", "b"];
+    }
 }
 
 walker post_path_var {
     has a: str;
 
-    static has _jac_specs_: dict = {
-        "path": "/{a}",
-        "methods": ["post", "get"]
-    };
+    obj Specs {
+        static has path: str = "/{a}", methods: list = ["post", "get"];
+    }
 }
 
 walker combination2 {
@@ -58,11 +54,9 @@ walker combination2 {
     has b: str;
     has c: str;
 
-    static has _jac_specs_: dict = {
-        "path": "/{a}",
-        "methods": ["post", "get"],
-        "as_query": ["b"]
-    };
+    obj Specs {
+        static has path: str = "/{a}", methods: list = ["post", "get", "put", "patch", "delete", "head", "trace", "options"], as_query: list = ["b"];
+    }
 }
 
 with entry:__main__ {
