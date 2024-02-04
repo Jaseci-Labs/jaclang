@@ -279,29 +279,20 @@ class JacFeatureDefaults:
 
         Note: connect needs to call assign compr with tuple in op
         """
-        def update_adjacency_matrix(node1: NodeArchitype, node2: NodeArchitype) -> None:
-            """Update the adjacency matrix dynamically."""
-            root.unique_nodes.extend(x for x in (node1, node2) if x not in root.unique_nodes)
-            root.add_adjacency_matrix_entry(node1, node2)
-            
         if isinstance(left, list):
             if isinstance(right, list):
                 for i in left:
                     for j in right:
                         i._jac_.connect_node(j, edge_spec)
-                        update_adjacency_matrix(i, j)
             else:
                 for i in left:
                     i._jac_.connect_node(right, edge_spec)
-                    update_adjacency_matrix(i, right)
         else:
             if isinstance(right, list):
                 for i in right:
                     left._jac_.connect_node(i, edge_spec)
-                    update_adjacency_matrix(left, i)
             else:
                 left._jac_.connect_node(right, edge_spec)
-                update_adjacency_matrix(left, right)
         return left
 
     @staticmethod

@@ -40,6 +40,7 @@ class NodeAnchor(ObjectAnchor):
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
         edg._jac_.attach(self.obj, nd)
+        root.update_adjacency_matrix(self.obj, nd)
         return self.obj
 
     def edges_to_nodes(
@@ -258,10 +259,14 @@ class Root(NodeArchitype):
     unique_nodes = []
     adj_matrix = []
 
-    def add_adjacency_matrix_entry(self, node1: NodeArchitype, node2: NodeArchitype) -> None:
-        """Add an entry to the adjacency matrix."""
-        left_index = self.unique_nodes.index(node1)
-        right_index = self.unique_nodes.index(node2)
+    def update_adjacency_matrix(
+        self, node1: NodeArchitype, node2: NodeArchitype
+    ) -> None:
+        """Update the adjacency matrix dynamically."""
+        self.unique_nodes.extend({node1, node2} - set(self.unique_nodes))
+        left_index, right_index = self.unique_nodes.index(
+            node1
+        ), self.unique_nodes.index(node2)
 
         while len(self.adj_matrix) <= max(left_index, right_index):
             self.adj_matrix.append([0] * len(self.unique_nodes))
@@ -270,11 +275,12 @@ class Root(NodeArchitype):
             while len(row) < len(self.unique_nodes):
                 row.append(0)
 
-        self.adj_matrix[left_index][right_index] = 1 
+        self.adj_matrix[left_index][right_index] = 1
         # print("Adjacency Matrix:")
         # for row in self.adj_matrix:
-        #     print(row)
+        #  print(row)
         # print()
+
 
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
