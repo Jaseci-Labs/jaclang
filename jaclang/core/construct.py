@@ -1,7 +1,7 @@
 """Core constructs for Jac Language."""
+
 from __future__ import annotations
 
-import numpy as np
 import types
 import unittest
 from dataclasses import dataclass, field
@@ -267,28 +267,31 @@ class Root(NodeArchitype):
         left_index, right_index = self.unique_nodes.index(
             node1
         ), self.unique_nodes.index(node2)
+        adjacency_matrix=self.adj_matrix
+        while len(adjacency_matrix) <= max(left_index, right_index):
+            adjacency_matrix.append([0] * len(self.unique_nodes))
 
-        while len(self.adj_matrix) <= max(left_index, right_index):
-            self.adj_matrix.append([0] * len(self.unique_nodes))
-
-        for row in self.adj_matrix:
+        for row in adjacency_matrix:
             while len(row) < len(self.unique_nodes):
                 row.append(0)
 
-        self.adj_matrix[left_index][right_index] = 1
-        
-        adjacency_matrix = np.array(self.adj_matrix)
-        num_nodes = len(adjacency_matrix)
-        reachability_matrix = np.copy(adjacency_matrix)
+        adjacency_matrix[left_index][right_index] = 1
 
-        for i in range(2, num_nodes + 1):
-            reachability_matrix = np.logical_or(reachability_matrix, np.linalg.matrix_power(adjacency_matrix, i))
-        reachability_matrix = reachability_matrix.astype(int)
+        num_nodes = len(adjacency_matrix)
+        reachability_matrix = [row[:] for row in adjacency_matrix]
+        for k in range(num_nodes):
+            for i in range(num_nodes):
+                for j in range(num_nodes):
+                    reachability_matrix[i][j] = reachability_matrix[i][j] or (reachability_matrix[i][k] and reachability_matrix[k][j])
 
         print("Adjacency Matrix:")
-        print(adjacency_matrix)
+        for row in adjacency_matrix:
+            print(row)
+
         print("\nReachability Matrix:")
-        print(reachability_matrix)
+        for row in reachability_matrix:
+            print(row)
+
 
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
