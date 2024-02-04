@@ -73,5 +73,8 @@ with entry {
     <r> spawn walker1();
     <r> spawn walker2();
     <r> spawn walker3();
-    print(<r>._jac_.gen_dot());
+    # print((_Jac.get_root()).adj_matrix);
+#    print((_Jac.get_root()).unique_nodes);
+    # print(len((_Jac.get_root()).unique_nodes));
+    # print(<r>._jac_.gen_dot());
 }

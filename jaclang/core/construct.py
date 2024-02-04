@@ -255,7 +255,26 @@ class Root(NodeArchitype):
 
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
+    unique_nodes = []
+    adj_matrix = []
 
+    def add_adjacency_matrix_entry(self, node1: NodeArchitype, node2: NodeArchitype) -> None:
+        """Add an entry to the adjacency matrix."""
+        left_index = self.unique_nodes.index(node1)
+        right_index = self.unique_nodes.index(node2)
+
+        while len(self.adj_matrix) <= max(left_index, right_index):
+            self.adj_matrix.append([0] * len(self.unique_nodes))
+
+        for row in self.adj_matrix:
+            while len(row) < len(self.unique_nodes):
+                row.append(0)
+
+        self.adj_matrix[left_index][right_index] = 1 
+        # print("Adjacency Matrix:")
+        # for row in self.adj_matrix:
+        #     print(row)
+        # print()
 
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
