@@ -1,7 +1,7 @@
 """Core constructs for Jac Language."""
-
 from __future__ import annotations
 
+import numpy as np
 import types
 import unittest
 from dataclasses import dataclass, field
@@ -276,11 +276,19 @@ class Root(NodeArchitype):
                 row.append(0)
 
         self.adj_matrix[left_index][right_index] = 1
-        # print("Adjacency Matrix:")
-        # for row in self.adj_matrix:
-        #  print(row)
-        # print()
+        
+        adjacency_matrix = np.array(self.adj_matrix)
+        num_nodes = len(adjacency_matrix)
+        reachability_matrix = np.copy(adjacency_matrix)
 
+        for i in range(2, num_nodes + 1):
+            reachability_matrix = np.logical_or(reachability_matrix, np.linalg.matrix_power(adjacency_matrix, i))
+        reachability_matrix = reachability_matrix.astype(int)
+
+        print("Adjacency Matrix:")
+        print(adjacency_matrix)
+        print("\nReachability Matrix:")
+        print(reachability_matrix)
 
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
