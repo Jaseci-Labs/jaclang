@@ -1,5 +1,6 @@
 """Example of simple walker walking nodes."""
-import:py from jaclang_fastapi, FastAPI, specs, start;
+import:py from jaclang_fastapi, FastAPI, start;
+import:py from jaclang_fastapi.plugins, specs;
 
 walker post_no_body {}
 walker post_with_body {
