@@ -10,18 +10,12 @@ class FastAPI:
     def get(cls) -> _FaststAPI:
         if not isinstance(cls.__app__, _FaststAPI):
             cls.__app__ = _FaststAPI()
-            cls.walker_get = cls.__app__.get
-            cls.walker_post = cls.__app__.post
-            cls.walker_put = cls.__app__.put
-            cls.walker_patch = cls.__app__.patch
-            cls.walker_delete = cls.__app__.delete
-            cls.walker_head = cls.__app__.head
-            cls.walker_options = cls.__app__.options
-            cls.walker_trace = cls.__app__.trace
 
             from jaclang_fastapi.routers import user_router
+            from jaclang_fastapi.plugins import walker_router
 
-            cls.__app__.include_router(user_router)
+            for router in [user_router, walker_router]:
+                cls.__app__.include_router(router)
 
         return cls.__app__
 

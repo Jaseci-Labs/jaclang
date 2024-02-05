@@ -60,7 +60,8 @@ class BaseCollector:
 
             if cls.__indexes__:
                 idxs = []
-                for idx in cls.__indexes__:
+                while cls.__indexes__:
+                    idx = cls.__indexes__.pop()
                     idxs.append(IndexModel(idx.pop("fields"), **idx))
                 await cls.__collection_obj__.create_indexes(idxs)
 

@@ -8,12 +8,13 @@ from pydantic import create_model
 from pydoc import locate
 from re import compile
 
-from fastapi import Depends
-from jaclang_fastapi import FastAPI
+from fastapi import Depends, APIRouter
 
 
 T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
+
+router = APIRouter(prefix="/walker", tags=["walker"])
 
 
 class DefaultSpecs:
@@ -105,7 +106,7 @@ def populate_apis(cls):
     for method in methods:
         method = method.lower()
 
-        walker_method = getattr(FastAPI, f"walker_{method}")
+        walker_method = getattr(router, method)
         walker_method(walker_url, tags=["walker"])(api)
 
 

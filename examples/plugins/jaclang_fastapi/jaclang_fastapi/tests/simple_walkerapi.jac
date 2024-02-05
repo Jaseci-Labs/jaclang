@@ -1,6 +1,12 @@
 """Example of simple walker walking nodes."""
 import:py from jaclang_fastapi, FastAPI, start;
+import:py from jaclang_fastapi.models, User as BaseUser;
 
+# if possible to support this native class declaration
+::py::
+class User(BaseUser):
+    name: str
+::py::
 
 walker post_no_body {}
 walker post_with_body {
