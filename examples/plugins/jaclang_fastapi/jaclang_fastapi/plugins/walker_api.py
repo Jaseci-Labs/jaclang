@@ -1,9 +1,9 @@
+from jaclang.core.construct import Architype, DSFunc, WalkerArchitype
 from jaclang.plugin.default import hookimpl
-from jaclang.plugin.spec import ArchBound, WalkerArchitype, DSFunc
+from jaclang.plugin.feature import JacFeature as Jac
 
-from dataclasses import dataclass, Field
-from functools import wraps
-from typing import Type, Callable, Union
+from dataclasses import Field
+from typing import Type, TypeVar, Callable, Union
 from pydantic import create_model
 from pydoc import locate
 from re import compile
@@ -12,6 +12,7 @@ from fastapi import Depends
 from jaclang_fastapi import FastAPI
 
 
+T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
 
 
@@ -21,7 +22,7 @@ class DefaultSpecs:
     as_query: Union[str, list[str]] = []
 
 
-class JacFeature:
+class JacPlugin:
     @staticmethod
     @hookimpl
     def make_walker(
@@ -29,25 +30,11 @@ class JacFeature:
     ) -> Callable[[type], type]:
         """Create a walker architype."""
 
-        def decorator(cls: Type[ArchBound]) -> Type[ArchBound]:
+        def decorator(cls: Type[Architype]) -> Type[Architype]:
             """Decorate class."""
-            cls = dataclass(eq=False)(cls)
-            for i in on_entry + on_exit:
-                i.resolve(cls)
-            arch_cls = WalkerArchitype
-            if not issubclass(cls, arch_cls):
-                cls = type(cls.__name__, (cls, arch_cls), {})
-            cls._jac_entry_funcs_ = on_entry
-            cls._jac_exit_funcs_ = on_exit
-            inner_init = cls.__init__
-
-            @wraps(inner_init)
-            def new_init(self: ArchBound, *args: object, **kwargs: object) -> None:
-                inner_init(self, *args, **kwargs)
-                arch_cls.__init__(self)
-
-            cls.__init__ = new_init
-
+            cls = Jac.make_architype(
+                cls=cls, arch_base=WalkerArchitype, on_entry=on_entry, on_exit=on_exit
+            )
             populate_apis(cls)
             return cls
 
@@ -97,26 +84,45 @@ def populate_apis(cls):
 
     if body and query:
 
-        def api(body: BodyModel, query: QueryModel = Depends()):
+        async def api(body: BodyModel, query: QueryModel = Depends()):
             return "ok"
 
     elif body:
 
-        def api(body: BodyModel):
+        async def api(body: BodyModel):
             return "ok"
 
     elif query:
 
-        def api(query: QueryModel = Depends()):
+        async def api(query: QueryModel = Depends()):
             return query
 
     else:
 
-        def api():
+        async def api():
             return "ok"
 
     for method in methods:
         method = method.lower()
 
         walker_method = getattr(FastAPI, f"walker_{method}")
-        walker_method(walker_url)(api)
+        walker_method(walker_url, tags=["walker"])(api)
+
+
+def specs(
+    path: str = "", methods: list[str] = [], as_query: Union[str, list] = []
+) -> Callable:
+    def wrapper(cls: T) -> T:
+        p = path
+        m = methods
+        aq = as_query
+
+        class Specs:
+            path: str = p
+            methods: list[str] = m
+            as_query: Union[str, list] = aq
+
+        cls.Specs = Specs
+        return cls
+
+    return wrapper
