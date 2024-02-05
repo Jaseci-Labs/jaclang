@@ -7,5 +7,3 @@ load_dotenv()
 start = FastAPI.start
 
 __all__ = ["FastAPI", "start"]
-
-FastAPI.get()

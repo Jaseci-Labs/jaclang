@@ -5,7 +5,6 @@ from fastapi import Depends, Header, Request
 from fastapi.exceptions import HTTPException
 
 from jwt import decode, encode
-from bcrypt import hashpw as _hashpw, gensalt
 from passlib.context import CryptContext
 
 from jaclang_fastapi.models import User
@@ -27,10 +26,6 @@ def decrypt(token: str) -> dict:
     except Exception:
         logger.exception("Token is invalid!")
         return None
-
-
-def hashpw(password: str) -> bytes:
-    return _hashpw(password.encode(), gensalt())
 
 
 async def create_token(user: dict) -> str:

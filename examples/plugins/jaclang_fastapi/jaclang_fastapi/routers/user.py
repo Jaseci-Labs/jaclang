@@ -11,8 +11,8 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 
 @router.post("/register", status_code=status.HTTP_200_OK)
-async def register(req: UserRequest):
-    result = await User.Collector.insert_one(req.parsed())
+async def register(req: User.register_type()):
+    result = await User.Collector.insert_one(req.obfuscate())
 
     if result:
         return ORJSONResponse({"message": "Successfully Registered!"}, 201)
