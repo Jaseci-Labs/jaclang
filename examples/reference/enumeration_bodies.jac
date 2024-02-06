@@ -35,3 +35,4 @@ with entry{
         # Using the enum in a function
         print_color(Color.GREEN);    # output: It's green!
 }
+
