@@ -15,8 +15,12 @@ class CommonMemory:
     @staticmethod
     def get_rd() -> Redis:
         if not isinstance(__class__.__redis__, Redis):
-            __class__.__redis__ = aioredis.from_url(getenv("REDIS_HOST"))
-
+            __class__.__redis__ = aioredis.from_url(
+                getenv("REDIS_HOST"),
+                port=int(getenv("REDIS_PORT")),
+                username=getenv("REDIS_USER"),
+                password=getenv("REDIS_PASS"),
+            )
         return __class__.__redis__
 
     @classmethod

@@ -96,7 +96,9 @@ class BaseCollector:
         if "projection" not in kwargs:
             kwargs["projection"] = cls.__excluded_obj__
 
-        return cls.__documents__(await collection.find(**kwargs))
+        if results := await collection.find(**kwargs):
+            return cls.__documents__(results)
+        return results
 
     @classmethod
     async def find_one(cls, **kwargs):
@@ -105,7 +107,9 @@ class BaseCollector:
         if "projection" not in kwargs:
             kwargs["projection"] = cls.__excluded_obj__
 
-        return cls.__document__(await collection.find_one(**kwargs))
+        if result := await collection.find_one(**kwargs):
+            return cls.__document__(result)
+        return result
 
     @classmethod
     async def find_by_id(cls, id: str, **kwargs):
@@ -114,9 +118,9 @@ class BaseCollector:
         if "projection" not in kwargs:
             kwargs["projection"] = cls.__excluded_obj__
 
-        return cls.__document__(
-            await collection.find_one({"_id": ObjectId(id)}, **kwargs)
-        )
+        if result := await collection.find_one({"_id": ObjectId(id)}, **kwargs):
+            return cls.__document__(result)
+        return result
 
     @classmethod
     async def delete(cls, filter):
