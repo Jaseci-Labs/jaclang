@@ -10,6 +10,9 @@ from pydantic.fields import FieldInfo
 from jaclang_fastapi.collector import BaseCollector
 
 
+NULL_BYTES = bytes()
+
+
 class UserCommon(BaseModel):
     def json(self):
         return self.model_dump(exclude={"password"})
@@ -36,7 +39,7 @@ class User(UserCommon):
             return User.model()(
                 id=str(doc.pop("_id")),
                 email=doc.pop("email"),
-                password=doc.pop("password", None),
+                password=doc.pop("password", None) or NULL_BYTES,
                 **doc,
             )
 
@@ -46,7 +49,7 @@ class User(UserCommon):
                 User.model()(
                     id=str(doc.get("_id")),
                     email=doc.get("email"),
-                    password=doc.get("password"),
+                    password=doc.get("password") or NULL_BYTES,
                     **doc,
                 )
                 for doc in docs
@@ -58,7 +61,9 @@ class User(UserCommon):
 
     @staticmethod
     def model() -> type["User"]:
-        return __class__.__subclasses__()[-1]
+        if subs := __class__.__subclasses__():
+            return subs[-1]
+        return __class__
 
     @staticmethod
     def register_type() -> type:

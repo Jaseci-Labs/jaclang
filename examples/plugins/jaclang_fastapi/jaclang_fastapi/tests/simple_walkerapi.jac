@@ -34,7 +34,7 @@ walker get_all_query {
     has b: str;
 
     obj Specs {
-        static has methods: list = ["get"], as_query: list = "*";
+        static has methods: list = ["get"], as_query: list = "*", auth: bool = False;
     }
 }
 

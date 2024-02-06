@@ -16,7 +16,7 @@ walker get_with_query {
     has a: str;
 }
 
-@specs(methods=["get"], as_query="*")
+@specs(methods=["get"], as_query="*", auth=False)
 walker get_all_query {
     # @query - future improvements instead of adding manually on as_query
     has a: str;

@@ -1,8 +1,8 @@
 from os import getenv
-from typing import Annotated
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 from fastapi.exceptions import HTTPException
+from fastapi.security import HTTPBearer
 
 from jwt import decode, encode
 from passlib.context import CryptContext
@@ -36,22 +36,21 @@ async def create_token(user: dict) -> str:
     raise HTTPException(500, "Token Creation Failed!")
 
 
-async def authenticate(
-    request: Request, Authorization: Annotated[str, Header()]
-):  # noqa N803
-    if Authorization and Authorization.lower().startswith("bearer"):
-        token = Authorization[7:]
+async def authenticate(request: Request):  # noqa N803
+    authorization = request.headers.get("Authorization")
+    if authorization and authorization.lower().startswith("bearer"):
+        token = authorization[7:]
         decrypted = decrypt(token)
         if (
             decrypted
             and decrypted["expiration"] > utc_now()
             and await TokenMemory.hget(key=token)
         ):
-            request.auth_user = await User.Collector.find_by_id(decrypted["id"])
+            request.auth_user = await User.model().Collector.find_by_id(decrypted["id"])
             return
 
     raise HTTPException(status_code=401)
 
 
 verify = CryptContext(schemes=["bcrypt"], deprecated="auto").verify
-authenticator = [Depends(authenticate)]
+authenticator = [Depends(HTTPBearer()), Depends(authenticate)]

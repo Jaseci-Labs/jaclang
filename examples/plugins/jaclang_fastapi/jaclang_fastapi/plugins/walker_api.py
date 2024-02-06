@@ -10,6 +10,8 @@ from re import compile
 
 from fastapi import Depends, APIRouter
 
+from jaclang_fastapi.securities import authenticator
+
 
 T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
@@ -21,6 +23,7 @@ class DefaultSpecs:
     path: str = ""
     methods: list[str] = ["post"]
     as_query: Union[str, list[str]] = []
+    auth: bool = True
 
 
 class JacPlugin:
@@ -55,6 +58,7 @@ def populate_apis(cls):
     path: str = specs.path or ""
     methods: list = specs.methods or []
     as_query: dict = specs.as_query or []
+    auth: bool = specs.auth or False
 
     query = {}
     body = {}
@@ -64,7 +68,7 @@ def populate_apis(cls):
             path = f"/{path}"
         as_query += PATH_VARIABLE_REGEX.findall(path)
 
-    walker_url = f"/walker/{cls.__name__}{path}"
+    walker_url = f"/{cls.__name__}{path}"
 
     fields: dict[str, Field] = cls.__dataclass_fields__
     for key, val in fields.items():
@@ -107,21 +111,31 @@ def populate_apis(cls):
         method = method.lower()
 
         walker_method = getattr(router, method)
-        walker_method(walker_url, tags=["walker"])(api)
+
+        settings = {}
+        if auth:
+            settings["dependencies"] = authenticator
+
+        walker_method(walker_url, tags=["walker"], **settings)(api)
 
 
 def specs(
-    path: str = "", methods: list[str] = [], as_query: Union[str, list] = []
+    path: str = "",
+    methods: list[str] = [],
+    as_query: Union[str, list] = [],
+    auth: bool = True,
 ) -> Callable:
     def wrapper(cls: T) -> T:
         p = path
         m = methods
         aq = as_query
+        a = auth
 
         class Specs:
             path: str = p
             methods: list[str] = m
             as_query: Union[str, list] = aq
+            auth: bool = a
 
         cls.Specs = Specs
         return cls
