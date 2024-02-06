@@ -36,6 +36,10 @@ walker get_all_query {
     obj Specs {
         static has methods: list = ["get"], as_query: list = "*", auth: bool = False;
     }
+
+    can enter with `<r> entry {
+        return 1;
+    }
 }
 
 walker combination {
