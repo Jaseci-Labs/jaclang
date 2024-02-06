@@ -1,4 +1,4 @@
-from jaclang.core.construct import Architype, DSFunc, WalkerArchitype
+from jaclang.core.construct import Architype, DSFunc, WalkerArchitype, root
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
@@ -90,22 +90,30 @@ def populate_apis(cls):
     if body and query:
 
         async def api(body: BodyModel, query: QueryModel = Depends()):
-            return "ok"
+            wlk = cls(**body.model_dump(), **query.model_dump())
+            wlk._jac_.spawn_call(root)
+            return wlk._jac_.returns
 
     elif body:
 
         async def api(body: BodyModel):
-            return "ok"
+            wlk = cls(**body.model_dump())
+            wlk._jac_.spawn_call(root)
+            return wlk._jac_.returns
 
     elif query:
 
         async def api(query: QueryModel = Depends()):
-            return query
+            wlk = cls(**query.model_dump())
+            wlk._jac_.spawn_call(root)
+            return wlk._jac_.returns
 
     else:
 
         async def api():
-            return "ok"
+            wlk = cls()
+            wlk._jac_.spawn_call(root)
+            return wlk._jac_.returns
 
     for method in methods:
         method = method.lower()

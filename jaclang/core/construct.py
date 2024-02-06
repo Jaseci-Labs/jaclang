@@ -220,12 +220,14 @@ class WalkerAnchor(ObjectAnchor):
         """Invoke data spatial call."""
         self.path = []
         self.next = [nd]
+        self.returns = []
+
         while len(self.next):
             nd = self.next.pop(0)
             for i in nd._jac_entry_funcs_:
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
-                        i.func(nd, self.obj)
+                        self.returns.append(i.func(nd, self.obj))
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -233,7 +235,7 @@ class WalkerAnchor(ObjectAnchor):
             for i in self.obj._jac_entry_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
-                        i.func(self.obj, nd)
+                        self.returns.append(i.func(self.obj, nd))
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -241,7 +243,7 @@ class WalkerAnchor(ObjectAnchor):
             for i in self.obj._jac_exit_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
-                        i.func(self.obj, nd)
+                        self.returns.append(i.func(self.obj, nd))
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
@@ -249,7 +251,7 @@ class WalkerAnchor(ObjectAnchor):
             for i in nd._jac_exit_funcs_:
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
-                        i.func(nd, self.obj)
+                        self.returns.append(i.func(nd, self.obj))
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
