@@ -61,8 +61,8 @@ walker get_all_query {
     async can enter with `<r> entry {
         b = boy(val1="a", val2="b");
         g = girl(val="b");
+        b ++> g;
         await b.save();
-        await g.save();
         return 'something';
     }
 }

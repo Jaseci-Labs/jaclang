@@ -4,8 +4,6 @@ from fastapi import Depends, Request
 from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPBearer
 
-from jaclang.core.construct import root
-
 from jwt import decode, encode
 from passlib.context import CryptContext
 
@@ -41,8 +39,6 @@ async def create_token(user: dict) -> str:
 
 async def authenticate(request: Request):  # noqa N803
     authorization = request.headers.get("Authorization")
-    request.auth_user = None
-    request.user_root = root
     if authorization and authorization.lower().startswith("bearer"):
         token = authorization[7:]
         decrypted = decrypt(token)

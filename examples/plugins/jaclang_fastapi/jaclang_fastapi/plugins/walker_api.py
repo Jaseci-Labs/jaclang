@@ -169,28 +169,28 @@ def populate_apis(cls):
 
         async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
             wlk = cls(**body.model_dump(), **query.model_dump())
-            await wlk._jac_.spawn_call(request.user_root)
+            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
 
     elif body:
 
         async def api(request: Request, body: BodyModel):
             wlk = cls(**body.model_dump())
-            await wlk._jac_.spawn_call(request.user_root)
+            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
 
     elif query:
 
         async def api(request: Request, query: QueryModel = Depends()):
             wlk = cls(**query.model_dump())
-            await wlk._jac_.spawn_call(request.user_roott)
+            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
 
     else:
 
         async def api(request: Request):
             wlk = cls()
-            await wlk._jac_.spawn_call(request.user_root)
+            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
 
     for method in methods:

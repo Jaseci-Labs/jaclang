@@ -7,7 +7,6 @@ from pydantic import BaseModel, EmailStr
 from pydantic.fields import FieldInfo
 
 from jaclang_fastapi.collections.user import UserCollection
-from jaclang_fastapi.plugins import Root
 
 NULL_BYTES = bytes()
 
