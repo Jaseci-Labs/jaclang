@@ -4,9 +4,12 @@ from fastapi import Depends, Request
 from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPBearer
 
+from jaclang.core.construct import root
+
 from jwt import decode, encode
 from passlib.context import CryptContext
 
+from jaclang_fastapi.plugins import Root
 from jaclang_fastapi.models import User
 from jaclang_fastapi.memory import TokenMemory
 from jaclang_fastapi.utils import logger, utc_now
@@ -38,6 +41,8 @@ async def create_token(user: dict) -> str:
 
 async def authenticate(request: Request):  # noqa N803
     authorization = request.headers.get("Authorization")
+    request.auth_user = None
+    request.user_root = root
     if authorization and authorization.lower().startswith("bearer"):
         token = authorization[7:]
         decrypted = decrypt(token)
@@ -46,7 +51,12 @@ async def authenticate(request: Request):  # noqa N803
             and decrypted["expiration"] > utc_now()
             and await TokenMemory.hget(key=token)
         ):
-            request.auth_user = await User.model().Collector.find_by_id(decrypted["id"])
+            request.auth_user = await User.model().Collection.find_by_id(
+                decrypted["id"]
+            )
+            request.user_root = await Root.Collection.find_by_id(
+                request.auth_user.root_id
+            )
             return
 
     raise HTTPException(status_code=401)
