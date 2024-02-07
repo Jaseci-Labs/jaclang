@@ -4,9 +4,25 @@ import:py from jaclang_fastapi.models, User as BaseUser;
 
 # if possible to support this native class declaration
 ::py::
+NULL_BYTES = bytes()
+
 class User(BaseUser):
     name: str
+
+    class Collection(BaseUser.Collection):
+        @classmethod
+        def __document__(cls, doc) -> "User":
+            return User.model()(
+                id=str(doc.pop("_id")),
+                email=doc.pop("email") + "overrided",
+                password=doc.pop("password", None) or NULL_BYTES,
+                **doc,
+            )
 ::py::
+
+node a {
+    has val1: str;
+}
 
 walker post_no_body {}
 walker post_with_body {
@@ -37,8 +53,10 @@ walker get_all_query {
         static has methods: list = ["get"], as_query: list = "*", auth: bool = False;
     }
 
-    can enter with `<r> entry {
-        return 1;
+    async can enter with `<r> entry {
+        b = a(val1= 2);
+        await b.save();
+        return 'something';
     }
 }
 

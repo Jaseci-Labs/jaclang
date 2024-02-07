@@ -1,13 +1,20 @@
-from jaclang.core.construct import Architype, DSFunc, WalkerArchitype, root
+from jaclang.core.construct import (
+    Architype,
+    DSFunc,
+    WalkerArchitype as _WalkerArchitype,
+    WalkerAnchor as _WalkerAnchor,
+    root,
+)
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
-from dataclasses import Field
+from dataclasses import Field, dataclass
 from typing import Type, TypeVar, Callable, Union
 from pydantic import create_model
 from pydoc import locate
 from re import compile
 
+from inspect import iscoroutine
 from fastapi import Depends, APIRouter
 
 from jaclang_fastapi.securities import authenticator
@@ -24,6 +31,65 @@ class DefaultSpecs:
     methods: list[str] = ["post"]
     as_query: Union[str, list[str]] = []
     auth: bool = True
+
+
+@dataclass(eq=False)
+class WalkerAnchor(_WalkerAnchor):
+    async def await_if_coroutine(self, ret):
+        if iscoroutine(ret):
+            ret = await ret
+
+        self.returns.append(ret)
+
+    async def spawn_call(self, nd: Architype) -> None:
+        """Invoke data spatial call."""
+        self.path = []
+        self.next = [nd]
+        self.returns = []
+
+        while len(self.next):
+            nd = self.next.pop(0)
+            for i in nd._jac_entry_funcs_:
+                if not i.trigger or isinstance(self.obj, i.trigger):
+                    if i.func:
+                        await self.await_if_coroutine(i.func(nd, self.obj))
+                    else:
+                        raise ValueError(f"No function {i.name} to call.")
+                if self.disengaged:
+                    return
+            for i in self.obj._jac_entry_funcs_:
+                if not i.trigger or isinstance(nd, i.trigger):
+                    if i.func:
+                        await self.await_if_coroutine(i.func(self.obj, nd))
+                    else:
+                        raise ValueError(f"No function {i.name} to call.")
+                if self.disengaged:
+                    return
+            for i in self.obj._jac_exit_funcs_:
+                if not i.trigger or isinstance(nd, i.trigger):
+                    if i.func:
+                        await self.await_if_coroutine(i.func(self.obj, nd))
+                    else:
+                        raise ValueError(f"No function {i.name} to call.")
+                if self.disengaged:
+                    return
+            for i in nd._jac_exit_funcs_:
+                if not i.trigger or isinstance(self.obj, i.trigger):
+                    if i.func:
+                        await self.await_if_coroutine(i.func(nd, self.obj))
+                    else:
+                        raise ValueError(f"No function {i.name} to call.")
+                if self.disengaged:
+                    return
+        self.ignores = []
+
+
+class WalkerArchitype(_WalkerArchitype):
+    """Walker Architype Protocol."""
+
+    def __init__(self) -> None:
+        """Create walker architype."""
+        self._jac_: WalkerAnchor = WalkerAnchor(obj=self)
 
 
 class JacPlugin:
@@ -43,6 +109,18 @@ class JacPlugin:
             return cls
 
         return decorator
+
+    @staticmethod
+    @hookimpl
+    async def spawn_call(op1: Architype, op2: Architype) -> bool:
+        """Jac's spawn operator feature."""
+        if isinstance(op1, WalkerArchitype):
+            await op1._jac_.spawn_call(op2)
+        elif isinstance(op2, WalkerArchitype):
+            await op2._jac_.spawn_call(op1)
+        else:
+            raise TypeError("Invalid walker object")
+        return True
 
 
 def get_specs(cls):

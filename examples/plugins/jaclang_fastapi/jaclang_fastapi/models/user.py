@@ -1,14 +1,11 @@
-from dataclasses import Field, dataclass
 from pydantic import create_model
-from pydoc import locate
 
 from bcrypt import hashpw, gensalt
 
 from pydantic import BaseModel, EmailStr
 from pydantic.fields import FieldInfo
 
-from jaclang_fastapi.collector import BaseCollector
-
+from jaclang_fastapi.collections.user import UserCollection
 
 NULL_BYTES = bytes()
 
@@ -29,11 +26,7 @@ class User(UserCommon):
     email: EmailStr
     password: bytes
 
-    class Collector(BaseCollector):
-        __collection__ = "user"
-        __excluded__ = ["password"]
-        __indexes__ = [{"fields": ["email"], "unique": True}]
-
+    class Collection(UserCollection):
         @classmethod
         def __document__(cls, doc) -> "User":
             return User.model()(
@@ -54,10 +47,6 @@ class User(UserCommon):
                 )
                 for doc in docs
             ]
-
-        @classmethod
-        async def find_by_email(cls, email: str) -> "User":
-            return await cls.find_one(filter={"email": email}, projection=None)
 
     @staticmethod
     def model() -> type["User"]:
