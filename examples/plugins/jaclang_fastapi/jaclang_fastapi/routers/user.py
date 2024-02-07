@@ -9,10 +9,12 @@ from jaclang_fastapi.securities import create_token, verify
 
 router = APIRouter(prefix="/user", tags=["user"])
 
+User = User.model()
+
 
 @router.post("/register", status_code=status.HTTP_200_OK)
 async def register(req: User.register_type()):
-    result = await User.Collector.insert_one(req.obfuscate())
+    result = await User.Collection.insert_one(req.obfuscate())
 
     if result:
         return ORJSONResponse({"message": "Successfully Registered!"}, 201)
@@ -22,10 +24,10 @@ async def register(req: User.register_type()):
 
 @router.post("/login")
 async def root(req: UserRequest):
-    user: User = await User.Collector.find_by_email(req.email)
+    user: User = await User.Collection.find_by_email(req.email)
     if not user or not verify(req.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid Email/Password!")
+    user_json = user.json()
+    token = await create_token(user_json)
 
-    token = await create_token(user.json())
-
-    return ORJSONResponse(content={"token": token})
+    return ORJSONResponse(content={"token": token, "user": user_json})

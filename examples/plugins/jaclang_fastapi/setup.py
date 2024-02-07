@@ -28,7 +28,7 @@ setup(
     entry_points={
         "jac": [
             "walker_api = jaclang_fastapi.plugins.walker_api:JacPlugin",
-            "architype_document = jaclang_fastapi.plugins.architype_document:JacPlugin",
+            "graph_doc = jaclang_fastapi.plugins.graph_doc:JacPlugin",
         ],
     },
     author="Jason Mars",

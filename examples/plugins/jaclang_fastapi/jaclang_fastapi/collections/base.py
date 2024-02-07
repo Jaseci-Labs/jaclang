@@ -14,7 +14,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from jaclang_fastapi.utils import logger
 
 
-class BaseCollector:
+class BaseCollection:
     __collection__ = None
     __collection_obj__: Collection = None
     __indexes__ = []
@@ -68,9 +68,8 @@ class BaseCollector:
         return cls.__collection_obj__
 
     @classmethod
-    async def insert_one(cls, doc: BaseModel):
+    async def insert_one(cls, doc: dict):
         try:
-            doc = dict(doc)
             collection = await cls.collection()
             result = await collection.insert_one(doc)
             return result.inserted_id
@@ -79,9 +78,8 @@ class BaseCollector:
         return []
 
     @classmethod
-    async def insert_many(cls, docs: list[BaseModel]):
+    async def insert_many(cls, docs: list[dict]):
         try:
-            docs = [dict(doc) for doc in docs]
             collection = await cls.collection()
             result = await collection.insert_many()
             return result.inserted_ids
@@ -139,6 +137,3 @@ class BaseCollector:
         collection = await cls.collection()
         result = await collection.delete_one({"_id": ObjectId(id)})
         return result.deleted_count
-
-
-__all__ = ["BaseCollector"]
