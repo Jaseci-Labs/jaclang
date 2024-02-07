@@ -4,17 +4,29 @@ from jaclang.core.construct import (
     NodeArchitype as _NodeArchitype,
     EdgeArchitype as _EdgeArchitype,
     NodeAnchor,
+    EdgeAnchor,
+    EdgeDir,
     Root as _Root,
 )
 
 from bson import ObjectId
 
+from pymongo.client_session import ClientSession
+
 from dataclasses import field, dataclass, asdict
-from typing import Type, Callable, Optional
+from typing import Type, Callable, Union, Optional
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
 from jaclang_fastapi.collections import BaseCollection
+from jaclang_fastapi.utils import logger
+
+
+@dataclass(eq=False)
+class DocAnchor:
+    type: str
+    id: ObjectId = field(default_factory=ObjectId)
+    update: Union[bool, list[str]] = field(default_factory=list)
 
 
 class Root(_Root):
@@ -34,30 +46,40 @@ class Root(_Root):
             return Root(id=doc.pop("_id"), **doc)
 
 
-@dataclass(eq=False)
-class DocAnchor:
-    type: str
-    id: Optional[ObjectId] = field(default=None)
-    update: list[str] = field(default_factory=list)
-
-
 class NodeArchitype(_NodeArchitype):
     """Node Architype Protocol."""
 
     def __init__(self) -> None:
         """Create node architype."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
-        self._jac_doc_: DocAnchor = DocAnchor("node")
+        self._jac_doc_: DocAnchor = DocAnchor("node", update=True)
         self.Collection: BaseCollection
 
-    async def save(self):
-        if not self._jac_doc_.id:
-            edges = [None, [], [], []]  # can be used in future
-            for edir, earchs in self._jac_.edges.items():
-                for earch in earchs:
-                    edges[edir.value].append(earch.save())
+    async def save(self, session: ClientSession = None):
+        if session:
+            if self._jac_doc_.update == True:
+                self._jac_doc_.update = False
+                edges = [None, [], [], []]  # can be used in future
+                for edir, earchs in self._jac_.edges.items():
+                    for earch in earchs:
+                        edges[edir.value].append(await earch.save(session))
 
-            await self.Collection.insert_one({"edges": edges, "context": asdict(self)})
+                await self.Collection.insert_one(
+                    {"_id": self._jac_doc_.id, "edg": edges, "ctx": asdict(self)},
+                    session=session,
+                )
+            elif self._jac_doc_.update:
+                pass
+        else:
+            async with await BaseCollection.get_session() as session:
+                async with session.start_transaction():
+                    try:
+                        await self.save(session)
+                        await session.commit_transaction()
+                    except Exception:
+                        await session.abort_transaction()
+                        logger.exception("Error saving node!")
+                        raise
 
         return self._jac_doc_.id
 
@@ -67,18 +89,51 @@ class EdgeArchitype(_EdgeArchitype):
 
     def __init__(self) -> None:
         """Edge node architype."""
-        self._jac_: NodeAnchor = NodeAnchor(obj=self)
-        self._jac_doc_: DocAnchor = DocAnchor("edge")
+        self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
+        self._jac_doc_: DocAnchor = DocAnchor("edge", update=True)
         self.Collection: BaseCollection
 
-    def save(self):
-        if not self._jac_doc_.id:
-            from uuid import uuid4
-            from bson import ObjectId
+    async def save(self, session: ClientSession = None):
+        if session:
+            if self._jac_doc_.update == True:
+                self._jac_doc_.update = []
 
-            self._jac_doc_.id = ObjectId(str(uuid4()))
+                await self.Collection.insert_one(
+                    {
+                        "_id": self._jac_doc_.id,
+                        "src": await self._jac_.source.save(session),
+                        "tgt": await self._jac_.target.save(session),
+                        "dir": self._jac_.dir.value,
+                        "ctx": asdict(self),
+                    },
+                    session=session,
+                )
+            elif self._jac_doc_.update:
+                pass
+        else:
+            async with await BaseCollection.get_session() as session:
+                async with session.start_transaction():
+                    try:
+                        await self.save(session)
+                        await session.commit_transaction()
+                    except Exception:
+                        await session.abort_transaction()
+                        logger.exception("Error saving edge!")
+                        raise
 
         return self._jac_doc_.id
+
+
+@dataclass
+class GenericEdge(EdgeArchitype):
+
+    def __init__(self) -> None:
+        """Edge node architype."""
+        self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
+        self._jac_doc_: DocAnchor = DocAnchor("edge", update=True)
+
+    class Collection(BaseCollection):
+        __collection__ = f"e_generic"
 
 
 class JacPlugin:
@@ -115,6 +170,28 @@ class JacPlugin:
             return cls
 
         return decorator
+
+    @staticmethod
+    @hookimpl
+    def build_edge(
+        edge_dir: EdgeDir,
+        conn_type: Optional[Type[Architype]],
+        conn_assign: Optional[tuple[tuple, tuple]],
+    ) -> Architype:
+        """Jac's root getter."""
+        conn_type = conn_type if conn_type else GenericEdge
+        edge = conn_type()
+        if isinstance(edge._jac_, EdgeAnchor):
+            edge._jac_.dir = edge_dir
+        else:
+            raise TypeError("Invalid edge object")
+        if conn_assign:
+            for fld, val in zip(conn_assign[0], conn_assign[1]):
+                if hasattr(edge, fld):
+                    setattr(edge, fld, val)
+                else:
+                    raise ValueError(f"Invalid attribute: {fld}")
+        return edge
 
 
 def populate_collection(cls: type, prefix: str) -> type:
