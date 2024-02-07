@@ -16,13 +16,10 @@ class User(BaseUser):
                 id=str(doc.pop("_id")),
                 email=doc.pop("email") + "overrided",
                 password=doc.pop("password", None) or NULL_BYTES,
+                root_id=str(doc.pop("root_id")),
                 **doc,
             )
 ::py::
-
-node a {
-    has val1: str;
-}
 
 walker post_no_body {}
 walker post_with_body {
@@ -44,6 +41,14 @@ walker get_with_query {
     }
 }
 
+node boy {
+    has val1: str, val2: str;
+}
+
+node girl {
+    has val: str;
+}
+
 walker get_all_query {
     # @query - future improvements instead of adding manually on as_query
     has a: str;
@@ -54,8 +59,10 @@ walker get_all_query {
     }
 
     async can enter with `<r> entry {
-        b = a(val1= 2);
+        b = boy(val1="a", val2="b");
+        g = girl(val="b");
         await b.save();
+        await g.save();
         return 'something';
     }
 }

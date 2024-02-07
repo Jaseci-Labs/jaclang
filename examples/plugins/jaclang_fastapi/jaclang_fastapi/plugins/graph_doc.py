@@ -1,21 +1,37 @@
 from jaclang.core.construct import (
     Architype,
     DSFunc,
-    NodeArchitype,
-    EdgeArchitype,
-    EdgeAnchor,
+    NodeArchitype as _NodeArchitype,
+    EdgeArchitype as _EdgeArchitype,
     NodeAnchor,
-    ElementAnchor,
+    Root as _Root,
 )
 
 from bson import ObjectId
 
-from dataclasses import field, dataclass
-from typing import Type, Callable, Union, Optional
+from dataclasses import field, dataclass, asdict
+from typing import Type, Callable, Optional
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
 from jaclang_fastapi.collections import BaseCollection
+
+
+class Root(_Root):
+
+    def __init__(self, id: ObjectId, date_created: int) -> None:
+        """Create node architype."""
+        self.id = id
+        self.date_created = date_created
+        self._jac_: NodeAnchor = NodeAnchor(obj=self)
+        self._jac_doc_: DocAnchor = DocAnchor("root")
+
+    class Collection(BaseCollection):
+        __collection__ = f"root"
+
+        @classmethod
+        def __document__(cls, doc: dict):
+            return Root(id=doc.pop("_id"), **doc)
 
 
 @dataclass(eq=False)
@@ -25,7 +41,7 @@ class DocAnchor:
     update: list[str] = field(default_factory=list)
 
 
-class NodeArchitypeDoc(NodeArchitype):
+class NodeArchitype(_NodeArchitype):
     """Node Architype Protocol."""
 
     def __init__(self) -> None:
@@ -40,15 +56,13 @@ class NodeArchitypeDoc(NodeArchitype):
             for edir, earchs in self._jac_.edges.items():
                 for earch in earchs:
                     edges[edir.value].append(earch.save())
-            import pdb
 
-            pdb.set_trace()
-            self.Collection.insert_one({})
+            await self.Collection.insert_one({"edges": edges, "context": asdict(self)})
 
         return self._jac_doc_.id
 
 
-class EdgeArchitypeDoc(EdgeArchitype):
+class EdgeArchitype(_EdgeArchitype):
     """Edge Architype Protocol."""
 
     def __init__(self) -> None:
@@ -57,7 +71,7 @@ class EdgeArchitypeDoc(EdgeArchitype):
         self._jac_doc_: DocAnchor = DocAnchor("edge")
         self.Collection: BaseCollection
 
-    def save(self: EdgeArchitype):
+    def save(self):
         if not self._jac_doc_.id:
             from uuid import uuid4
             from bson import ObjectId
@@ -78,7 +92,7 @@ class JacPlugin:
         def decorator(cls: Type[Architype]) -> Type[Architype]:
             """Decorate class."""
             cls = Jac.make_architype(
-                cls, arch_base=NodeArchitypeDoc, on_entry=on_entry, on_exit=on_exit
+                cls, arch_base=NodeArchitype, on_entry=on_entry, on_exit=on_exit
             )
             populate_collection(cls, "n")
             return cls
@@ -95,7 +109,7 @@ class JacPlugin:
         def decorator(cls: Type[Architype]) -> Type[Architype]:
             """Decorate class."""
             cls = Jac.make_architype(
-                cls, arch_base=EdgeArchitypeDoc, on_entry=on_entry, on_exit=on_exit
+                cls, arch_base=EdgeArchitype, on_entry=on_entry, on_exit=on_exit
             )
             populate_collection(cls, "e")
             return cls

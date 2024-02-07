@@ -163,10 +163,11 @@ class WalkerAnchor(ObjectAnchor):
     """Walker Anchor."""
 
     obj: WalkerArchitype
-    path: list[Architype] = field(default_factory=lambda: [])
-    next: list[Architype] = field(default_factory=lambda: [])
-    ignores: list[Architype] = field(default_factory=lambda: [])
+    path: list[Architype] = field(default_factory=list)
+    next: list[Architype] = field(default_factory=list)
+    ignores: list[Architype] = field(default_factory=list)
     disengaged: bool = False
+    returns: list = field(default_factory=list)
 
     def visit_node(
         self,

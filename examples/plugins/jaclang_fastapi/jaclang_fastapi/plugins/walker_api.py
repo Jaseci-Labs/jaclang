@@ -15,7 +15,7 @@ from pydoc import locate
 from re import compile
 
 from inspect import iscoroutine
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, Request
 
 from jaclang_fastapi.securities import authenticator
 
@@ -167,30 +167,30 @@ def populate_apis(cls):
 
     if body and query:
 
-        async def api(body: BodyModel, query: QueryModel = Depends()):
+        async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
             wlk = cls(**body.model_dump(), **query.model_dump())
-            wlk._jac_.spawn_call(root)
+            await wlk._jac_.spawn_call(request.user_root)
             return wlk._jac_.returns
 
     elif body:
 
-        async def api(body: BodyModel):
+        async def api(request: Request, body: BodyModel):
             wlk = cls(**body.model_dump())
-            wlk._jac_.spawn_call(root)
+            await wlk._jac_.spawn_call(request.user_root)
             return wlk._jac_.returns
 
     elif query:
 
-        async def api(query: QueryModel = Depends()):
+        async def api(request: Request, query: QueryModel = Depends()):
             wlk = cls(**query.model_dump())
-            wlk._jac_.spawn_call(root)
+            await wlk._jac_.spawn_call(request.user_roott)
             return wlk._jac_.returns
 
     else:
 
-        async def api():
+        async def api(request: Request):
             wlk = cls()
-            wlk._jac_.spawn_call(root)
+            await wlk._jac_.spawn_call(request.user_root)
             return wlk._jac_.returns
 
     for method in methods:

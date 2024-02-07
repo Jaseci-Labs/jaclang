@@ -1,11 +1,13 @@
 from pydantic import create_model
 
+from bson import ObjectId
 from bcrypt import hashpw, gensalt
 
 from pydantic import BaseModel, EmailStr
 from pydantic.fields import FieldInfo
 
 from jaclang_fastapi.collections.user import UserCollection
+from jaclang_fastapi.plugins import Root
 
 NULL_BYTES = bytes()
 
@@ -25,6 +27,7 @@ class User(UserCommon):
     id: str
     email: EmailStr
     password: bytes
+    root_id: str
 
     class Collection(UserCollection):
         @classmethod
@@ -33,6 +36,7 @@ class User(UserCommon):
                 id=str(doc.pop("_id")),
                 email=doc.pop("email"),
                 password=doc.pop("password", None) or NULL_BYTES,
+                root_id=str(doc.pop("root_id")),
                 **doc,
             )
 
@@ -43,6 +47,7 @@ class User(UserCommon):
                     id=str(doc.get("_id")),
                     email=doc.get("email"),
                     password=doc.get("password") or NULL_BYTES,
+                    root_id=str(doc.pop("root_id")),
                     **doc,
                 )
                 for doc in docs
@@ -68,5 +73,6 @@ class User(UserCommon):
 
         user_model["password"] = (str, ...)
         user_model.pop("id", None)
+        user_model.pop("root_id", None)
 
         return create_model(f"UserRegister", __base__=UserCommon, **user_model)
