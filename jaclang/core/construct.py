@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shelve
 import types
 import unittest
 from dataclasses import dataclass, field
@@ -40,6 +41,7 @@ class NodeAnchor(ObjectAnchor):
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
         edg._jac_.attach(self.obj, nd)
+        root.update_reachable_nodes(self.obj,nd)
         return self.obj
 
     def edges_to_nodes(
@@ -255,7 +257,25 @@ class Root(NodeArchitype):
 
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
+    reachable_nodes = []
 
+    def update_reachable_nodes(self, node_1, node_2):
+        ''' Updates the list of reachable nodes with the provided nodes.'''
+        def update_shelf(node):
+            with shelve.open("ztest1") as shelf:
+                shelf[str(id(node))] = (str(vars(node)))
+
+        if not self.reachable_nodes:
+            self.reachable_nodes.extend([node_1, node_2])
+            update_shelf(node_1)
+            update_shelf(node_2)
+        else:
+            if node_1 not in self.reachable_nodes:
+                self.reachable_nodes.append(node_1)
+                update_shelf(node_1)
+            if node_2 not in self.reachable_nodes:
+                self.reachable_nodes.append(node_2)
+                update_shelf(node_2)
 
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
