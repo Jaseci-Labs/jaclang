@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import shelve
+# import shelve
 import types
 import unittest
 from dataclasses import dataclass, field
@@ -40,7 +40,6 @@ class NodeAnchor(ObjectAnchor):
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
         edg._jac_.attach(self.obj, nd)
-        root.update_reachable_nodes(self.obj, nd, edg)
         return self.obj
 
     def edges_to_nodes(
@@ -95,11 +94,13 @@ class EdgeAnchor(ObjectAnchor):
     def attach(self, src: NodeArchitype, trg: NodeArchitype) -> EdgeAnchor:
         """Attach edge to nodes."""
         if self.dir == EdgeDir.IN:
+            root.update_reachable_nodes(trg,src,self.obj)
             self.source = trg
             self.target = src
             self.source._jac_.edges[EdgeDir.IN].append(self.obj)
             self.target._jac_.edges[EdgeDir.OUT].append(self.obj)
         else:
+            root.update_reachable_nodes(src, trg,self.obj)
             self.source = src
             self.target = trg
             self.source._jac_.edges[EdgeDir.OUT].append(self.obj)
@@ -260,22 +261,22 @@ class Root(NodeArchitype):
         """Update reachable_nodes list."""
         self.connections.add((node_1, node_2, edg))
 
-        def update_shelf(node: NodeArchitype) -> None:
-            """Store node information in shelve."""
-            with shelve.open("ztest1") as shelf:
-                shelf[str(id(node))] = str(vars(node))
+        # def update_shelf(node: NodeArchitype) -> None:
+        #     """Store node information in shelve."""
+        #     with shelve.open("ztest1") as shelf:
+        #         shelf[str(id(node))] = str(vars(node))
 
-        if not self.reachable_nodes:
-            self.reachable_nodes.extend([node_1, node_2])
-            update_shelf(node_1)
-            update_shelf(node_2)
-        else:
-            if node_1 not in self.reachable_nodes:
-                self.reachable_nodes.append(node_1)
-                update_shelf(node_1)
-            if node_2 not in self.reachable_nodes:
-                self.reachable_nodes.append(node_2)
-                update_shelf(node_2)
+        # if not self.reachable_nodes:
+        #     self.reachable_nodes.extend([node_1, node_2])
+        #     update_shelf(node_1)
+        #     update_shelf(node_2)
+        # else:
+        #     if node_1 not in self.reachable_nodes:
+        #         self.reachable_nodes.append(node_1)
+        #         update_shelf(node_1)
+        #     if node_2 not in self.reachable_nodes:
+        #         self.reachable_nodes.append(node_2)
+        #         update_shelf(node_2)
 
 
 class GenericEdge(EdgeArchitype):
