@@ -7,7 +7,7 @@ model llm {
 '''Function'''
 can 'Summarize the Accomplishments'
 summarize ('Accomplishments' a: List[String]) -> 'Summary of the Accomplishments' summary: String Using llm{
-    
+
 }
 
 with entry{
