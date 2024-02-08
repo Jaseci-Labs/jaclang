@@ -51,7 +51,7 @@ class BaseCollection:
     def get_database() -> Database:
         if not isinstance(__class__.__database__, Database):
             __class__.__database__ = __class__.get_client().get_database(
-                "DATABASE_NAME"
+                getenv("DATABASE_NAME")
             )
 
         return __class__.__database__

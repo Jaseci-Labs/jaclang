@@ -1,3 +1,4 @@
+from contextvars import copy_context, ContextVar
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -24,6 +25,7 @@ T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
 
 router = APIRouter(prefix="/walker", tags=["walker"])
+context = ContextVar("context", default=0)
 
 
 class DefaultSpecs:
@@ -46,7 +48,6 @@ class WalkerAnchor(_WalkerAnchor):
         self.path = []
         self.next = [nd]
         self.returns = []
-
         while len(self.next):
             nd = self.next.pop(0)
             for i in nd._jac_entry_funcs_:
@@ -122,6 +123,14 @@ class JacPlugin:
             raise TypeError("Invalid walker object")
         return True
 
+    @staticmethod
+    @hookimpl
+    def get_root() -> Architype:
+        """Jac's assign comprehension feature."""
+        if req := context.get():
+            user_root = getattr(req, "user_root", None)
+        return user_root or root
+
 
 def get_specs(cls):
     specs = getattr(cls, "Specs", DefaultSpecs)
@@ -168,6 +177,7 @@ def populate_apis(cls):
     if body and query:
 
         async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
+            context.set(request)
             wlk = cls(**body.model_dump(), **query.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -175,6 +185,7 @@ def populate_apis(cls):
     elif body:
 
         async def api(request: Request, body: BodyModel):
+            context.set(request)
             wlk = cls(**body.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -182,6 +193,7 @@ def populate_apis(cls):
     elif query:
 
         async def api(request: Request, query: QueryModel = Depends()):
+            context.set(request)
             wlk = cls(**query.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -189,6 +201,7 @@ def populate_apis(cls):
     else:
 
         async def api(request: Request):
+            context.set(request)
             wlk = cls()
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
