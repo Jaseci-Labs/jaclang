@@ -8,7 +8,7 @@ from jaclang_fastapi.models import User
 from jaclang_fastapi.models.ephemerals import UserRequest
 from jaclang_fastapi.securities import create_token, verify
 from jaclang_fastapi.plugins import Root
-from jaclang_fastapi.utils import utc_now, logger
+from jaclang_fastapi.utils import logger
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -20,9 +20,8 @@ async def register(req: User.register_type()):
     async with await Root.Collection.get_session() as session:
         async with session.start_transaction():
             try:
-                root_id = await Root.Collection.insert_one(
-                    {"date_created": utc_now()}, session=session
-                )
+
+                root_id = await Root().save(session=session)
 
                 req_obf = req.obfuscate()
                 req_obf["root_id"] = root_id

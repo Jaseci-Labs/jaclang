@@ -21,7 +21,16 @@ class User(BaseUser):
             )
 ::py::
 
-walker post_no_body {}
+walker post_no_body {
+    async can enter with `<r> entry {
+        b = boy(val1="a", val2="b");
+        g = girl(val="b");
+        b ++> g;
+        <r> ++> b ++> g;
+        await <r>.save();
+        return True;
+    }
+}
 walker post_with_body {
     has a: str;
 }
@@ -56,14 +65,6 @@ walker get_all_query {
 
     obj Specs {
         static has methods: list = ["get"], as_query: list = "*", auth: bool = False;
-    }
-
-    async can enter with `<r> entry {
-        b = boy(val1="a", val2="b");
-        g = girl(val="b");
-        b ++> g;
-        await b.save();
-        return 'something';
     }
 }
 
