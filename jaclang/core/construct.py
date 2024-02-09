@@ -46,6 +46,8 @@ class NodeAnchor(ObjectAnchor):
         self, dir: EdgeDir, filter_type: Optional[type], filter_func: Optional[Callable]
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
+        print('\n\n',self)
+        # print('damar ',self.obj)
         filter_func = filter_func or (lambda x: x)
         edge_list = [
             e
@@ -53,6 +55,12 @@ class NodeAnchor(ObjectAnchor):
             if getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source", None)
             and (not filter_type or isinstance(e, filter_type))
         ]
+        # print(set(edge_list))
+        kk=[
+            getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source")
+            for e in filter_func(edge_list)
+        ]
+        # print(kk,'kukkuuu')
         return [
             getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source")
             for e in filter_func(edge_list)
@@ -94,13 +102,13 @@ class EdgeAnchor(ObjectAnchor):
     def attach(self, src: NodeArchitype, trg: NodeArchitype) -> EdgeAnchor:
         """Attach edge to nodes."""
         if self.dir == EdgeDir.IN:
-            root.update_reachable_nodes(trg,src,self.obj)
+            root.update_reachable_nodes(trg, src, self.obj)
             self.source = trg
             self.target = src
             self.source._jac_.edges[EdgeDir.IN].append(self.obj)
             self.target._jac_.edges[EdgeDir.OUT].append(self.obj)
         else:
-            root.update_reachable_nodes(src, trg,self.obj)
+            root.update_reachable_nodes(src, trg, self.obj)
             self.source = src
             self.target = trg
             self.source._jac_.edges[EdgeDir.OUT].append(self.obj)
@@ -229,6 +237,7 @@ class NodeArchitype(Architype):
     def __init__(self) -> None:
         """Create node architype."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
+
 
 
 class EdgeArchitype(Architype):

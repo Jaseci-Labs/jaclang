@@ -259,17 +259,54 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def edge_ref(
-        node_obj: NodeArchitype,
+    def edge_ref(      
+        node_obj: NodeArchitype |list[NodeArchitype],
         dir: EdgeDir,
         filter_type: Optional[type],
         filter_func: Optional[Callable],
     ) -> list[NodeArchitype]:
         """Jac's apply_dir stmt feature."""
+        # print('yaarda nee',node_obj)
         if isinstance(node_obj, NodeArchitype):
             return node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+        elif isinstance(node_obj,list):
+            # print(node_obj,'mmm intersting')
+            ll=[]
+            for i in node_obj:
+                ll.extend(i._jac_.edges_to_nodes(dir, filter_type, filter_func))
+            
+        #     print(node_obj,'node obj')
+            # l=['enna elavuda']
+        #     for i in node_obj:
+        #         print(i,type(i))
+        #         # j=i._jac_.edges_to_nodes(dir, filter_type, filter_func)
+        #         # l.append(j)
+            return list(set(ll))
         else:
             raise TypeError("Invalid node object")
+
+    @staticmethod
+    @hookimpl
+    def build_edge(
+        edge_dir: EdgeDir,
+        conn_type: Optional[Type[Architype]],
+        conn_assign: Optional[tuple[tuple, tuple]],
+    ) -> Architype:
+        """Jac's root getter."""
+        print('is it coontribute')
+        conn_type = conn_type if conn_type else GenericEdge
+        edge = conn_type()
+        if isinstance(edge._jac_, EdgeAnchor):
+            edge._jac_.dir = edge_dir
+        else:
+            raise TypeError("Invalid edge object")
+        if conn_assign:
+            for fld, val in zip(conn_assign[0], conn_assign[1]):
+                if hasattr(edge, fld):
+                    setattr(edge, fld, val)
+                else:
+                    raise ValueError(f"Invalid attribute: {fld}")
+        return edge
 
     @staticmethod
     @hookimpl
@@ -282,21 +319,54 @@ class JacFeatureDefaults:
 
         Note: connect needs to call assign compr with tuple in op
         """
+        def build_edge(
+                edge_dir: EdgeDir,
+                conn_type: Optional[Type[Architype]],
+                conn_assign: Optional[tuple[tuple, tuple]],
+            ) -> Architype:
+                """Jac's root getter."""
+                print('is it coontribute')
+                conn_type = conn_type if conn_type else GenericEdge
+                edge = conn_type()
+                if isinstance(edge._jac_, EdgeAnchor):
+                    edge._jac_.dir = edge_dir
+                else:
+                    raise TypeError("Invalid edge object")
+                if conn_assign:
+                    for fld, val in zip(conn_assign[0], conn_assign[1]):
+                        if hasattr(edge, fld):
+                            setattr(edge, fld, val)
+                        else:
+                            raise ValueError(f"Invalid attribute: {fld}")
+                return edge
+
+        print('\n\nleft\n', left, '\n\nright\n\n', right, '\n\n', edge_spec, "\n\n")
+
         if isinstance(left, list):
             if isinstance(right, list):
                 for i in left:
                     for j in right:
-                        i._jac_.connect_node(j, edge_spec)
+                        # Call build_edge to create a new instance of EdgeArchitype
+                        new_edge = build_edge(EdgeDir.OUT, type(edge_spec),None)
+                        i._jac_.connect_node(j, new_edge)
             else:
                 for i in left:
-                    i._jac_.connect_node(right, edge_spec)
+                    # Call build_edge to create a new instance of EdgeArchitype
+                    new_edge = build_edge(EdgeDir.OUT, type(edge_spec),None)
+                    i._jac_.connect_node(right, new_edge)
         else:
             if isinstance(right, list):
                 for i in right:
-                    left._jac_.connect_node(i, edge_spec)
+                    # Call build_edge to create a new instance of EdgeArchitype
+                    new_edge = build_edge(EdgeDir.IN, type(edge_spec),None)
+                    left._jac_.connect_node(i, new_edge)
             else:
-                left._jac_.connect_node(right, edge_spec)
+                # Call build_edge to create a new instance of EdgeArchitype
+                new_edge = build_edge(EdgeDir.IN, type(edge_spec),None)
+                left._jac_.connect_node(right, new_edge)
+
         return left
+
 
     @staticmethod
     @hookimpl
@@ -322,24 +392,3 @@ class JacFeatureDefaults:
         """Jac's assign comprehension feature."""
         return root
 
-    @staticmethod
-    @hookimpl
-    def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
-        conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype:
-        """Jac's root getter."""
-        conn_type = conn_type if conn_type else GenericEdge
-        edge = conn_type()
-        if isinstance(edge._jac_, EdgeAnchor):
-            edge._jac_.dir = edge_dir
-        else:
-            raise TypeError("Invalid edge object")
-        if conn_assign:
-            for fld, val in zip(conn_assign[0], conn_assign[1]):
-                if hasattr(edge, fld):
-                    setattr(edge, fld, val)
-                else:
-                    raise ValueError(f"Invalid attribute: {fld}")
-        return edge
