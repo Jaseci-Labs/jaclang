@@ -319,26 +319,6 @@ class JacFeatureDefaults:
 
         Note: connect needs to call assign compr with tuple in op
         """
-        def build_edge(
-                edge_dir: EdgeDir,
-                conn_type: Optional[Type[Architype]],
-                conn_assign: Optional[tuple[tuple, tuple]],
-            ) -> Architype:
-                """Jac's root getter."""
-                print('is it coontribute')
-                conn_type = conn_type if conn_type else GenericEdge
-                edge = conn_type()
-                if isinstance(edge._jac_, EdgeAnchor):
-                    edge._jac_.dir = edge_dir
-                else:
-                    raise TypeError("Invalid edge object")
-                if conn_assign:
-                    for fld, val in zip(conn_assign[0], conn_assign[1]):
-                        if hasattr(edge, fld):
-                            setattr(edge, fld, val)
-                        else:
-                            raise ValueError(f"Invalid attribute: {fld}")
-                return edge
 
         print('\n\nleft\n', left, '\n\nright\n\n', right, '\n\n', edge_spec, "\n\n")
 
@@ -346,24 +326,17 @@ class JacFeatureDefaults:
             if isinstance(right, list):
                 for i in left:
                     for j in right:
-                        # Call build_edge to create a new instance of EdgeArchitype
-                        new_edge = build_edge(EdgeDir.OUT, type(edge_spec),None)
-                        i._jac_.connect_node(j, new_edge)
+                        i._jac_.connect_node(j, edge_spec)
             else:
                 for i in left:
-                    # Call build_edge to create a new instance of EdgeArchitype
-                    new_edge = build_edge(EdgeDir.OUT, type(edge_spec),None)
-                    i._jac_.connect_node(right, new_edge)
+                    
+                    i._jac_.connect_node(right, edge_spec)
         else:
             if isinstance(right, list):
                 for i in right:
-                    # Call build_edge to create a new instance of EdgeArchitype
-                    new_edge = build_edge(EdgeDir.IN, type(edge_spec),None)
-                    left._jac_.connect_node(i, new_edge)
+                    left._jac_.connect_node(i, edge_spec)
             else:
-                # Call build_edge to create a new instance of EdgeArchitype
-                new_edge = build_edge(EdgeDir.IN, type(edge_spec),None)
-                left._jac_.connect_node(right, new_edge)
+                left._jac_.connect_node(right, edge_spec)
 
         return left
 
