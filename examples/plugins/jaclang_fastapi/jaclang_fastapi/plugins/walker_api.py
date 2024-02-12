@@ -8,8 +8,8 @@ from jaclang.core.construct import (
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
-from dataclasses import Field, dataclass
-from typing import Type, TypeVar, Callable, Union
+from dataclasses import Field, dataclass, asdict
+from typing import Type, TypeVar, Callable, Union, Any
 from pydantic import create_model
 from pydoc import locate
 from re import compile
@@ -40,13 +40,10 @@ class WalkerAnchor(_WalkerAnchor):
         if iscoroutine(ret):
             ret = await ret
 
-        self.returns.append(ret)
-
     async def spawn_call(self, nd: Architype) -> None:
         """Invoke data spatial call."""
         self.path = []
         self.next = [nd]
-        self.returns = []
         while len(self.next):
             nd = self.next.pop(0)
             for i in nd._jac_entry_funcs_:
@@ -132,6 +129,13 @@ class JacPlugin:
             current_root = jctx.root
         return current_root
 
+    @staticmethod
+    @hookimpl
+    def report(expr: Any) -> Any:  # noqa: ANN401
+        """Jac's report stmt feature."""
+        jctx: JacContext = JCONTEXT.get()
+        jctx.report(expr)
+
 
 def get_specs(cls):
     specs = getattr(cls, "Specs", DefaultSpecs)
@@ -178,30 +182,38 @@ def populate_apis(cls):
     if body and query:
 
         async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
+            jctx = JacContext(request=request)
+            JCONTEXT.set(jctx)
             wlk = cls(**body.model_dump(), **query.model_dump())
-            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
-            return wlk._jac_.returns
+            await wlk._jac_.spawn_call(jctx.root)
+            return jctx.response()
 
     elif body:
 
         async def api(request: Request, body: BodyModel):
+            jctx = JacContext(request=request)
+            JCONTEXT.set(jctx)
             wlk = cls(**body.model_dump())
-            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
-            return wlk._jac_.returns
+            await wlk._jac_.spawn_call(jctx.root)
+            return jctx.response()
 
     elif query:
 
         async def api(request: Request, query: QueryModel = Depends()):
+            jctx = JacContext(request=request)
+            JCONTEXT.set(jctx)
             wlk = cls(**query.model_dump())
-            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
-            return wlk._jac_.returns
+            await wlk._jac_.spawn_call(jctx.root)
+            return jctx.response()
 
     else:
 
         async def api(request: Request):
+            jctx = JacContext(request=request)
+            JCONTEXT.set(jctx)
             wlk = cls()
-            await wlk._jac_.spawn_call(getattr(request, "user_root", root))
-            return wlk._jac_.returns
+            await wlk._jac_.spawn_call(jctx.root)
+            return jctx.response()
 
     for method in methods:
         method = method.lower()

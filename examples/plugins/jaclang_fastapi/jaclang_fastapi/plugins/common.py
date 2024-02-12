@@ -1,20 +1,21 @@
 from contextvars import ContextVar
 from jaclang.core.construct import (
+    Architype,
     NodeArchitype as _NodeArchitype,
     EdgeArchitype as _EdgeArchitype,
     NodeAnchor as _NodeAnchor,
     EdgeAnchor as _EdgeAnchor,
     EdgeDir,
     Root as _Root,
+    root,
 )
 
 from bson import ObjectId
 from enum import Enum
-
 from pymongo.client_session import ClientSession
 
 from dataclasses import field, dataclass, asdict
-from typing import Union, Optional, Callable
+from typing import Union, Optional, Callable, Any
 
 from fastapi import Request
 
@@ -22,9 +23,7 @@ from jaclang_fastapi.models import User
 from jaclang_fastapi.collections import BaseCollection
 from jaclang_fastapi.utils import logger
 
-JCONTEXT = ContextVar("JCONTEXT", default=0)
-
-JCLASS = [{}, {}, {}]
+JCONTEXT = ContextVar("JCONTEXT")
 JTYPE = ["r", "n", "e"]
 
 
@@ -59,8 +58,11 @@ class DocAnchor:
     obj: object = None
     upsert: Union[bool, list[str]] = field(default_factory=list)
 
-    def json(self):
+    def dict(self):
         return {"_id": self.id, "_type": self.type.value, "_name": self.name}
+
+    def json(self):
+        return {"_id": str(self.id), "_type": self.type.value, "_name": self.name}
 
     def class_ref(self):
         return JCLASS[self.type.value].get(self.name)
@@ -68,11 +70,14 @@ class DocAnchor:
     def build(self, **kwargs):
         return self.class_ref()(**kwargs)
 
-    def connect(self):
+    def __dict__(self):
+        return self.json()
+
+    async def connect(self):
         cls = self.class_ref()
         data = None
         if cls:
-            data = self.obj = cls.Collection.find_by_id(self.id)
+            data = self.obj = await cls.Collection.find_by_id(self.id)
         return data
 
 
@@ -92,6 +97,7 @@ class NodeArchitype(_NodeArchitype):
                 type=JType(doc.get("_type")), name=doc.get("_name"), id=doc.get("_id")
             )
             arch: NodeArchitype = doc_anc.build(**(doc.get("ctx") or {}))
+            arch._jac_doc_ = doc_anc
             arch._jac_.edges = cls.translate_edges(doc.get("edg") or [])
             doc_anc.obj = arch._jac_
             return arch
@@ -109,10 +115,10 @@ class NodeArchitype(_NodeArchitype):
                 edges = [[], [], [], []]  # can be used in future
                 for edir, earchs in self._jac_.edges.items():
                     for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).json())
+                        edges[edir.value].append((await earch.save(session)).dict())
 
                 await self.Collection.insert_one(
-                    {**self._jac_doc_.json(), "edg": edges, "ctx": asdict(self)},
+                    {**self._jac_doc_.dict(), "edg": edges, "ctx": asdict(self)},
                     session=session,
                 )
             elif self._jac_doc_.upsert:
@@ -120,7 +126,7 @@ class NodeArchitype(_NodeArchitype):
                 edges = [[], [], [], []]  # can be used in future
                 for edir, earchs in self._jac_.edges.items():
                     for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).json())
+                        edges[edir.value].append((await earch.save(session)).dict())
 
                 await self.Collection.update_by_id(
                     self._jac_doc_.id,
@@ -144,26 +150,38 @@ class NodeArchitype(_NodeArchitype):
 @dataclass(eq=False)
 class NodeAnchor(_NodeAnchor):
 
-    def edges_to_nodes(
+    async def edges_to_nodes(
         self, dir: EdgeDir, filter_type: Optional[type], filter_func: Optional[Callable]
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
         filter_func = filter_func or (lambda x: x)
 
         edge_list = []
-        for e in self.edges[dir]:
+        edges_dir = self.edges[dir]
+        for idx, e in enumerate(edges_dir):
             if isinstance(e, DocAnchor):
-                e = e.connect()
+                edges_dir[idx] = e = await e.connect()
 
             if getattr(
                 e._jac_, "target" if dir == EdgeDir.OUT else "source", None
             ) and (not filter_type or isinstance(e, filter_type)):
                 edge_list.append(e)
 
-        return [
-            getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source")
-            for e in filter_func(edge_list)
-        ]
+        node_list = []
+        for e in filter_func(edge_list):
+            ej = e._jac_
+            ejt = ej.target
+            ejs = ej.source
+
+            if dir == EdgeDir.OUT:
+                if isinstance(ejt, DocAnchor):
+                    ej.target = ejt = await ejt.connect()
+                node_list.append(ejt)
+            else:
+                if isinstance(ejs, DocAnchor):
+                    ej.source = ejs = await ejs.connect()
+                node_list.append(ejs)
+        return node_list
 
 
 @dataclass
@@ -182,10 +200,10 @@ class Root(NodeArchitype, _Root):
                 edges = [[], [], [], []]  # can be used in future
                 for edir, earchs in self._jac_.edges.items():
                     for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).json())
+                        edges[edir.value].append((await earch.save(session)).dict())
 
                 await self.Collection.insert_one(
-                    {**self._jac_doc_.json(), "edg": edges, "ctx": asdict(self)},
+                    {**self._jac_doc_.dict(), "edg": edges, "ctx": asdict(self)},
                     session=session,
                 )
             elif self._jac_doc_.upsert:
@@ -193,7 +211,7 @@ class Root(NodeArchitype, _Root):
                 edges = [[], [], [], []]  # can be used in future
                 for edir, earchs in self._jac_.edges.items():
                     for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).json())
+                        edges[edir.value].append((await earch.save(session)).dict())
 
                 await self.Collection.update_by_id(
                     self._jac_doc_.id,
@@ -271,9 +289,9 @@ class EdgeArchitype(_EdgeArchitype):
 
                 await self.Collection.insert_one(
                     {
-                        **self._jac_doc_.json(),
-                        "src": (await self._jac_.source.save(session)).json(),
-                        "tgt": (await self._jac_.target.save(session)).json(),
+                        **self._jac_doc_.dict(),
+                        "src": (await self._jac_.source.save(session)).dict(),
+                        "tgt": (await self._jac_.target.save(session)).dict(),
                         "dir": self._jac_.dir.value,
                         "ctx": asdict(self),
                     },
@@ -284,8 +302,8 @@ class EdgeArchitype(_EdgeArchitype):
                     self._jac_doc_.id,
                     {
                         "$set": {
-                            "src": (await self._jac_.source.save(session)).json(),
-                            "tgt": (await self._jac_.target.save(session)).json(),
+                            "src": (await self._jac_.source.save(session)).dict(),
+                            "tgt": (await self._jac_.target.save(session)).dict(),
                             "dir": self._jac_.dir.value,
                             "ctx": asdict(self),
                         }
@@ -325,16 +343,17 @@ class GenericEdge(EdgeArchitype):
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
-    class Collection(ArchCollection):
+    class Collection(EdgeArchitype.Collection, ArchCollection):
         __collection__ = f"e"
 
 
-@dataclass
 class JacContext:
-    request: Request
-    user: User
-    root: Root
-    __mem__: Optional[dict[str, object]] = field(default_factory=dict)
+    def __init__(self, request: Request):
+        self.__mem__ = {}
+        self.request = request
+        self.user = getattr(request, "auth_user", None)
+        self.root = getattr(request, "auth_root", root)
+        self.reports = []
 
     def has(self, id: Union[ObjectId, str]):
         return str(id) in self.__mem__
@@ -347,3 +366,32 @@ class JacContext:
 
     def remove(self, id: Union[ObjectId, str]):
         self.__mem__.pop(str(id), None)
+
+    def report(self, obj: Any):
+        self.reports.append(obj)
+
+    def response(self):
+        for key, val in enumerate(self.reports):
+            if isinstance(val, Architype) and (
+                ret_jd := getattr(val, "_jac_doc_", None)
+            ):
+                self.reports[key] = {**ret_jd.json(), "ctx": asdict(val)}
+            else:
+                self.clean_response(val)
+        return self.reports
+
+    def clean_response_override(self, key, val, obj):
+        if isinstance(val, Architype) and (ret_jd := getattr(val, "_jac_doc_", None)):
+            obj[key] = {**ret_jd.json(), "ctx": asdict(val)}
+
+    def clean_response(self, obj: Union[list, dict]):
+        if isinstance(obj, list):
+            for idx, val in enumerate(obj):
+                self.clean_response_override(idx, val, obj)
+
+        elif isinstance(obj, dict):
+            for key, val in obj.items():
+                self.clean_response_override(key, val, obj)
+
+
+JCLASS = [{Root.__name__: Root}, {}, {GenericEdge.__name__: GenericEdge}]

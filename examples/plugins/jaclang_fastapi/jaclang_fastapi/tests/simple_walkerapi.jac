@@ -31,11 +31,27 @@ walker post_no_body {
         return True;
     }
 }
+
+node boy {
+    has val1: str, val2: str;
+}
+
+node girl {
+    has val: str;
+}
+
 walker post_with_body {
     has a: str;
 
-    async can enter with `<r> entry {
-        return -->;
+    async can enter1 with `<r> entry {
+        a = await -->;
+        report <r>;
+        report a;
+        visit a;
+    }
+
+    async can enter2 with boy entry {
+        report (await -->)[0];
     }
 }
 
@@ -52,14 +68,6 @@ walker get_with_query {
     obj Specs {
         static has methods: list = ["get"], as_query: list = ["a"];
     }
-}
-
-node boy {
-    has val1: str, val2: str;
-}
-
-node girl {
-    has val: str;
 }
 
 walker get_all_query {
