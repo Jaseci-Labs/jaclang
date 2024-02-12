@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer
 from jwt import decode, encode
 from passlib.context import CryptContext
 
-from jaclang_fastapi.plugins import Root, JCONTEXT, JacContext
+from jaclang_fastapi.plugins import Root
 from jaclang_fastapi.models import User
 from jaclang_fastapi.memory import TokenMemory
 from jaclang_fastapi.utils import logger, utc_now
@@ -49,7 +49,8 @@ async def authenticate(request: Request):  # noqa N803
         ):
             user = await User.model().Collection.find_by_id(decrypted["id"])
             root = await Root.Collection.find_by_id(user.root_id)
-            JCONTEXT.set(JacContext(request=request, user=user, root=root))
+            request.auth_user = user
+            request.auth_root = root
             return
 
     raise HTTPException(status_code=401)
