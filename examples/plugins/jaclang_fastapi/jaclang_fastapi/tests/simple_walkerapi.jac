@@ -26,13 +26,17 @@ walker post_no_body {
         b = boy(val1="a", val2="b");
         g = girl(val="b");
         b ++> g;
-        <r> ++> b ++> g;
+        <r> ++> b;
         await <r>.save();
         return True;
     }
 }
 walker post_with_body {
     has a: str;
+
+    async can enter with `<r> entry {
+        return -->;
+    }
 }
 
 walker get_no_body {

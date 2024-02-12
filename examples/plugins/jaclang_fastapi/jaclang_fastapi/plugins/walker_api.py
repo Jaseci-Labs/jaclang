@@ -1,4 +1,3 @@
-from contextvars import copy_context, ContextVar
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -19,13 +18,13 @@ from inspect import iscoroutine
 from fastapi import Depends, APIRouter, Request
 
 from jaclang_fastapi.securities import authenticator
+from .common import JCONTEXT, JacContext
 
 
 T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
 
 router = APIRouter(prefix="/walker", tags=["walker"])
-context = ContextVar("context", default=0)
 
 
 class DefaultSpecs:
@@ -127,9 +126,11 @@ class JacPlugin:
     @hookimpl
     def get_root() -> Architype:
         """Jac's assign comprehension feature."""
-        if req := context.get():
-            user_root = getattr(req, "user_root", None)
-        return user_root or root
+        jctx: JacContext = JCONTEXT.get()
+        current_root = root
+        if jctx:
+            current_root = jctx.root
+        return current_root
 
 
 def get_specs(cls):
@@ -177,7 +178,6 @@ def populate_apis(cls):
     if body and query:
 
         async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
-            context.set(request)
             wlk = cls(**body.model_dump(), **query.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -185,7 +185,6 @@ def populate_apis(cls):
     elif body:
 
         async def api(request: Request, body: BodyModel):
-            context.set(request)
             wlk = cls(**body.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -193,7 +192,6 @@ def populate_apis(cls):
     elif query:
 
         async def api(request: Request, query: QueryModel = Depends()):
-            context.set(request)
             wlk = cls(**query.model_dump())
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
@@ -201,7 +199,6 @@ def populate_apis(cls):
     else:
 
         async def api(request: Request):
-            context.set(request)
             wlk = cls()
             await wlk._jac_.spawn_call(getattr(request, "user_root", root))
             return wlk._jac_.returns
