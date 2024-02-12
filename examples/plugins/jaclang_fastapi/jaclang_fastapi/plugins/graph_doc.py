@@ -1,5 +1,6 @@
 from jaclang.core.construct import Architype, DSFunc, EdgeDir
 
+from dataclasses import fields
 from typing import Type, Callable, Optional
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
@@ -90,6 +91,8 @@ class JacPlugin:
 def populate_collection(cls: type, jtype: JType) -> type:
     class_name = cls.__name__.lower()
     JCLASS[jtype.value][class_name] = cls
+
+    cls._jac_fields_ = [field.name for field in fields(cls)]
 
     collection = f"{jtype}_{class_name}"
     if (coll := getattr(cls, "Collection", None)) is None:

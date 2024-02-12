@@ -14,7 +14,7 @@ from bson import ObjectId
 from enum import Enum
 from pymongo.client_session import ClientSession
 
-from dataclasses import field, dataclass, asdict
+from dataclasses import field, dataclass, asdict, fields
 from typing import Union, Optional, Callable, Any
 
 from fastapi import Request
@@ -56,7 +56,40 @@ class DocAnchor:
     name: str
     id: ObjectId
     obj: object = None
-    upsert: Union[bool, list[str]] = field(default_factory=list)
+    changes: Optional[dict] = field(default_factory=dict)
+
+    def update(self, up: dict):
+        if "$set" not in self.changes:
+            self.changes["$set"] = {}
+
+        _set: dict = self.changes.get("$set")
+        _set.update(up)
+
+    def edge_push(self, dir: int, up: object):
+        if "$push" not in self.changes:
+            self.changes["$push"] = {}
+
+        _push: dict = self.changes.get("$push")
+
+        edg_tgt: str = f"edg.{dir}"
+        if edg_tgt not in _push:
+            _push[edg_tgt] = {"$each": []}
+
+        edg_list: list = _push[edg_tgt]["$each"]
+        edg_list.append(up)
+
+    def edge_pull(self, dir: int, up: object):
+        if "$pull" not in self.changes:
+            self.changes["$pull"] = {}
+
+        _pull: dict = self.changes.get("$pull")
+
+        edg_tgt: str = f"edge.{dir}"
+        if edg_tgt not in _pull:
+            _pull[edg_tgt] = {"$each": []}
+
+        edg_list: list = _pull[edg_tgt]["$each"]
+        edg_list.append(up)
 
     def dict(self):
         return {"_id": self.id, "_type": self.type.value, "_name": self.name}
@@ -89,6 +122,17 @@ class NodeArchitype(_NodeArchitype):
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        jd: DocAnchor
+        if (
+            (jd := getattr(self, "_jac_doc_", None))
+            and (fields := getattr(self, "_jac_fields_", None))
+            and __name in fields
+        ):
+            jd.update({f"ctx.{__name}": __value})
+
+        return super().__setattr__(__name, __value)
+
     class Collection:
 
         @classmethod
@@ -102,15 +146,21 @@ class NodeArchitype(_NodeArchitype):
             doc_anc.obj = arch._jac_
             return arch
 
-    def update(self, up):
-        if hasattr(self, "_jac_doc_"):
-            self._jac_doc_.upsert.append(up)
+    def update(self, up: dict):
+        self._jac_doc_.update(up)
 
-    async def save(self, session: ClientSession = None):
+    def edge_push(self, dir: int, up: dict):
+        self._jac_doc_.edge_push(dir, up)
+
+    def edge_pull(self, dir: int, up: dict):
+        self._jac_doc_.edge_pull(dir, up)
+
+    async def _save(self, jtype: JType, session: ClientSession = None):
         if session:
-            if not hasattr(self, "_jac_doc_"):
+            jd: DocAnchor
+            if not (jd := getattr(self, "_jac_doc_", None)):
                 self._jac_doc_ = DocAnchor(
-                    JType.NODE, self.__class__.__name__, ObjectId(), obj=self._jac_
+                    jtype, self.__class__.__name__, ObjectId(), obj=self._jac_
                 )
                 edges = [[], [], [], []]  # can be used in future
                 for edir, earchs in self._jac_.edges.items():
@@ -121,23 +171,24 @@ class NodeArchitype(_NodeArchitype):
                     {**self._jac_doc_.dict(), "edg": edges, "ctx": asdict(self)},
                     session=session,
                 )
-            elif self._jac_doc_.upsert:
-                self._jac_doc_.upsert.clear()
-                edges = [[], [], [], []]  # can be used in future
-                for edir, earchs in self._jac_.edges.items():
-                    for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).dict())
+            elif changes := jd.changes:
+                jd.changes = {}
+                for val in (changes.get("$push") or {}).values():
+                    each = val.get("$each") or []
+                    for idx, eval in enumerate(each):
+                        if isinstance(eval, EdgeArchitype):
+                            each[idx] = (await eval.save(session)).dict()
 
                 await self.Collection.update_by_id(
-                    self._jac_doc_.id,
-                    {"$set": {"edg": edges, "ctx": asdict(self)}},
+                    jd.id,
+                    changes,
                     session=session,
                 )
         else:
             async with await ArchCollection.get_session() as session:
                 async with session.start_transaction():
                     try:
-                        await self.save(session)
+                        await self._save(jtype, session)
                         await session.commit_transaction()
                     except Exception:
                         await session.abort_transaction()
@@ -145,6 +196,9 @@ class NodeArchitype(_NodeArchitype):
                         raise
 
         return self._jac_doc_
+
+    async def save(self, session: ClientSession = None):
+        return await self._save(JType.NODE, session)
 
 
 @dataclass(eq=False)
@@ -192,44 +246,7 @@ class Root(NodeArchitype, _Root):
         self._jac_doc_: DocAnchor
 
     async def save(self, session: ClientSession = None):
-        if session:
-            if not hasattr(self, "_jac_doc_"):
-                self._jac_doc_ = DocAnchor(
-                    JType.ROOT, self.__class__.__name__, ObjectId(), obj=self._jac_
-                )
-                edges = [[], [], [], []]  # can be used in future
-                for edir, earchs in self._jac_.edges.items():
-                    for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).dict())
-
-                await self.Collection.insert_one(
-                    {**self._jac_doc_.dict(), "edg": edges, "ctx": asdict(self)},
-                    session=session,
-                )
-            elif self._jac_doc_.upsert:
-                self._jac_doc_.upsert.clear()
-                edges = [[], [], [], []]  # can be used in future
-                for edir, earchs in self._jac_.edges.items():
-                    for earch in earchs:
-                        edges[edir.value].append((await earch.save(session)).dict())
-
-                await self.Collection.update_by_id(
-                    self._jac_doc_.id,
-                    {"$set": {"edg": edges, "ctx": asdict(self)}},
-                    session=session,
-                )
-        else:
-            async with await ArchCollection.get_session() as session:
-                async with session.start_transaction():
-                    try:
-                        await self.save(session)
-                        await session.commit_transaction()
-                    except Exception:
-                        await session.abort_transaction()
-                        logger.exception("Error saving node!")
-                        raise
-
-        return self._jac_doc_
+        return await self._save(JType.ROOT, session)
 
     class Collection(ArchCollection):
         __collection__ = f"root"
@@ -255,6 +272,16 @@ class EdgeArchitype(_EdgeArchitype):
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        jd: DocAnchor
+        if (
+            (jd := getattr(self, "_jac_doc_", None))
+            and (fields := getattr(self, "_jac_fields_", None))
+            and __name in fields
+        ):
+            jd.update({f"ctx.{__name}": __value})
+        return super().__setattr__(__name, __value)
+
     class Collection:
         @classmethod
         def __document__(cls, doc: dict):
@@ -262,7 +289,7 @@ class EdgeArchitype(_EdgeArchitype):
                 type=JType(doc.get("_type")), name=doc.get("_name"), id=doc.get("_id")
             )
             arch: EdgeArchitype = doc_anc.build(**(doc.get("ctx") or {}))
-
+            arch._jac_doc_ = doc_anc
             if src := doc.get("src"):
                 arch._jac_.source = DocAnchor(
                     type=JType(src.get("_type")),
@@ -282,7 +309,8 @@ class EdgeArchitype(_EdgeArchitype):
 
     async def save(self, session: ClientSession = None):
         if session:
-            if not hasattr(self, "_jac_doc_"):
+            jd: DocAnchor
+            if not (jd := getattr(self, "_jac_doc_", None)):
                 self._jac_doc_ = DocAnchor(
                     JType.EDGE, self.__class__.__name__, ObjectId(), obj=self._jac_
                 )
@@ -297,17 +325,11 @@ class EdgeArchitype(_EdgeArchitype):
                     },
                     session=session,
                 )
-            elif self._jac_doc_:
+            elif changes := jd.changes:
+                jd.changes = {}
                 await self.Collection.update_by_id(
-                    self._jac_doc_.id,
-                    {
-                        "$set": {
-                            "src": (await self._jac_.source.save(session)).dict(),
-                            "tgt": (await self._jac_.target.save(session)).dict(),
-                            "dir": self._jac_.dir.value,
-                            "ctx": asdict(self),
-                        }
-                    },
+                    jd.id,
+                    {"$set": changes},
                     session=session,
                 )
         else:
@@ -328,10 +350,21 @@ class EdgeArchitype(_EdgeArchitype):
 class EdgeAnchor(_EdgeAnchor):
     def attach(self, src: NodeArchitype, trg: NodeArchitype) -> "EdgeAnchor":
         """Attach edge to nodes."""
-        super().attach(src, trg)
+        if self.dir == EdgeDir.IN:
+            self.source = trg
+            self.target = src
+            self.source._jac_.edges[EdgeDir.IN].append(self.obj)
+            self.target._jac_.edges[EdgeDir.OUT].append(self.obj)
+            self.source.edge_push(EdgeDir.IN.value, self.obj)
+            self.target.edge_push(EdgeDir.OUT.value, self.obj)
+        else:
+            self.source = src
+            self.target = trg
+            self.source._jac_.edges[EdgeDir.OUT].append(self.obj)
+            self.target._jac_.edges[EdgeDir.IN].append(self.obj)
+            self.source.edge_push(EdgeDir.OUT.value, self.obj)
+            self.target.edge_push(EdgeDir.IN.value, self.obj)
 
-        self.source.update(True)
-        self.target.update(True)
         return self
 
 
