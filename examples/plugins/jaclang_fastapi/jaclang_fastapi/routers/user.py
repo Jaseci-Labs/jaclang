@@ -21,10 +21,9 @@ async def register(req: User.register_type()):
         async with session.start_transaction():
             try:
 
-                root_id = await Root().save(session=session)
-
+                root = await Root().save(session=session)
                 req_obf = req.obfuscate()
-                req_obf["root_id"] = root_id
+                req_obf["root_id"] = root.id
                 result = await User.Collection.insert_one(req_obf, session=session)
 
                 await session.commit_transaction()

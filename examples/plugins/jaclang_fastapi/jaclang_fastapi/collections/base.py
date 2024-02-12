@@ -107,6 +107,38 @@ class BaseCollection:
         return []
 
     @classmethod
+    async def update_one(
+        cls, filter: dict, update: dict, session: ClientSession = None
+    ):
+        try:
+            collection = await cls.collection(session=session)
+            result = await collection.update_one(filter, update, session=session)
+            return result.modified_count
+        except Exception:
+            if session:
+                raise
+            logger.exception(f"Error updating doc:\n{filter}\n{update}")
+        return 0
+
+    @classmethod
+    async def update_many(
+        cls, filter: dict, update: dict, session: ClientSession = None
+    ):
+        try:
+            collection = await cls.collection(session=session)
+            result = await collection.update_many(filter, update, session=session)
+            return result.modified_count
+        except Exception:
+            if session:
+                raise
+            logger.exception(f"Error updating doc:\n{filter}\n{update}")
+        return 0
+
+    @classmethod
+    async def update_by_id(cls, id: dict, update: dict, session: ClientSession = None):
+        return await cls.update_one({"_id": ObjectId(id)}, update, session)
+
+    @classmethod
     async def find(cls, **kwargs):
         collection = await cls.collection()
 
@@ -130,14 +162,7 @@ class BaseCollection:
 
     @classmethod
     async def find_by_id(cls, id: str, **kwargs):
-        collection = await cls.collection()
-
-        if "projection" not in kwargs:
-            kwargs["projection"] = cls.__excluded_obj__
-
-        if result := await collection.find_one({"_id": ObjectId(id)}, **kwargs):
-            return cls.__document__(result)
-        return result
+        return await cls.find_one(filter={"_id": ObjectId(id)}, **kwargs)
 
     @classmethod
     async def delete(cls, filter, session: ClientSession = None):
@@ -165,12 +190,4 @@ class BaseCollection:
 
     @classmethod
     async def delete_by_id(cls, id: str, session: ClientSession = None):
-        try:
-            collection = await cls.collection(session=session)
-            result = await collection.delete_one({"_id": ObjectId(id)}, session=session)
-            return result.deleted_count
-        except Exception:
-            if session:
-                raise
-            logger.exception(f"Error delete by id [{id}]")
-        return 0
+        return await cls.delete_one({"_id": ObjectId(id)}, session)
