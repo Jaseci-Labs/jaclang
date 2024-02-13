@@ -10,6 +10,7 @@ import jaclang.compiler.absyntree as ast
 from jaclang.compiler.compile import jac_file_to_pass
 from jaclang.compiler.symtable import SymbolTable
 from jaclang.utils.helpers import extract_headings, heading_to_snake, pascal_to_snake
+from jaclang.utils.treeprinter import print_ast_tree
 
 
 class AstKidInfo:
@@ -249,7 +250,7 @@ class AstTool:
             with open(file_name, "r") as file:
                 code = file.read()
             parsed_ast = py_ast.parse(code)
-            return f"\n{py_ast.dump(parsed_ast, indent=2)}"
+            return print_ast_tree(parsed_ast)
         else:
             return "Not a .jac or .py file, or invalid command for file type."
 

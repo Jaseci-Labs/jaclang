@@ -96,29 +96,30 @@ def print_ast_tree(
             return f"{node.__class__.__name__}"
 
     def __node_repr_in_py_tree(node: ast3.AST) -> str:
-        if isinstance(node, ast3.Constant):
-            return f"{node.__class__.__name__} - {node.value}"
-        elif isinstance(node, ast3.Name):
-            return f"{node.__class__.__name__} - {node.id}"
-        elif isinstance(node, ast3.FunctionDef | ast3.ClassDef | ast3.AsyncFunctionDef):
-            return f"{node.__class__.__name__} - {node.name}"
-        elif isinstance(node, ast3.Import):
-            return f"{node.__class__.__name__} - {', '.join(alias.name for alias in node.names)}"
-        elif isinstance(node, ast3.ImportFrom):
-            return f"{node.__class__.__name__} - {node.module} : {', '.join(alias.name for alias in node.names)}"
-        elif isinstance(node, ast3.alias):
-            return f"{node.__class__.__name__} - {node.name}"
-        elif isinstance(node, ast3.Attribute):
-            return f"{node.__class__.__name__} - {node.attr}"
-        elif isinstance(node, ast3.Call):
-            if isinstance(node.func, ast3.Name):
-                return f"{node.__class__.__name__} - {node.func.id}"
-            elif isinstance(node.func, ast3.Attribute):
-                return f"{node.__class__.__name__} - {node.func.attr}"
-            else:
-                return f"{node.__class__.__name__}"
-        else:
-            return f"{node.__class__.__name__}"
+
+        # # 1) Covers all attributes but looks like a junk of informations
+        #     attrs = vars(node)
+        #     return f"{node.__class__.__name__} - {attrs}"
+
+        # 2) Covers attributes mentioned in the list if it exists
+        attr_names = ["name", "id", "attr", "value"]
+        attrs = []
+        for attr in attr_names:
+            if hasattr(node, attr):
+                attrs.append(f"{attr}: {getattr(node, attr)}")
+        return f"{node.__class__.__name__} - {', '.join(attrs)}"
+        # Covers almost 30 attr but no point of use these, most of them are again a nodethat will be printed separetly
+        # attr_names = ['name', 'id', 'attr', 'value', 'args', 'elts', 'bases', 'test', 'ops', 'comparators',
+        #           'body', 'targets', 'ctx', 'func', 'keywords', 'starargs', 'kwargs', 'left', 'right',
+        #           'operand', 'expressions', 'keys', 'values', 'dim', 'slice', 'lower', 'upper', 'step',
+        #           'module', 'names']
+
+    # # 3) perioratises the order of attibute by a list; it will only show one attr based on periority
+    #     attr_names = ['name', 'id', 'attr', 'value']
+    #     for attr in attr_names:
+    #         if hasattr(node, attr):
+    #             return f"{node.__class__.__name__} - {getattr(node, attr)}"
+    #     return f"{node.__class__.__name__}"
 
     def get_location_info(node: ast3.AST) -> str:
         if hasattr(node, "lineno"):
