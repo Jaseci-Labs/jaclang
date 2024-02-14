@@ -7,7 +7,7 @@ class UserCollection(BaseCollection):
     """
     User collection interface.
 
-    This is interface is for User's Management.
+    This interface is for User's Management.
     You may override this if you wish to implement different structure
     """
 

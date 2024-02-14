@@ -20,10 +20,10 @@ from jaclang.core.construct import (
     root,
 )
 
-from jaclang_fastapi.collections import BaseCollection
-from jaclang_fastapi.utils import logger
-
 from pymongo.client_session import ClientSession
+
+from ..collections import BaseCollection
+from ..utils import logger
 
 
 JCONTEXT = ContextVar("JCONTEXT")
@@ -119,7 +119,7 @@ class DocAnchor:
         """Return generated class equivalent for DocAnchor."""
         return JCLASS[self.type.value].get(self.name)
 
-    def build(self, **kwargs: dict[str, Any]) -> object:
+    def build(self, **kwargs: "dict[str, Any]") -> object:
         """Return generated class instance equivalent for DocAnchor."""
         return self.class_ref()(**kwargs)
 

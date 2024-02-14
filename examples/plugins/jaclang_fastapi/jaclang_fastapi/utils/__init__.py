@@ -1,9 +1,12 @@
+"""Common Utilities."""
+
 import logging
 import sys
 from datetime import datetime, timedelta, timezone
 
 
-def utc_now(**addons) -> int:
+def utc_now(**addons: dict[str, int]) -> int:
+    """Get current timestamp with option to add additional timedelta."""
     return int((datetime.now(tz=timezone.utc) + timedelta(**addons)).timestamp())
 
 

@@ -1,3 +1,5 @@
+"""Walker API Authenticator."""
+
 from os import getenv
 
 from fastapi import Depends, Request
@@ -5,12 +7,13 @@ from fastapi.exceptions import HTTPException
 from fastapi.security import HTTPBearer
 
 from jwt import decode, encode
+
 from passlib.context import CryptContext
 
-from jaclang_fastapi.plugins import Root
-from jaclang_fastapi.models import User
-from jaclang_fastapi.memory import TokenMemory
-from jaclang_fastapi.utils import logger, utc_now
+from ..memory import TokenMemory
+from ..models import User
+from ..plugins import Root
+from ..utils import logger, utc_now
 
 
 TOKEN_SECRET = getenv("TOKEN_SECRET")
@@ -18,10 +21,12 @@ TOKEN_ALGORITHM = getenv("TOKEN_ALGORITHM")
 
 
 def encrypt(data: dict) -> str:
+    """Encrypt data."""
     return encode(data, key=TOKEN_SECRET, algorithm=TOKEN_ALGORITHM)
 
 
 def decrypt(token: str) -> dict:
+    """Decrypt data."""
     try:
         return decode(token, key=TOKEN_SECRET, algorithms=[TOKEN_ALGORITHM])
     except Exception:
@@ -30,6 +35,7 @@ def decrypt(token: str) -> dict:
 
 
 async def create_token(user: dict) -> str:
+    """Generate token for current user."""
     user["expiration"] = utc_now(hours=int(getenv("TOKEN_TIMEOUT") or "12"))
     token = encrypt(user)
     if await TokenMemory.hset(key=token, data=True):
@@ -37,7 +43,8 @@ async def create_token(user: dict) -> str:
     raise HTTPException(500, "Token Creation Failed!")
 
 
-async def authenticate(request: Request):  # noqa N803
+async def authenticate(request: Request) -> None:
+    """Authenticate current request and attach authenticated user and their root."""
     authorization = request.headers.get("Authorization")
     if authorization and authorization.lower().startswith("bearer"):
         token = authorization[7:]
