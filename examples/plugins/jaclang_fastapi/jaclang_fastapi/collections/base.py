@@ -5,8 +5,6 @@ from typing import Any
 
 from bson import ObjectId
 
-from jaclang_fastapi.utils import logger
-
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from pymongo import IndexModel
@@ -15,12 +13,14 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.server_api import ServerApi
 
+from ..utils import logger
+
 
 class BaseCollection:
     """
     Base collection interface.
 
-    This is interface use for connecting to mongodb.
+    This interface use for connecting to mongodb.
     """
 
     __collection__ = None

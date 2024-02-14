@@ -1,19 +1,28 @@
+"""Memory Interface."""
+
 from os import getenv
+from typing import Any
 
 from orjson import dumps, loads
 
 from redis import Redis, asyncio as aioredis
 
-from jaclang_fastapi.utils import logger
+from ..utils import logger
 
 
 class CommonMemory:
-    __table__ = "common"
+    """
+    Base Memory interface.
 
+    This interface use for connecting to redis.
+    """
+
+    __table__ = "common"
     __redis__: Redis = None
 
     @staticmethod
     def get_rd() -> Redis:
+        """Return redis.Redis for Redis connection."""
         if not isinstance(__class__.__redis__, Redis):
             __class__.__redis__ = aioredis.from_url(
                 getenv("REDIS_HOST"),
@@ -24,7 +33,8 @@ class CommonMemory:
         return __class__.__redis__
 
     @classmethod
-    async def get(cls, key: str):
+    async def get(cls, key: str) -> Any:  # noqa: ANN401
+        """Retrieve via key."""
         try:
             redis = cls.get_rd()
             return loads(await redis.get(key))
@@ -33,16 +43,18 @@ class CommonMemory:
             return None
 
     @classmethod
-    async def keys(cls):
+    async def keys(cls) -> list[str]:
+        """Return all available keys."""
         try:
             redis = cls.get_rd()
             return await redis.keys()
         except Exception:
             logger.exception("Error getting keys")
-            return None
+            return []
 
     @classmethod
-    async def set(cls, key: str, data: dict):
+    async def set(cls, key: str, data: Any) -> bool:  # noqa: ANN401
+        """Push key value pair."""
         try:
             redis = cls.get_rd()
             return bool(await redis.set(key, dumps(data)))
@@ -51,7 +63,8 @@ class CommonMemory:
             return False
 
     @classmethod
-    async def delete(cls, key: str):
+    async def delete(cls, key: str) -> bool:
+        """Delete via key."""
         try:
             redis = cls.get_rd()
             return bool(await redis.delete(key))
@@ -60,7 +73,8 @@ class CommonMemory:
             return False
 
     @classmethod
-    async def hget(cls, key: str):
+    async def hget(cls, key: str) -> Any:  # noqa: ANN401
+        """Retrieve via key from group."""
         try:
             redis = cls.get_rd()
             return loads(await redis.hget(cls.__table__, key))
@@ -69,7 +83,8 @@ class CommonMemory:
             return None
 
     @classmethod
-    async def hkeys(cls):
+    async def hkeys(cls) -> list[str]:
+        """Retrieve all available keys from group."""
         try:
             redis = cls.get_rd()
             return await redis.hkeys(cls.__table__)
@@ -78,7 +93,8 @@ class CommonMemory:
             return None
 
     @classmethod
-    async def hset(cls, key: str, data: dict):
+    async def hset(cls, key: str, data: dict) -> bool:
+        """Push key value pair to group."""
         try:
             redis = cls.get_rd()
             return bool(await redis.hset(cls.__table__, key, dumps(data)))
@@ -89,7 +105,8 @@ class CommonMemory:
             return False
 
     @classmethod
-    async def hdelete(cls, key: str):
+    async def hdelete(cls, key: str) -> bool:
+        """Delete via key from group."""
         try:
             redis = cls.get_rd()
             return bool(await redis.hdel(cls.__table__, key))

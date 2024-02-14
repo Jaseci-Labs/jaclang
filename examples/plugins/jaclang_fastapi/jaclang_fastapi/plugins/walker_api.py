@@ -1,24 +1,27 @@
+"""Walker API Plugin."""
+
+from dataclasses import Field, dataclass
+from inspect import iscoroutine
+from pydoc import locate
+from re import compile
+from typing import Any, Callable, Type, TypeVar, Union
+
+from fastapi import APIRouter, Depends, Request, Response
+
 from jaclang.core.construct import (
     Architype,
     DSFunc,
-    WalkerArchitype as _WalkerArchitype,
     WalkerAnchor as _WalkerAnchor,
+    WalkerArchitype as _WalkerArchitype,
     root,
 )
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
-from dataclasses import Field, dataclass, asdict
-from typing import Type, TypeVar, Callable, Union, Any
 from pydantic import create_model
-from pydoc import locate
-from re import compile
 
-from inspect import iscoroutine
-from fastapi import Depends, APIRouter, Request
-
-from jaclang_fastapi.securities import authenticator
 from .common import JCONTEXT, JacContext
+from ..securities import authenticator
 
 
 T = TypeVar("T")
@@ -28,6 +31,8 @@ router = APIRouter(prefix="/walker", tags=["walker"])
 
 
 class DefaultSpecs:
+    """Default API specs."""
+
     path: str = ""
     methods: list[str] = ["post"]
     as_query: Union[str, list[str]] = []
@@ -36,7 +41,10 @@ class DefaultSpecs:
 
 @dataclass(eq=False)
 class WalkerAnchor(_WalkerAnchor):
-    async def await_if_coroutine(self, ret):
+    """Overriden WalkerAnchor."""
+
+    async def await_if_coroutine(self, ret: Any) -> None:  # noqa: ANN401
+        """Await return if it's a coroutine."""
         if iscoroutine(ret):
             ret = await ret
 
@@ -90,6 +98,8 @@ class WalkerArchitype(_WalkerArchitype):
 
 
 class JacPlugin:
+    """Plugin Methods."""
+
     @staticmethod
     @hookimpl
     def make_walker(
@@ -137,7 +147,8 @@ class JacPlugin:
         jctx.report(expr)
 
 
-def get_specs(cls):
+def get_specs(cls: type) -> DefaultSpecs:
+    """Get Specs and inherit from DefaultSpecs."""
     specs = getattr(cls, "Specs", DefaultSpecs)
     if not issubclass(specs, DefaultSpecs):
         specs = type(specs.__name__, (specs, DefaultSpecs), {})
@@ -145,7 +156,8 @@ def get_specs(cls):
     return specs
 
 
-def populate_apis(cls):
+def populate_apis(cls: type) -> None:
+    """Generate FastAPI endpoint based on WalkerArchitype class."""
     specs = get_specs(cls)
     path: str = specs.path or ""
     methods: list = specs.methods or []
@@ -176,12 +188,14 @@ def populate_apis(cls):
         else:
             body[key] = consts
 
-    QueryModel = create_model(f"{cls.__name__.lower()}_query_model", **query)
-    BodyModel = create_model(f"{cls.__name__.lower()}_body_model", **body)
+    query_model = create_model(f"{cls.__name__.lower()}_query_model", **query)
+    body_model = create_model(f"{cls.__name__.lower()}_body_model", **body)
 
     if body and query:
 
-        async def api(request: Request, body: BodyModel, query: QueryModel = Depends()):
+        async def api(
+            request: Request, body: body_model, query: query_model = Depends()  # type: ignore # noqa: B008
+        ) -> Response:
             jctx = JacContext(request=request)
             JCONTEXT.set(jctx)
             wlk = cls(**body.model_dump(), **query.model_dump())
@@ -190,7 +204,7 @@ def populate_apis(cls):
 
     elif body:
 
-        async def api(request: Request, body: BodyModel):
+        async def api(request: Request, body: body_model) -> Response:  # type: ignore
             jctx = JacContext(request=request)
             JCONTEXT.set(jctx)
             wlk = cls(**body.model_dump())
@@ -199,7 +213,7 @@ def populate_apis(cls):
 
     elif query:
 
-        async def api(request: Request, query: QueryModel = Depends()):
+        async def api(request: Request, query: query_model = Depends()) -> Response:  # type: ignore # noqa: B008
             jctx = JacContext(request=request)
             JCONTEXT.set(jctx)
             wlk = cls(**query.model_dump())
@@ -208,7 +222,7 @@ def populate_apis(cls):
 
     else:
 
-        async def api(request: Request):
+        async def api(request: Request) -> Response:
             jctx = JacContext(request=request)
             JCONTEXT.set(jctx)
             wlk = cls()
@@ -229,10 +243,12 @@ def populate_apis(cls):
 
 def specs(
     path: str = "",
-    methods: list[str] = [],
-    as_query: Union[str, list] = [],
+    methods: list[str] = [],  # noqa: B006
+    as_query: Union[str, list] = [],  # noqa: B006
     auth: bool = True,
 ) -> Callable:
+    """Walker Decorator."""
+
     def wrapper(cls: T) -> T:
         p = path
         m = methods

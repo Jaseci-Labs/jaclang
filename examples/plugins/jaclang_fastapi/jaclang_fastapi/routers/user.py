@@ -4,11 +4,11 @@ from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import ORJSONResponse
 
-from jaclang_fastapi.models import User
-from jaclang_fastapi.models.ephemerals import UserRequest
-from jaclang_fastapi.plugins import Root
-from jaclang_fastapi.securities import create_token, verify
-from jaclang_fastapi.utils import logger
+from ..models import User
+from ..models.ephemerals import UserRequest
+from ..plugins import Root
+from ..securities import create_token, verify
+from ..utils import logger
 
 router = APIRouter(prefix="/user", tags=["user"])
 

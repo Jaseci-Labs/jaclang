@@ -1,22 +1,26 @@
-from jaclang.core.construct import Architype, DSFunc, EdgeDir
+"""Graph Docs Plugin."""
 
 from dataclasses import fields
-from typing import Type, Callable, Optional
+from typing import Callable, Optional, Type
+
+from jaclang.core.construct import Architype, DSFunc, EdgeDir
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.feature import JacFeature as Jac
 
 from .common import (
-    NodeArchitype,
-    EdgeArchitype,
-    GenericEdge,
-    JType,
-    JCLASS,
     ArchCollection,
     EdgeAnchor,
+    EdgeArchitype,
+    GenericEdge,
+    JCLASS,
+    JType,
+    NodeArchitype,
 )
 
 
 class JacPlugin:
+    """Plugin Methods."""
+
     @staticmethod
     @hookimpl
     def make_node(
@@ -89,6 +93,7 @@ class JacPlugin:
 
 
 def populate_collection(cls: type, jtype: JType) -> type:
+    """Override Architype's Collection to support MongoDB operations."""
     class_name = cls.__name__.lower()
     JCLASS[jtype.value][class_name] = cls
 
