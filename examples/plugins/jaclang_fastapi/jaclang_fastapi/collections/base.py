@@ -1,8 +1,13 @@
+"""BaseCollection Interface."""
+
 from os import getenv
+from typing import Any
 
 from bson import ObjectId
 
-from pydantic import BaseModel
+from jaclang_fastapi.utils import logger
+
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from pymongo import IndexModel
 from pymongo.client_session import ClientSession
@@ -10,31 +15,46 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.server_api import ServerApi
 
-from motor.motor_asyncio import AsyncIOMotorClient
-
-from jaclang_fastapi.utils import logger
-
 
 class BaseCollection:
+    """
+    Base collection interface.
+
+    This is interface use for connecting to mongodb.
+    """
+
     __collection__ = None
     __collection_obj__: Collection = None
     __indexes__ = []
     __excluded__ = []
     __excluded_obj__ = None
 
-    __client__: AsyncIOMotorClient = None
+    __client__: AsyncIOMotorClient = None  # type: ignore
     __database__: Database = None
 
     @classmethod
-    def __document__(cls, doc: dict):
+    def __document__(cls, doc: dict) -> dict:
+        """
+        Return parsed version of document.
+
+        This the default parser after getting a single document.
+        You may override this to specify how/which class it will be casted/based.
+        """
         return doc
 
     @classmethod
-    def __documents__(cls, docs: list[dict]):
+    def __documents__(cls, docs: list[dict]) -> list[dict]:
+        """
+        Return parsed version of multiple documents.
+
+        This the default parser after getting a list of documents.
+        You may override this to specify how/which class it will be casted/based.
+        """
         return docs
 
     @staticmethod
-    def get_client() -> AsyncIOMotorClient:
+    def get_client() -> AsyncIOMotorClient:  # type: ignore
+        """Return pymongo.database.Database for mongodb connection."""
         if not isinstance(__class__.__client__, AsyncIOMotorClient):
             __class__.__client__ = AsyncIOMotorClient(
                 getenv("DATABASE_HOST"),
@@ -45,10 +65,12 @@ class BaseCollection:
 
     @staticmethod
     async def get_session() -> ClientSession:
+        """Return pymongo.client_session.ClientSession used for mongodb transactional operations."""
         return await __class__.get_client().start_session()
 
     @staticmethod
     def get_database() -> Database:
+        """Return pymongo.database.Database for database connection based from current client connection."""
         if not isinstance(__class__.__database__, Database):
             __class__.__database__ = __class__.get_client().get_database(
                 getenv("DATABASE_NAME")
@@ -58,10 +80,12 @@ class BaseCollection:
 
     @staticmethod
     def get_collection(collection: str) -> Collection:
+        """Return pymongo.collection.Collection for collection connection based from current database connection."""
         return __class__.get_database().get_collection(collection)
 
     @classmethod
     async def collection(cls, session: ClientSession = None) -> Collection:
+        """Return pymongo.collection.Collection for collection connection based from attribute of it's child class."""
         if not isinstance(cls.__collection_obj__, Collection):
             cls.__collection_obj__ = cls.get_collection(
                 getattr(cls, "__collection__", None) or cls.__name__.lower()
@@ -83,7 +107,8 @@ class BaseCollection:
         return cls.__collection_obj__
 
     @classmethod
-    async def insert_one(cls, doc: dict, session: ClientSession = None):
+    async def insert_one(cls, doc: dict, session: ClientSession = None) -> ObjectId:
+        """Insert single document and return the inserted id."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.insert_one(doc, session=session)
@@ -92,10 +117,13 @@ class BaseCollection:
             if session:
                 raise
             logger.exception(f"Error inserting doc:\n{doc}")
-        return []
+        return None
 
     @classmethod
-    async def insert_many(cls, docs: list[dict], session: ClientSession = None):
+    async def insert_many(
+        cls, docs: list[dict], session: ClientSession = None
+    ) -> list[ObjectId]:
+        """Insert multiple documents and return the inserted ids."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.insert_many(docs, session=session)
@@ -109,7 +137,8 @@ class BaseCollection:
     @classmethod
     async def update_one(
         cls, filter: dict, update: dict, session: ClientSession = None
-    ):
+    ) -> int:
+        """Update single document and return if it's modified or not."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.update_one(filter, update, session=session)
@@ -123,7 +152,8 @@ class BaseCollection:
     @classmethod
     async def update_many(
         cls, filter: dict, update: dict, session: ClientSession = None
-    ):
+    ) -> int:
+        """Update multiple documents and return how many docs are modified."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.update_many(filter, update, session=session)
@@ -135,11 +165,15 @@ class BaseCollection:
         return 0
 
     @classmethod
-    async def update_by_id(cls, id: dict, update: dict, session: ClientSession = None):
+    async def update_by_id(
+        cls, id: dict, update: dict, session: ClientSession = None
+    ) -> int:
+        """Update single document via ID and return if it's modified or not."""
         return await cls.update_one({"_id": ObjectId(id)}, update, session)
 
     @classmethod
-    async def find(cls, **kwargs):
+    async def find(cls, **kwargs: dict[str, Any]) -> list[object]:
+        """Retrieve multiple documents."""
         collection = await cls.collection()
 
         if "projection" not in kwargs:
@@ -150,7 +184,8 @@ class BaseCollection:
         return results
 
     @classmethod
-    async def find_one(cls, **kwargs):
+    async def find_one(cls, **kwargs: dict[str, Any]) -> object:
+        """Retrieve single document from db."""
         collection = await cls.collection()
 
         if "projection" not in kwargs:
@@ -161,11 +196,13 @@ class BaseCollection:
         return result
 
     @classmethod
-    async def find_by_id(cls, id: str, **kwargs):
+    async def find_by_id(cls, id: str, **kwargs: dict[str, Any]) -> object:
+        """Retrieve single document via ID."""
         return await cls.find_one(filter={"_id": ObjectId(id)}, **kwargs)
 
     @classmethod
-    async def delete(cls, filter, session: ClientSession = None):
+    async def delete(cls, filter: dict, session: ClientSession = None) -> int:
+        """Delete document/s via filter and return how many documents are deleted."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.delete_many(filter, session=session)
@@ -177,7 +214,8 @@ class BaseCollection:
         return 0
 
     @classmethod
-    async def delete_one(cls, filter, session: ClientSession = None):
+    async def delete_one(cls, filter: dict, session: ClientSession = None) -> int:
+        """Delete single document via filter and return if it's deleted or not."""
         try:
             collection = await cls.collection(session=session)
             result = await collection.delete_one(filter, session=session)
@@ -189,5 +227,6 @@ class BaseCollection:
         return 0
 
     @classmethod
-    async def delete_by_id(cls, id: str, session: ClientSession = None):
+    async def delete_by_id(cls, id: str, session: ClientSession = None) -> int:
+        """Delete single document via ID and return if it's deleted or not."""
         return await cls.delete_one({"_id": ObjectId(id)}, session)
