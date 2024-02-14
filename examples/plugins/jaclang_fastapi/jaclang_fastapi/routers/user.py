@@ -1,4 +1,4 @@
-from bson import ObjectId
+"""User APIs."""
 
 from fastapi import APIRouter, status
 from fastapi.exceptions import HTTPException
@@ -6,8 +6,8 @@ from fastapi.responses import ORJSONResponse
 
 from jaclang_fastapi.models import User
 from jaclang_fastapi.models.ephemerals import UserRequest
-from jaclang_fastapi.securities import create_token, verify
 from jaclang_fastapi.plugins import Root
+from jaclang_fastapi.securities import create_token, verify
 from jaclang_fastapi.utils import logger
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -16,7 +16,8 @@ User = User.model()
 
 
 @router.post("/register", status_code=status.HTTP_200_OK)
-async def register(req: User.register_type()):
+async def register(req: User.register_type()) -> ORJSONResponse:  # type: ignore
+    """Register user API."""
     async with await Root.Collection.get_session() as session:
         async with session.start_transaction():
             try:
@@ -27,7 +28,7 @@ async def register(req: User.register_type()):
                 result = await User.Collection.insert_one(req_obf, session=session)
 
                 await session.commit_transaction()
-            except Exception as e:
+            except Exception:
                 logger.exception("Error commiting user registration!")
                 result = None
 
@@ -40,8 +41,9 @@ async def register(req: User.register_type()):
 
 
 @router.post("/login")
-async def root(req: UserRequest):
-    user: User = await User.Collection.find_by_email(req.email)
+async def root(req: UserRequest) -> ORJSONResponse:
+    """Login user API."""
+    user: User = await User.Collection.find_by_email(req.email)  # type: ignore
     if not user or not verify(req.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid Email/Password!")
     user_json = user.json()
