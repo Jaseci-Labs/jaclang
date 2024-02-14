@@ -1,44 +1,55 @@
+"""Common Classes for FastAPI Graph Integration."""
+
 from contextvars import ContextVar
+from dataclasses import asdict, dataclass, field
+from enum import Enum
+from typing import Any, Callable, Optional, Union
+
+from bson import ObjectId
+
+from fastapi import Request
+
 from jaclang.core.construct import (
     Architype,
-    NodeArchitype as _NodeArchitype,
-    EdgeArchitype as _EdgeArchitype,
-    NodeAnchor as _NodeAnchor,
     EdgeAnchor as _EdgeAnchor,
+    EdgeArchitype as _EdgeArchitype,
     EdgeDir,
+    NodeAnchor as _NodeAnchor,
+    NodeArchitype as _NodeArchitype,
     Root as _Root,
     root,
 )
 
-from bson import ObjectId
-from enum import Enum
-from pymongo.client_session import ClientSession
-
-from dataclasses import field, dataclass, asdict, fields
-from typing import Union, Optional, Callable, Any
-
-from fastapi import Request
-
-from jaclang_fastapi.models import User
 from jaclang_fastapi.collections import BaseCollection
 from jaclang_fastapi.utils import logger
+
+from pymongo.client_session import ClientSession
+
 
 JCONTEXT = ContextVar("JCONTEXT")
 JTYPE = ["r", "n", "e"]
 
 
 class JType(Enum):
+    """Enum For Graph Types."""
+
     ROOT = 0
     NODE = 1
     EDGE = 2
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return equivalent shorthand name."""
         return JTYPE[self.value]
 
 
 class ArchCollection(BaseCollection):
+    """Default Collection for Architypes."""
+
     @classmethod
-    def translate_edges(cls, edges: list[list[dict]]):
+    def translate_edges(
+        cls, edges: list[list[dict]]
+    ) -> dict[EdgeDir, list["DocAnchor"]]:
+        """Translate EdgeArchitypes edges into DocAnchor edges."""
         doc_edges: dict[EdgeDir, list[DocAnchor]] = {EdgeDir.IN: [], EdgeDir.OUT: []}
         for i, es in enumerate(edges):
             for e in es:
@@ -52,20 +63,24 @@ class ArchCollection(BaseCollection):
 
 @dataclass(eq=False)
 class DocAnchor:
+    """DocAnchor for Mongodb Referencing."""
+
     type: JType
     name: str
     id: ObjectId
     obj: object = None
     changes: Optional[dict] = field(default_factory=dict)
 
-    def update(self, up: dict):
+    def update(self, up: dict) -> None:
+        """Push update that there's a change happen in context."""
         if "$set" not in self.changes:
             self.changes["$set"] = {}
 
         _set: dict = self.changes.get("$set")
         _set.update(up)
 
-    def edge_push(self, dir: int, up: object):
+    def edge_push(self, dir: int, up: object) -> None:
+        """Push update that there's newly added edge."""
         if "$push" not in self.changes:
             self.changes["$push"] = {}
 
@@ -78,7 +93,8 @@ class DocAnchor:
         edg_list: list = _push[edg_tgt]["$each"]
         edg_list.append(up)
 
-    def edge_pull(self, dir: int, up: object):
+    def edge_pull(self, dir: int, up: object) -> None:
+        """Push update that there's edge that has been removed."""
         if "$pull" not in self.changes:
             self.changes["$pull"] = {}
 
@@ -91,22 +107,28 @@ class DocAnchor:
         edg_list: list = _pull[edg_tgt]["$each"]
         edg_list.append(up)
 
-    def dict(self):
+    def dict(self) -> dict:
+        """Convert to dictionary but id is still ObjectId."""
         return {"_id": self.id, "_type": self.type.value, "_name": self.name}
 
-    def json(self):
+    def json(self) -> "dict":
+        """Convert to dictionary but id is casted to string."""
         return {"_id": str(self.id), "_type": self.type.value, "_name": self.name}
 
-    def class_ref(self):
+    def class_ref(self) -> "type":
+        """Return generated class equivalent for DocAnchor."""
         return JCLASS[self.type.value].get(self.name)
 
-    def build(self, **kwargs):
+    def build(self, **kwargs: dict[str, Any]) -> object:
+        """Return generated class instance equivalent for DocAnchor."""
         return self.class_ref()(**kwargs)
 
-    def __dict__(self):
+    def __dict__(self) -> "dict":
+        """Convert to dictionary but id is casted to string."""
         return self.json()
 
-    async def connect(self):
+    async def connect(self) -> object:
+        """Retrieve the Architype from db and return."""
         cls = self.class_ref()
         data = None
         if cls:
@@ -115,14 +137,15 @@ class DocAnchor:
 
 
 class NodeArchitype(_NodeArchitype):
-    """Node Architype Protocol."""
+    """Overriden NodeArchitype."""
 
     def __init__(self) -> None:
         """Create node architype."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
-    def __setattr__(self, __name: str, __value: Any) -> None:
+    def __setattr__(self, __name: str, __value: Any) -> None:  # noqa: ANN401
+        """Catch variable set to include in changes holder for db updates."""
         jd: DocAnchor
         if (
             (jd := getattr(self, "_jac_doc_", None))
@@ -134,9 +157,11 @@ class NodeArchitype(_NodeArchitype):
         return super().__setattr__(__name, __value)
 
     class Collection:
+        """Default NodeArchitype Collection."""
 
         @classmethod
-        def __document__(cls, doc: dict):
+        def __document__(cls, doc: dict) -> "NodeArchitype":
+            """Return parsed NodeArchitype from document."""
             doc_anc = DocAnchor(
                 type=JType(doc.get("_type")), name=doc.get("_name"), id=doc.get("_id")
             )
@@ -146,16 +171,20 @@ class NodeArchitype(_NodeArchitype):
             doc_anc.obj = arch._jac_
             return arch
 
-    def update(self, up: dict):
+    def update(self, up: dict) -> None:
+        """Update DocAnchor that there's a change happen in context."""
         self._jac_doc_.update(up)
 
-    def edge_push(self, dir: int, up: dict):
+    def edge_push(self, dir: int, up: dict) -> None:
+        """Update DocAnchor that there's newly added edge."""
         self._jac_doc_.edge_push(dir, up)
 
-    def edge_pull(self, dir: int, up: dict):
+    def edge_pull(self, dir: int, up: dict) -> None:
+        """Update DocAnchor that there's edge that has been removed."""
         self._jac_doc_.edge_pull(dir, up)
 
-    async def _save(self, jtype: JType, session: ClientSession = None):
+    async def _save(self, jtype: JType, session: ClientSession = None) -> DocAnchor:
+        """Upsert NodeArchitype."""
         if session:
             jd: DocAnchor
             if not (jd := getattr(self, "_jac_doc_", None)):
@@ -197,17 +226,19 @@ class NodeArchitype(_NodeArchitype):
 
         return self._jac_doc_
 
-    async def save(self, session: ClientSession = None):
+    async def save(self, session: ClientSession = None) -> DocAnchor:
+        """Upsert NodeArchitype."""
         return await self._save(JType.NODE, session)
 
 
 @dataclass(eq=False)
 class NodeAnchor(_NodeAnchor):
+    """Overridden NodeAnchor."""
 
     async def edges_to_nodes(
         self, dir: EdgeDir, filter_type: Optional[type], filter_func: Optional[Callable]
     ) -> list[NodeArchitype]:
-        """Get set of nodes connected to this node."""
+        """Return set of nodes connected to this node."""
         filter_func = filter_func or (lambda x: x)
 
         edge_list = []
@@ -240,19 +271,25 @@ class NodeAnchor(_NodeAnchor):
 
 @dataclass
 class Root(NodeArchitype, _Root):
+    """Overridden Root."""
+
     def __init__(self) -> None:
-        """Create node architype."""
+        """Create Root."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
-    async def save(self, session: ClientSession = None):
+    async def save(self, session: ClientSession = None) -> None:
+        """Upsert NodeArchitype."""
         return await self._save(JType.ROOT, session)
 
     class Collection(ArchCollection):
-        __collection__ = f"root"
+        """Default Root Collection."""
+
+        __collection__ = "root"
 
         @classmethod
-        def __document__(cls, doc: dict):
+        def __document__(cls, doc: dict) -> "Root":
+            """Return parsed Root from document."""
             root = Root()
             root._jac_doc_ = DocAnchor(
                 type=JType(doc.get("_type")),
@@ -265,14 +302,15 @@ class Root(NodeArchitype, _Root):
 
 
 class EdgeArchitype(_EdgeArchitype):
-    """Edge Architype Protocol."""
+    """Overriden EdgeArchitype."""
 
     def __init__(self) -> None:
-        """Edge node architype."""
+        """Create EdgeArchitype."""
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
-    def __setattr__(self, __name: str, __value: Any) -> None:
+    def __setattr__(self, __name: str, __value: Any) -> None:  # noqa: ANN401
+        """Catch variable set to include in changes holder for db updates."""
         jd: DocAnchor
         if (
             (jd := getattr(self, "_jac_doc_", None))
@@ -283,8 +321,11 @@ class EdgeArchitype(_EdgeArchitype):
         return super().__setattr__(__name, __value)
 
     class Collection:
+        """Default EdgeArchitype Collection."""
+
         @classmethod
-        def __document__(cls, doc: dict):
+        def __document__(cls, doc: dict) -> "EdgeArchitype":
+            """Return parsed EdgeArchitype from document."""
             doc_anc = DocAnchor(
                 type=JType(doc.get("_type")), name=doc.get("_name"), id=doc.get("_id")
             )
@@ -307,7 +348,8 @@ class EdgeArchitype(_EdgeArchitype):
             doc_anc.obj = arch._jac_
             return arch
 
-    async def save(self, session: ClientSession = None):
+    async def save(self, session: ClientSession = None) -> None:
+        """Upsert EdgeArchitype."""
         if session:
             jd: DocAnchor
             if not (jd := getattr(self, "_jac_doc_", None)):
@@ -348,6 +390,8 @@ class EdgeArchitype(_EdgeArchitype):
 
 @dataclass(eq=False)
 class EdgeAnchor(_EdgeAnchor):
+    """Overriden EdgeAnchor."""
+
     def attach(self, src: NodeArchitype, trg: NodeArchitype) -> "EdgeAnchor":
         """Attach edge to nodes."""
         if self.dir == EdgeDir.IN:
@@ -370,61 +414,76 @@ class EdgeAnchor(_EdgeAnchor):
 
 @dataclass
 class GenericEdge(EdgeArchitype):
+    """GenericEdge Replacement."""
 
     def __init__(self) -> None:
-        """Edge node architype."""
+        """Create Generic Edge."""
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
         self._jac_doc_: DocAnchor
 
     class Collection(EdgeArchitype.Collection, ArchCollection):
-        __collection__ = f"e"
+        """Default GenericEdge Collection."""
+
+        __collection__ = "e"
 
 
 class JacContext:
-    def __init__(self, request: Request):
+    """Jac Lang Context Handler."""
+
+    def __init__(self, request: Request) -> None:
+        """Create JacContext."""
         self.__mem__ = {}
         self.request = request
         self.user = getattr(request, "auth_user", None)
         self.root = getattr(request, "auth_root", root)
         self.reports = []
 
-    def has(self, id: Union[ObjectId, str]):
+    def has(self, id: Union[ObjectId, str]) -> bool:
+        """Check if Architype is existing in memory."""
         return str(id) in self.__mem__
 
-    def get(self, id: Union[ObjectId, str], default: object = None):
+    def get(self, id: Union[ObjectId, str], default: object = None) -> object:
+        """Retrieve Architype in memory."""
         return self.__mem__.get(str(id), default)
 
-    def set(self, id: Union[ObjectId, str], obj: object):
+    def set(self, id: Union[ObjectId, str], obj: object) -> None:
+        """Push Architype in memory via ID."""
         self.__mem__[str(id)] = obj
 
-    def remove(self, id: Union[ObjectId, str]):
-        self.__mem__.pop(str(id), None)
+    def remove(self, id: Union[ObjectId, str]) -> object:
+        """Pull Architype in memory via ID."""
+        return self.__mem__.pop(str(id), None)
 
-    def report(self, obj: Any):
+    def report(self, obj: Any) -> None:  # noqa: ANN401
+        """Append report."""
         self.reports.append(obj)
 
-    def response(self):
+    def response(self) -> list:
+        """Return serialized version of reports."""
         for key, val in enumerate(self.reports):
             if isinstance(val, Architype) and (
                 ret_jd := getattr(val, "_jac_doc_", None)
             ):
                 self.reports[key] = {**ret_jd.json(), "ctx": asdict(val)}
             else:
-                self.clean_response(val)
+                self.clean_response(key, val, self.reports)
         return self.reports
 
-    def clean_response_override(self, key, val, obj):
-        if isinstance(val, Architype) and (ret_jd := getattr(val, "_jac_doc_", None)):
-            obj[key] = {**ret_jd.json(), "ctx": asdict(val)}
-
-    def clean_response(self, obj: Union[list, dict]):
-        if isinstance(obj, list):
-            for idx, val in enumerate(obj):
-                self.clean_response_override(idx, val, obj)
-
-        elif isinstance(obj, dict):
-            for key, val in obj.items():
-                self.clean_response_override(key, val, obj)
+    def clean_response(
+        self, key: str, val: Any, obj: Union[list, dict]  # noqa: ANN401
+    ) -> None:
+        """Cleanup and override current object."""
+        if isinstance(val, list):
+            for idx, lval in enumerate(val):
+                self.clean_response(idx, lval, val)
+        elif isinstance(val, dict):
+            for key, dval in val.items():
+                self.clean_response(key, dval, val)
+        elif isinstance(val, Architype):
+            addons = {}
+            if ret_jd := getattr(val, "_jac_doc_", None):
+                addons = ret_jd.json()
+            obj[key] = {**addons, "ctx": asdict(val)}
 
 
 JCLASS = [{Root.__name__: Root}, {}, {GenericEdge.__name__: GenericEdge}]
