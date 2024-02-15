@@ -8,9 +8,9 @@ model llm:openai {
 
 obj 'Person'
 Person {
-    has 'Name' name:str,
-        'date of birth' dob:str,
-        'Accomplishments' accomplishments:list[str];
+    has name: 'Name' str,
+        dob: 'date of birth' str,
+        accomplishments: 'Accomplishments' list[str];
 }
 
 with entry{

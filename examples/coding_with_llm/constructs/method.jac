@@ -8,17 +8,16 @@ model llm:openai {
 
 obj 'Person'
 Person {
-    has 'Name' name:str,
-        'Date of Birth' dob:str,
-        'Age' age:int = None;
+    has name: 'Name' str,
+        dob: 'Date of Birth' str,
+        age: 'Age' int = None;
 
     can 'Calculate the Age of a Person'
-    calculate ('Current Year' cur_year:int) -> 'Calculated Age' calculated_age:int with llm {
-        self.age = calculated_age;
-    }
+    calculate (cur_year: 'Current Year' int) -> 'Calculated Age' int with llm;
 }
 with entry{
     Einstein = Person(name="Einstein", dob="1879-03-14");
-    Einstein.calculate(cur_year=2024);
+    age = Einstein.calculate(cur_year=2024);
+    Einstein.age = age;
     print(Einstein.age);
 }
