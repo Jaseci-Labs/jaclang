@@ -15,7 +15,7 @@
 #     len(PUNCHLINE) > 1
 
 model llm:openai {
-    has model_name: "openai/text-davinci-003",
+    has model_name: "gpt-4",
         temperature: 0.7,
         do_sample: true;
 }
