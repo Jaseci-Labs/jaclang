@@ -1,30 +1,24 @@
-enum 'enum' emotion {
-        Happy,
-        Sad,
-        Calm,
-        Angry
+enum 'Emotions'
+emotion {
+    Happy,
+    Sad,
+    Calm,
+    Angry
 }
 
 node 'personality'
 personality{
-    has
-        'how nice the user is '
-        niceness:int,
-        'what kind of things they like'
-        likes : list[str],
-        'current mood of the user'
-        currentMood: mood;
-
+    has niceness: 'how nice the user is' int,
+        likes : 'what kind of things they like' list[str],
+        currentMood: 'current mood of the user' emotion;
 }
 
-walker  'users personal journal '
+walker 'users personal journal '
 journal {
-    has
-         'Daily Entry'
-          count: int;
+    has count: 'Daily Entry Count' int;
 }
 
-can add() -> 'no of'int {}
+can add -> 'number' int{}
 
 can 'update user mood'
-updateMood(* 'jll' mood: str,'semstrinngfd'   gfgf:str) 'mood selection' -> str {}
+updateMood(mood: 'Mood' emotion, apple: 'Apple' str) -> 'mood selection' str{}

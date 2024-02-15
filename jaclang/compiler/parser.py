@@ -807,15 +807,15 @@ class JacParser(Pass):
 
         def event_clause(self, kid: list[ast.AstNode]) -> ast.EventSignature:
             """Grammar rule.
+            event_clause: KW_WITH expression? (KW_EXIT | KW_ENTRY) (RETURN_HINT STRING? expression)?   
 
-            event_clause: KW_WITH expression? (KW_EXIT | KW_ENTRY) (STRING? RETURN_HINT expression)?
-            """
+                        """
             type_specs = kid[1] if isinstance(kid[1], ast.Expr) else None
+            event = kid[2] if type_specs else kid[1]
             return_spec = kid[-1] if isinstance(kid[-1], ast.Expr) else None
             semstr = (
-                kid[-3] if return_spec and isinstance(kid[-3], ast.String) else None
+                kid[-2] if return_spec and isinstance(kid[-2], ast.String) else None
             )
-            event = kid[2] if type_specs else kid[1]
             if isinstance(event, ast.Token) and (
                 isinstance(return_spec, ast.Expr) or return_spec is None
             ):
@@ -833,8 +833,9 @@ class JacParser(Pass):
 
         def func_decl(self, kid: list[ast.AstNode]) -> ast.FuncSignature:
             """Grammar rule.
+            func_decl: (LPAREN func_decl_params? RPAREN)? (RETURN_HINT STRING? expression)?   #new
 
-            func_decl: (LPAREN func_decl_params? RPAREN)? (STRING? RETURN_HINT expression)?
+            func_decl: (LPAREN func_decl_params? RPAREN)? (STRING? RETURN_HINT expression)?   #old
             """
             params = (
                 kid[1] if len(kid) > 1 and isinstance(kid[1], ast.SubNodeList) else None
@@ -843,8 +844,8 @@ class JacParser(Pass):
                 kid[-1] if len(kid) and isinstance(kid[-1], ast.Expr) else None
             )
             semstr = (
-                kid[-3]
-                if return_spec and len(kid) > 2 and isinstance(kid[-3], ast.String)
+                kid[-2]
+                if return_spec and len(kid) > 2 and isinstance(kid[-2], ast.String)
                 else None
             )
             if (isinstance(params, ast.SubNodeList) or params is None) and (
@@ -1006,16 +1007,15 @@ class JacParser(Pass):
         def typed_has_clause(self, kid: list[ast.AstNode]) -> ast.HasVar:
             """Grammar rule.
 
-            typed_has_clause: STRING? named_ref type_tag (EQ expression)?
+            typed_has_clause: named_ref type_tag (EQ expression)?
+
             """
-            semstr = kid[0] if isinstance(kid[0], ast.String) else None
-            name = kid[1] if semstr else kid[0]
-            type_tag = kid[2] if semstr else kid[1]
+            name = kid[0] 
+            type_tag = kid[2]
             value = kid[-1] if isinstance(kid[-1], ast.Expr) else None
             if isinstance(name, ast.Name) and isinstance(type_tag, ast.SubTag):
                 return self.nu(
                     ast.HasVar(
-                        semstr=semstr,
                         name=name,
                         type_tag=type_tag,
                         value=value,
@@ -1028,9 +1028,13 @@ class JacParser(Pass):
         def type_tag(self, kid: list[ast.AstNode]) -> ast.SubTag[ast.Expr]:
             """Grammar rule.
 
-            type_tag: COLON expression
+            type_tag: COLON STRING? expression    #new
+            type_tag: COLON  expression           #old
             """
-            if isinstance(kid[1], ast.Expr):
+            semstr = kid[1] if isinstance(kid[1], ast.String) else None
+            if semstr and isinstance(kid[2], ast.Expr):
+                    pass#????
+            elif isinstance(kid[1], ast.Expr):
                 return self.nu(
                     ast.SubTag[ast.Expr](
                         tag=kid[1],
