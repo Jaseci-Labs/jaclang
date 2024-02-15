@@ -1,8 +1,11 @@
+from contextvars import ContextVar
 from dataclasses import asdict
 from typing import Any, Union
 from fastapi import Request
 
 from jaclang.core.construct import Architype
+
+JCONTEXT = ContextVar("JCONTEXT")
 
 
 class JacContext:
@@ -42,13 +45,14 @@ class JacContext:
             ):
                 self.reports[key] = {**ret_jd.json(), "ctx": asdict(val)}
             else:
+                # data sanitization & serialization
                 self.clean_response(key, val, self.reports)
         return self.reports
 
     def clean_response(
         self, key: str, val: Any, obj: Union[list, dict]  # noqa: ANN401
     ) -> None:
-        """Cleanup and override current object."""
+        """Cleanup and override current object"""
         if isinstance(val, list):
             for idx, lval in enumerate(val):
                 self.clean_response(idx, lval, val)
@@ -56,7 +60,8 @@ class JacContext:
             for key, dval in val.items():
                 self.clean_response(key, dval, val)
         elif isinstance(val, Architype):
-            addons = {}
-            if ret_jd := getattr(val, "_jac_doc_", None):
-                addons = ret_jd.json()
-            obj[key] = {**addons, "ctx": asdict(val)}
+            obj[key] = {
+                "jid": val._edge_data.id,
+                "name": val.__class__.__name__,
+                "ctx": asdict(val),
+            }

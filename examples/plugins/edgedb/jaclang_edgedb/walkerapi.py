@@ -6,16 +6,19 @@ import re
 import typing
 import edgedb
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
-from .context import JacContext
+from jaclang_edgedb.queries import get_node
+from .context import JCONTEXT, JacContext
 from pydantic import create_model
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.construct import (
     Architype,
     EdgeArchitype,
+    NodeAnchor,
+    NodeArchitype,
 )
 from jaclang.core.construct import Root
 from jaclang.plugin.default import hookimpl
-from jaclang.plugin.spec import WalkerArchitype, DSFunc, NodeArchitype
+from jaclang.plugin.spec import WalkerArchitype, DSFunc
 from jaclang.cli.cli import cmd_registry
 
 from dataclasses import Field, dataclass
@@ -38,7 +41,6 @@ from jaclang.plugin.feature import JacFeature as Jac
 client = edgedb.create_client()
 async_client = edgedb.create_async_client()
 
-JCONTEXT = ContextVar("JCONTEXT")
 
 T = TypeVar("T")
 
@@ -126,8 +128,8 @@ def insert_node(cls, **kwargs) -> None:
 
     result = client.query(query, name=cls.__name__, properties=json.dumps(kwargs))
     # print(result[0].id)
-    cls._edge_data = result[0]
     client.close()
+    return result[0]
 
 
 def insert_edge(cls, **kwargs) -> None:
@@ -220,23 +222,46 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
         body: body_model = None,  # type: ignore
         query: query_model = Depends(),  # type: ignore
     ) -> Response:
-        print("NODE", query.nd)
-        # jctx = JacContext(request=request)
-        # JCONTEXT.set(jctx)
-        wlk = cls()
-        print(wlk._jac_)
+        jctx = JacContext(request=request)
+        JCONTEXT.set(jctx)
+        input = {**body.model_dump(), **query.model_dump()}
+        del input["nd"]
+
+        wlk = cls(**input)
         # node = wlk._jac_.get_node(query.nd)
         if not query.nd:
             root = Root()
+            print(vars(wlk._jac_))
+            print(vars(wlk))
             wlk._jac_.spawn_call(Jac.get_root())
         else:
+            db_node = await get_node(async_client, query.nd)
+
+            if not db_node:
+                # TODO: Use standard error interface
+                return Response(
+                    json.dumps({"error": "Node not found"}),
+                    status_code=404,
+                    headers={"content-type": "application/json"},
+                )
+
+            node_type = JacFeature._node_types[db_node.name]
+
+            if not node_type:
+                return Response("Node type not found", status_code=404)
+
+            node: NodeArchitype = node_type(
+                **json.loads(db_node.properties), _edge_data=db_node
+            )
+
+            wlk._jac_.spawn_call(node)
+
             # get the node from the db
             # create node architype
             # add edges to node object
             # spawn walker on the node
-
-        return "hello"
-        # return jctx.response()
+            pass
+        return jctx.response()
 
     router.post(f"{path.lower()}")(api)
 
@@ -245,6 +270,8 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
 
 class JacFeature:
     """Create a walker API."""
+
+    _node_types = {}
 
     @staticmethod
     @hookimpl
@@ -258,6 +285,7 @@ class JacFeature:
             cls = Jac.make_architype(
                 cls=cls, arch_base=WalkerArchitype, on_entry=on_entry, on_exit=on_exit
             )
+
             build_router(cls)
             return cls
 
@@ -284,12 +312,25 @@ class JacFeature:
             inner_init = cls.__init__
 
             @wraps(inner_init)
-            def new_init(self, *args: object, **kwargs: object) -> None:
+            def new_init(
+                self, _edge_data=None, *args: object, **kwargs: object
+            ) -> None:
                 inner_init(self, *args, **kwargs)
                 arch_cls.__init__(self)
-                insert_node(cls, **kwargs)
+                print(self)
+
+                # here we are accessing the node from the db, via walker api, so no need
+                # to insert node
+                if _edge_data:
+                    self._edge_data = _edge_data
+
+                if not hasattr(self, "_edge_data"):
+                    self._edge_data = insert_node(cls, **kwargs)
 
             cls.__init__ = new_init
+
+            # track node types
+            JacFeature._node_types[cls.__name__] = cls
 
             return cls
 
