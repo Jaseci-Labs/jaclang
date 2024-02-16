@@ -173,15 +173,18 @@ class NodeArchitype(_NodeArchitype):
 
     def update(self, up: dict) -> None:
         """Update DocAnchor that there's a change happen in context."""
-        self._jac_doc_.update(up)
+        if jd := getattr(self, "_jac_doc_", None):
+            jd.update(up)
 
     def edge_push(self, dir: int, up: dict) -> None:
         """Update DocAnchor that there's newly added edge."""
-        self._jac_doc_.edge_push(dir, up)
+        if jd := getattr(self, "_jac_doc_", None):
+            jd.edge_push(dir, up)
 
     def edge_pull(self, dir: int, up: dict) -> None:
         """Update DocAnchor that there's edge that has been removed."""
-        self._jac_doc_.edge_pull(dir, up)
+        if jd := getattr(self, "_jac_doc_", None):
+            jd.edge_pull(dir, up)
 
     async def _save(self, jtype: JType, session: ClientSession = None) -> DocAnchor:
         """Upsert NodeArchitype."""
