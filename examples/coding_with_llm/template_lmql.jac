@@ -23,7 +23,7 @@ obj 'Person'
 Person {
     has name: 'Name of the person' str,
         age: 'age' str,
-        top_songs: 'his/her top_songs' list[str,str];
+        top_songs: 'his/her 2 top_songs' list[str];
 }
 
 with entry{

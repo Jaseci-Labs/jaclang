@@ -9,7 +9,7 @@ This is an operation you must perform and return the output values. Neither, the
 [Information]
 Name of the Person (Str) (name): None
 age  (integer) (age): None
-his/her top_songs (list[str,str]) (top_songs): None
+his/her 2 top_songs (list[str]) (top_songs): None
 
 [Inputs and Input Type Information]
 ('Name of the Person', 'String', 'name', 'Bruno Mars')
@@ -29,5 +29,5 @@ Generate and return the output result(s) only, adhering to the provided Type in 
 
 Result
 ```yml
-[Output] {'name': 'Bruno Mars', 'age': 36, 'top_songs': ['Just the Way You Are', 'Locked Out of Heaven', 'Uptown Funk']}
+[Output] {'name': 'Bruno Mars', 'age': 36, 'top_songs': ['Just the Way You Are', 'Uptown Funk']}
 ```
