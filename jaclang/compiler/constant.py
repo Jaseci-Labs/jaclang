@@ -37,9 +37,9 @@ class Constants(str, Enum):
 class EdgeDir(Enum):
     """Edge direction indicator."""
 
-    IN = 1
-    OUT = 2
-    ANY = 3
+    IN = 1  # <--
+    OUT = 2  # -->
+    ANY = 3  # <-->
 
 
 class Values(int, Enum):
@@ -79,6 +79,7 @@ class Tokens(str, Enum):
     KW_LET = "KW_LET"
     KW_ABSTRACT = "KW_ABSTRACT"
     KW_OBJECT = "KW_OBJECT"
+    KW_CLASS = "KW_CLASS"
     KW_ENUM = "KW_ENUM"
     KW_NODE = "KW_NODE"
     KW_IGNORE = "KW_IGNORE"
@@ -192,6 +193,7 @@ class Tokens(str, Enum):
     ARROW_R_P2 = "ARROW_R_P2"
     CARROW_L = "CARROW_L"
     CARROW_R = "CARROW_R"
+    CARROW_BI = "CARROW_BI"
     CARROW_L_P1 = "CARROW_L_P1"
     CARROW_L_P2 = "CARROW_L_P2"
     CARROW_R_P1 = "CARROW_R_P1"
@@ -207,6 +209,7 @@ class Tokens(str, Enum):
     WALKER_OP = "WALKER_OP"
     NODE_OP = "NODE_OP"
     EDGE_OP = "EDGE_OP"
+    CLASS_OP = "CLASS_OP"
     OBJECT_OP = "OBJECT_OP"
     TYPE_OP = "TYPE_OP"
     ENUM_OP = "ENUM_OP"

@@ -146,11 +146,13 @@ class JacFeatureSpec:
     @staticmethod
     @hookspec(firstresult=True)
     def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
+        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
         filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]:
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's apply_dir stmt feature."""
         raise NotImplementedError
 
@@ -159,8 +161,9 @@ class JacFeatureSpec:
     def connect(
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
-        edge_spec: EdgeArchitype,
-    ) -> NodeArchitype | list[NodeArchitype]:
+        edge_spec: Callable[[], EdgeArchitype],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's connect operator feature.
 
         Note: connect needs to call assign compr with tuple in op
@@ -169,8 +172,14 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def disconnect(op1: Optional[T], op2: T, op: Any) -> T:  # noqa: ANN401
-        """Jac's connect operator feature."""
+    def disconnect(
+        left: NodeArchitype | list[NodeArchitype],
+        right: NodeArchitype | list[NodeArchitype],
+        dir: EdgeDir,
+        filter_type: Optional[type],
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+    ) -> bool:  # noqa: ANN401
+        """Jac's disconnect operator feature."""
         raise NotImplementedError
 
     @staticmethod
@@ -190,9 +199,19 @@ class JacFeatureSpec:
     @staticmethod
     @hookspec(firstresult=True)
     def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
+        is_undirected: bool,
+        conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype:
+    ) -> Callable[[], EdgeArchitype]:
         """Jac's root getter."""
+        raise NotImplementedError
+
+
+class JacBuiltin:
+    """Jac Builtins."""
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def dotgen(node: NodeArchitype, radius: int = 0) -> str:
+        """Print the dot graph."""
         raise NotImplementedError
