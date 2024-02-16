@@ -89,19 +89,27 @@ class JacFeatureDefaults:
     def disengage(walker: WalkerArchitype) -> bool: ...
     @staticmethod
     def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
         dir: EdgeDir,
         filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]: ...
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]: ...
     @staticmethod
     def connect(
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
-        edge_spec: EdgeArchitype,
-    ) -> NodeArchitype | list[NodeArchitype]: ...
+        edge_spec: Callable[[], EdgeArchitype],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]: ...
     @staticmethod
-    def disconnect(op1: Optional[T], op2: T, op: Any) -> T: ...
+    def disconnect(
+        left: NodeArchitype | list[NodeArchitype],
+        right: NodeArchitype | list[NodeArchitype],
+        dir: EdgeDir,
+        filter_type: Optional[type],
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+    ) -> bool: ...
     @staticmethod
     def assign_compr(
         target: list[T], attr_val: tuple[tuple[str], tuple[Any]]
@@ -110,7 +118,11 @@ class JacFeatureDefaults:
     def get_root() -> Architype: ...
     @staticmethod
     def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
+        is_undirected: bool,
+        conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype: ...
+    ) -> Callable[[], EdgeArchitype]: ...
+
+class JacBuiltin:
+    @staticmethod
+    def dotgen(node: NodeArchitype, radius: int = 0) -> str: ...
