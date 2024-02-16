@@ -21,16 +21,15 @@ model llm:openai {
 can 'Provide the Answer for the Given Question (A-F)'
 get_answer(question: 'Question' str, choices: 'Answer Choices': dict) -> 'Answer (A-F)' str with llm(reason=True);
 
-glob question: str = "It was Sept. 1st, 2021 a week ago. What is the date 10 days ago in MM/DD/YYYY?";
-glob choices: dict = {
-    "A": "08/29/2021",
-    "B": "08/28/2021",
-    "C": "08/29/1925",
-    "D": "08/30/2021",
-    "E": "05/25/2021",
-    "F": "09/19/2021"
-};
-
 with entry {
+    question: str = "It was Sept. 1st, 2021 a week ago. What is the date 10 days ago in MM/DD/YYYY?";
+    choices: dict = {
+        "A": "08/29/2021",
+        "B": "08/28/2021",
+        "C": "08/29/1925",
+        "D": "08/30/2021",
+        "E": "05/25/2021",
+        "F": "09/19/2021"
+    };
     print(get_answer(question, choices));
 }
