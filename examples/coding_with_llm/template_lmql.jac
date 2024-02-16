@@ -19,16 +19,16 @@ model llm:openai {
         do_sample: true;
 }
 
-obj 'Person'
-Person {
-    has name: 'Name of the person' str,
-        age: 'age' str,
-        top_songs: 'his/her top_songs' list[str,str];
+obj 'Singer'
+Singer {
+    has name: 'Name of the Singer' str,
+        age: 'Age' int,
+        top_songs: "His/Her's Top 2 Songs" list[str];
 }
 
 with entry{
-    Bruno_Mars = Person(name="Bruno Mars") with llm;
-    print(f"{Bruno_Mars.name} age is {Bruno_Mars.age}. His top_songs are {Bruno_Mars.top_songs}.");
+    bruno_mars = Singer(name="Bruno Mars") with llm;
+    print(f"{bruno_mars.name} is {bruno_mars.age} years old. His top 2 songs are {bruno_mars.top_songs}.");
 }
 
 

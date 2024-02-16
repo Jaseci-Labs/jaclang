@@ -1,33 +1,32 @@
 Jac
 ```python
-Bruno_Mars = Person(name="Bruno Mars") with llm
+bruno_mars = Singer(name="Bruno Mars") with llm;
 ```
-
+```yml
 [System Prompt]
 This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
 
 [Information]
-Name of the Person (Str) (name): None
-age  (integer) (age): None
-his/her top_songs (list[str,str]) (top_songs): None
+Name of the Singer (str) (name) = "Bruno Mars"
 
 [Inputs and Input Type Information]
-('Name of the Person', 'String', 'name', 'Bruno Mars')
+None
 
 [Output Type]
-dict
+Singer
 
 [Output Type Explanations]
-dict with filled empty field of (Person)
+Singer (Singer) (Name of the Singer (str) name, Age (int) age, His/Her's Top 2 Songs (list[str]) top_songs)
 
 [Action]
-use general knowledge and fill these empty fieds
+Create the Output Object. fill the fields. If there is nested object, fill the fields of the nested object as well.
 
 Generate and return the output result(s) only, adhering to the provided Type in the following format
 
 [Output] <result>
+```
 
 Result
 ```yml
-[Output] {'name': 'Bruno Mars', 'age': 36, 'top_songs': ['Just the Way You Are', 'Locked Out of Heaven', 'Uptown Funk']}
+[Output] Singer(name = "Bruno Mars", age = 35, top_songs = ['Just the Way You Are', 'Grenade'])
 ```
