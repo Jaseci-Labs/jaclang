@@ -26,64 +26,59 @@
 # ACTION in ["Search", "Finish"] and len(words(THOUGHT)) > 2 and
 # stops_at(SUBJECT, "'") and not "Tho" in THOUGHT
 
+import:py wikipedia;
+
 model llm:openai {
     has model_name: "gpt-4",
-        temperature: 0.7,
+        temperature: 1.0,
         do_sample: true;
 }
 
 obj 'Question Answering'
-QA  {
-    has qa_list :'QA List ': list[dict] =[
+QA {
+    has qa_example: 'QA example with Thoughts and Actions': list[dict] = [
         {
-            "question": "What is the elevation range for the area that the eastern '
-                         'sector of the Colorado orogeny extends into?' 
-        },
-        {
-            'Thought':'I need to search Colorado orogeny, find the area that the eastern'
-                     'sector of the Colorado ...\n"
-        },
-        {
-           'Action':'Search \'Colorado orogeny\'\n'
-        },
-        {
-            'Observation':'The Colorado orogeny was an episode of mountain building (an orogeny) ...\n'
-        },
-        {
-            'Thought': 'It does not mention the eastern sector. So I need to look up eastern sector.\n'
-        },
-        {
-            'Thought':' High Plains rise in elevation from around 1,800 to 7,000 ft, so the answer is 1,800 to 7,000 ft.'
-        },
-        {
-            "Action": "Finish \'1,800 to 7,000 ft\'"
-        },
-    ]
+            "Question": "What is the elevation range for the area that the eastern sector of the Colorado orogeny extends into?",
+            "Thoughts and Observations": [
+                {
+                    "Thought": "I need to search Colorado orogeny, find the area that the eastern sector of the Colorado ...",
+                    "Action": "Search 'Colorado orogeny'",
+                    "Observation": "The Colorado orogeny was an episode of mountain building (an orogeny) ..."
+                },
+                {
+                    "Thought": "It does not mention the eastern sector. So I need to look up eastern sector.",
+                    "Action": "Search 'eastern sector of the Colorado orogeny'",
+                    "Observation": "The eastern sector of the Colorado orogeny extends into the High Plains."
+                },
+                {
+                    "Thought": "High Plains rise in elevation from around 1,800 to 7,000 ft, so the answer is 1,800 to 7,000 ft.",
+                    "Action": "Finish '1,800 to 7,000 ft'"
+                }
+            ]
+        }
+    ];
 
-    can ' generate appropriate new dictionary for answering (it can be Thought / Action / Observation) '
-     generte_new_ditionary ->'Answer' dict with llm{}
+    can 'Get next Thought and Action'
+    get_throught_and_actions(question: 'Question' str, prev_info: 'Previous Thoughts, Actions, and Observations' list[dict] = []) -> 'Next Thought and Action' dict with llm;
 
-   
+    can get_answer(question: 'Question' str) -> str {
+        got_answer = False;
+        prev_info = [];
+        while not got_answer and len(prev_info) < 100 {
+            next_info = get_throught_and_actions(question, prev_info);
+            if next_info["Action"].startswith("Search") {
+                obs = wikipedia.summary(next_info["Action"].replace("Search ", "").replace("'", ""));
+                next_info["Observation"] = obs;
+            } elif next_info["Action"].startswith("Finish") {
+                got_answer = True;
+                return next_info["Action"].replace("Finish ", "").replace("'", "");
+            }
+            prev_info.append(next_info);
+        }
+    }
+}
 
-   can recurse{
-        if (qa_list[-1].keys())[0]=='Action' and 'finish' in (qa_list[-1].values())[0] : 
-            return (qa_list[-1].values())[0]
-        else:
-            if wiki needed:
-                search_wiki();
-
-
-            else:
-                new_dict=generte_new_ditionary();
-                qa_list.append(new_dict)
-                recurse();
-   }
-
-   can 'Question_asnwering'
-   Question_asnwering(question: str){
-       qa_list.append({'question':question});
-       generte_new_ditionary();
-       recurse();
-   }
-
+with entry {
+    qa = QA();
+    print(qa.get_answer("Where is Apple Computers headquartered?"));
 }
