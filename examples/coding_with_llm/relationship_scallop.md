@@ -9,7 +9,7 @@ graph = create_family(passage);
 This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
 
 [Information]
-Example Family Graph (graph) example_family_graph = {father = person(name = 'John'), mother = person(name = 'Jane'), father -[relationship(relation = 'husband')]-> mother}
+Example Family Graph (graph) example_family_graph = {john = person(name = 'John'), jane = person(name = 'Jane'), john -[relationship(relation = 'husband')]-> jane}
 Person (person) ((Name (str) (name)))
 Relationship (relationship) ((Relation (str) (relation)))
 
