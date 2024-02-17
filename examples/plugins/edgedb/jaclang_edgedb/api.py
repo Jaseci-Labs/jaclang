@@ -1,8 +1,13 @@
 """JacLang FastAPI Core."""
 
-from typing import Any
+from ctypes import Union
+import time
+from typing import Any, Callable
+from annotated_types import T
+from uvicorn.config import LOGGING_CONFIG
 
-from fastapi import FastAPI as _FaststAPI
+from fastapi import FastAPI as _FaststAPI, Request
+from jaclang_edgedb.walkerapi import DefaultSpecs
 
 from uvicorn import run as _run
 
@@ -31,3 +36,10 @@ class FastAPI:
     ) -> None:
         """Run FastAPI Handler via Uvicorn."""
         _run(cls.get(), host=host, port=port, **kwargs)
+
+
+def api_exclude(cls: type) -> None:
+    """Get DefaultSpecs."""
+    if hasattr(cls, "Specs"):
+        cls.Specs.exclude = True
+        print(cls.Specs.exclude)

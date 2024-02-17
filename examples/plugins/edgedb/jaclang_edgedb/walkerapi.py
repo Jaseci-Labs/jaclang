@@ -5,17 +5,12 @@ from pydoc import locate
 import re
 import typing
 import edgedb
-from fastapi import APIRouter, Depends, FastAPI, Request, Response
-from jaclang_edgedb.queries import get_node
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
+from jaclang_edgedb.queries import delete_node, get_node, get_node_edges, update_node
 from .context import JCONTEXT, JacContext
 from pydantic import create_model
 from jaclang.compiler.constant import EdgeDir
-from jaclang.core.construct import (
-    Architype,
-    EdgeArchitype,
-    NodeAnchor,
-    NodeArchitype,
-)
+from jaclang.core.construct import Architype, EdgeArchitype, NodeArchitype
 from jaclang.core.construct import Root
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.spec import WalkerArchitype, DSFunc
@@ -25,16 +20,12 @@ from dataclasses import Field, dataclass
 from functools import wraps
 from typing import (
     Any,
-    List,
     NamedTuple,
-    Dict,
     Optional,
     Type,
     Callable,
     TypeVar,
     Union,
-    get_origin,
-    get_args,
 )
 from jaclang.plugin.feature import JacFeature as Jac
 
@@ -44,16 +35,16 @@ async_client = edgedb.create_async_client()
 
 T = TypeVar("T")
 
-router = APIRouter(prefix="/walker", tags=["walker"])
+router = APIRouter(prefix="/walker", tags=[])
 
 
 class DefaultSpecs:
     """Default API specs."""
 
-    path: str = ""
-    methods: list[str] = ["post"]
+    tags: str = [""]
+    exclude: bool = False
+    method: str = "post"
     as_query: Union[str, list[str]] = []
-    auth: bool = True
 
 
 class TypeInfo(NamedTuple):
@@ -141,9 +132,9 @@ def insert_edge(cls, **kwargs) -> None:
     """
 
     result = client.query(query, name=cls.__name__, properties=json.dumps(kwargs))
-    # print(result[0].id)
-    cls._edge_data = result[0]
     client.close()
+
+    return result[0]
 
 
 def connect_query(id: str, from_node: str, to_node: str):
@@ -188,7 +179,6 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     """Build a FastAPI router for the walker."""
     # read from specs object which determines which fields are query params, and other api metadata
     specs = get_specs(cls)
-    as_query: dict = specs.as_query or []
 
     query = {"nd": (str, "")}
     body = {}
@@ -209,7 +199,7 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             consts.append(...)
         consts = tuple(consts)
 
-        if as_query == "*" or key in as_query:
+        if specs.as_query == "*" or key in specs.as_query:
             query[key] = consts
         else:
             body[key] = consts
@@ -217,33 +207,37 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     query_model = create_model(f"{cls.__name__.lower()}_query_model", **query)
     body_model = create_model(f"{cls.__name__.lower()}_body_model", **body)
 
-    async def api(
-        request: Request,
-        body: body_model = None,  # type: ignore
-        query: query_model = Depends(),  # type: ignore
+    # if specs.method.lower() == "get":
+    # signature = (body: body_model = None, query: query_model = Depends()))
+
+    async def api_fn(
+        request: Request, body: body_model = None, query: query_model = Depends()
     ) -> Response:
+        cls.get_request = lambda self: request
+
         jctx = JacContext(request=request)
         JCONTEXT.set(jctx)
-        input = {**body.model_dump(), **query.model_dump()}
-        del input["nd"]
+        input = {}
+
+        if body:
+            input.update(body.model_dump())
+        if query:
+            input.update(query.model_dump())
+            del input["nd"]
 
         wlk = cls(**input)
         # node = wlk._jac_.get_node(query.nd)
         if not query.nd:
-            root = Root()
-            print(vars(wlk._jac_))
-            print(vars(wlk))
-            wlk._jac_.spawn_call(Jac.get_root())
+            db_root = get_root()
+            root_node = Jac.get_root()
+            root_node._edge_data = db_root
+            wlk._jac_.spawn_call(root_node)
         else:
             db_node = await get_node(async_client, query.nd)
 
             if not db_node:
                 # TODO: Use standard error interface
-                return Response(
-                    json.dumps({"error": "Node not found"}),
-                    status_code=404,
-                    headers={"content-type": "application/json"},
-                )
+                raise HTTPException(status_code=404, detail="Node not found")
 
             node_type = JacFeature._node_types[db_node.name]
 
@@ -263,7 +257,25 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             pass
         return jctx.response()
 
-    router.post(f"{path.lower()}")(api)
+    if specs.method.lower() == "get":
+
+        async def api(
+            request: Request,
+            query: query_model = Depends(),  # type: ignore
+        ) -> Response:
+            return await api_fn(request, query=query)
+
+    else:
+
+        async def api(
+            request: Request,
+            body: body_model = None,  # type: ignore
+            query: query_model = Depends(),  # type: ignore
+        ) -> Response:
+            return await api_fn(request, body, query)
+
+    if not specs.exclude:
+        getattr(router, specs.method.lower())(f"{path.lower()}", tags=specs.tags)(api)
 
     return router
 
@@ -272,6 +284,7 @@ class JacFeature:
     """Create a walker API."""
 
     _node_types = {}
+    _edge_types = {}
 
     @staticmethod
     @hookimpl
@@ -310,6 +323,7 @@ class JacFeature:
             cls._jac_entry_funcs_ = on_entry
             cls._jac_exit_funcs_ = on_exit
             inner_init = cls.__init__
+            inner_setattr = cls.__setattr__
 
             @wraps(inner_init)
             def new_init(
@@ -317,7 +331,6 @@ class JacFeature:
             ) -> None:
                 inner_init(self, *args, **kwargs)
                 arch_cls.__init__(self)
-                print(self)
 
                 # here we are accessing the node from the db, via walker api, so no need
                 # to insert node
@@ -327,7 +340,25 @@ class JacFeature:
                 if not hasattr(self, "_edge_data"):
                     self._edge_data = insert_node(cls, **kwargs)
 
+            @wraps(inner_setattr)
+            def new_setattr(self, __name: str, __value: Any) -> None:
+                """Intercept changes to node properties and update the db."""
+
+                if __name != "_edge_data" and __name != "_jac_":
+                    # only update if the attribute exists already
+                    if hasattr(self, __name) and hasattr(self, "_edge_data"):
+                        properties = json.loads(self._edge_data.properties)
+                        properties[__name] = __value
+                        properties = json.dumps(properties)
+                        update_node(client, self._edge_data.id, properties)
+
+                return inner_setattr(self, __name, __value)
+
             cls.__init__ = new_init
+            cls.__setattr__ = new_setattr
+            cls.destroy = lambda self: delete_node(
+                client=client, uuid=self._edge_data.id
+            )
 
             # track node types
             JacFeature._node_types[cls.__name__] = cls
@@ -357,12 +388,24 @@ class JacFeature:
             inner_init = cls.__init__
 
             @wraps(inner_init)
-            def new_init(self, *args: object, **kwargs: object) -> None:
+            def new_init(
+                self, _edge_data=None, *args: object, **kwargs: object
+            ) -> None:
                 inner_init(self, *args, **kwargs)
                 arch_cls.__init__(self)
-                insert_edge(cls, **kwargs)
+
+                # here we are accessing the node from the db, via walker api, so no need
+                # to insert node
+                if _edge_data:
+                    self._edge_data = _edge_data
+
+                if not hasattr(self, "_edge_data"):
+                    self._edge_data = insert_edge(cls, **kwargs)
 
             cls.__init__ = new_init
+
+            # track edge types
+            JacFeature._edge_types[cls.__name__] = cls
 
             return cls
 
@@ -399,7 +442,7 @@ class JacFeature:
             root = get_root()
             left_id = root.id
         else:
-            left_id = right._edge_data.id
+            left_id = left._edge_data.id
 
         if isinstance(right, Root):
             root = get_root()
@@ -407,6 +450,8 @@ class JacFeature:
         else:
             right_id = right._edge_data.id
 
+        print("LEFT", left_id)
+        print("RIGHT", right_id)
         connect_query(edge_spec._edge_data.id, left_id, right_id)
 
         return left
@@ -427,6 +472,7 @@ class JacFeature:
         """Jac's visit stmt feature."""
         print("EXPR", expr)
         if isinstance(walker, WalkerArchitype):
+            print("IGNORES", walker._jac_.ignores)
             return walker._jac_.visit_node(expr)
         else:
             raise TypeError("Invalid walker object")
@@ -437,3 +483,59 @@ class JacFeature:
         """Jac's report stmt feature."""
         jctx: JacContext = JCONTEXT.get()
         jctx.report(expr)
+
+    @staticmethod
+    @hookimpl
+    def edge_ref(
+        node_obj: NodeArchitype,
+        dir: EdgeDir,
+        filter_type: Optional[type],
+        filter_func: Optional[Callable],
+    ) -> list[NodeArchitype]:
+        """Jac's apply_dir stmt feature."""
+        if isinstance(node_obj, NodeArchitype):
+            node_obj._jac_.edges[EdgeDir.IN] = []
+            node_obj._jac_.edges[EdgeDir.OUT] = []
+
+            db_edges = get_node_edges(client, node_obj._edge_data.id)
+            for edge in db_edges:
+                # create the edge architype
+                # source node
+                if edge.from_node.id == node_obj._edge_data.id:
+                    from_node_obj = node_obj
+                else:
+                    # root node is named RootNode in the db, this node type isn't defined anywhere in the jac code
+                    if edge.from_node.name == "RootNode":
+                        from_node_obj = Jac.get_root()
+                        from_node_obj._edge_data = edge.from_node
+                    else:
+                        from_node_cls = JacFeature._node_types[edge.from_node.name]
+                        from_node_obj: NodeArchitype = from_node_cls(
+                            **json.loads(edge.from_node.properties),
+                            _edge_data=edge.from_node,
+                        )
+
+                # target node
+                if edge.to_node.id == node_obj._edge_data.id:
+                    to_node_obj = node_obj
+                else:
+                    if edge.to_node.name == "RootNode":
+                        to_node_cls = Jac.get_root()
+                        to_node_cls._edge_data = edge.to_node
+                    else:
+                        to_node_cls = JacFeature._node_types[edge.to_node.name]
+                        to_node_obj: NodeArchitype = to_node_cls(
+                            **json.loads(edge.to_node.properties),
+                            _edge_data=edge.to_node,
+                        )
+
+                edge_cls = JacFeature._edge_types[edge.name]
+                edge_obj: EdgeArchitype = edge_cls(
+                    **json.loads(edge.properties), _edge_data=edge
+                )
+                edge_obj._jac_.apply_dir(dir)
+                edge_obj._jac_.attach(src=from_node_obj, trg=to_node_obj)
+
+            return node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+        else:
+            raise TypeError("Invalid node object")
