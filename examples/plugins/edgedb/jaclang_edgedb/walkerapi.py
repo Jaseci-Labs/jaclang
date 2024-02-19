@@ -1,11 +1,9 @@
-from contextvars import ContextVar
 import json
 import os
-from pydoc import locate
 import re
 import typing
 import edgedb
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from jaclang_edgedb.queries import delete_node, get_node, get_node_edges, update_node
 from .context import JCONTEXT, JacContext
 from pydantic import create_model
@@ -16,7 +14,7 @@ from jaclang.plugin.default import hookimpl
 from jaclang.plugin.spec import WalkerArchitype, DSFunc
 from jaclang.cli.cli import cmd_registry
 
-from dataclasses import Field, dataclass
+from dataclasses import dataclass
 from functools import wraps
 from typing import (
     Any,
@@ -29,8 +27,16 @@ from typing import (
 )
 from jaclang.plugin.feature import JacFeature as Jac
 
+
 client = edgedb.create_client()
 async_client = edgedb.create_async_client()
+
+
+def to_snake_case(name):
+    name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    name = re.sub("__([A-Z])", r"_\1", name)
+    name = re.sub("([a-z0-9])([A-Z])", r"\1_\2", name)
+    return name.lower()
 
 
 T = TypeVar("T")
@@ -188,27 +194,32 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     #         path = f"/{path}"
     #     as_query += PATH_VARIABLE_REGEX.findall(path)
 
-    path = f"/{cls.__name__}"
+    path = f"/{to_snake_case(cls.__name__)}"
 
-    fields: dict[str, Field] = cls.__dataclass_fields__
-    for key, val in fields.items():
-        consts = [locate(val.type)]
-        if callable(val.default_factory):
-            consts.append(val.default_factory())
-        else:
-            consts.append(...)
-        consts = tuple(consts)
+    cls_fields = cls.__dataclass_fields__
+    default_values = {
+        k: v.default for k, v in cls_fields.items() if not k.startswith("_")
+    }
+    print(default_values)
+    cls_fields = typing.get_type_hints(cls, include_extras=True)
+    body = {k: (v, ...) for k, v in cls_fields.items() if not k.startswith("_")}
+
+    for key, val in cls_fields.items():
+        if key.startswith("_"):
+            continue
+
+        default_val = ...
+
+        if callable(cls.__dataclass_fields__[key].default_factory):
+            default_val = cls.__dataclass_fields__[key].default_factory()
 
         if specs.as_query == "*" or key in specs.as_query:
-            query[key] = consts
+            query[key] = (val, default_val)
         else:
-            body[key] = consts
+            body[key] = (val, default_val)
 
     query_model = create_model(f"{cls.__name__.lower()}_query_model", **query)
     body_model = create_model(f"{cls.__name__.lower()}_body_model", **body)
-
-    # if specs.method.lower() == "get":
-    # signature = (body: body_model = None, query: query_model = Depends()))
 
     async def api_fn(
         request: Request, body: body_model = None, query: query_model = Depends()
@@ -236,13 +247,12 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             db_node = await get_node(async_client, query.nd)
 
             if not db_node:
-                # TODO: Use standard error interface
                 raise HTTPException(status_code=404, detail="Node not found")
 
             node_type = JacFeature._node_types[db_node.name]
 
             if not node_type:
-                return Response("Node type not found", status_code=404)
+                raise HTTPException(detail="Node type not found", status_code=404)
 
             node: NodeArchitype = node_type(
                 **json.loads(db_node.properties), _edge_data=db_node
