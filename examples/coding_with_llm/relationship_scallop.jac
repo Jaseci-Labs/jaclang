@@ -22,13 +22,13 @@ relationship {
 
 graph 'Example Family Graph'
 example_family_graph {
-    father : person = person(name = 'John');
-    mother : person = person(name = 'Jane');
-    father -[relationship(relation = 'husband')]-> mother;
+    john : person = person(name = 'John');
+    jane : person = person(name = 'Jane');
+    john -[relationship(relation = 'husband')]-> jane;
 }
 
 can 'Create Family Representation'
-create_family (passage : 'Passage describing the Family' str) -> 'Graph Representing the Family' graph with llm(info=example_family_graph);
+create_family (passage : 'Passage describing the Family' str) -> 'Graph Representing the Family' graph with llm(info=(example_family_graph));
 
 can 'Answer Question about the Family'
 query_family (family_graph : 'Graph Representing the Family' graph, question : 'Question' str) -> 'Answer' str with llm;
