@@ -1,25 +1,26 @@
 ```jac
-expert=getExpert(question)
+question = "What are Large Language Models?";
+expert = get_expert(question);
 ```
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are needed. 
 
 [Information]
 None
 
 [Inputs and Input Type Information]
-question (str) question='What are Large Language Models?'
+Question (str) (question) = 'What are Large Language Models?'
 
 [Output Type]
 str
 
 [Output Type Explanations]
-expert name (str)
+Expert  Profession (str)
 
 [Action]
-get the best person to answer the question
+Finds the best professional to answer the given question
 
 Generate and return the output result(s) only, adhering to the provided Type in the following format
 
@@ -27,11 +28,11 @@ Generate and return the output result(s) only, adhering to the provided Type in 
 ```
 Result
 ```yml
-[Output] An expert in the field of Natural Language Processing or Artificial Intelligence.
+[Output] Artificial Intelligence Researcher
 ```
 ---
 ```jac
-answer=getAnswerForQuestion(question,expert)
+answer = get_answer(question, expert);
 ```
 
 ```yml
@@ -42,17 +43,17 @@ This is an operation you must perform and return the output values. Neither, the
 None
 
 [Inputs and Input Type Information]
-question (str) question='What are Large Language Models?'
-expert (str) expert =An expert in the field of Natural Language Processing or Artificial Intelligence
+Question (str) (question) = 'What are Large Language Models?'
+Expert (str) (expert) = 'Artificial Intelligence Researcher'
 
 [Output Type]
 str
 
 [Output Type Explanations]
-answer for the question (str)
+Expert's Answer (str)
 
 [Action]
-get the answer for the question from the expert(professional)
+Get the answer for the question from expert's perspective
 
 Generate and return the output result(s) only, adhering to the provided Type in the following format
 
@@ -60,5 +61,5 @@ Generate and return the output result(s) only, adhering to the provided Type in 
 ```
 Result
 ```yml
-[Output] Large Language Models are advanced artificial intelligence models that have been trained on massive amounts of text data to understand and generate human-like text.
+[Output] Large Language Models are advanced artificial intelligence models that have been trained on a large amount of text data
 ```
