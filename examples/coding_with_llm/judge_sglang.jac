@@ -25,17 +25,20 @@ model llm:openai {
         do_sample: true;
 }
 
-obj 'gradeEssay'
-grader{
-    has grade:'grade' list=['A', 'B', 'C', 'D'],
-        criteria:'criteria to be considered.' list=['Clarity', 'Originality', 'Evidence'];
-    
-    can 'grade the given Essay for all the criteria' 
-    gradeEssay(essay:'essay' str)-> 'grade of the essay for each criteria' dict with llm;
-    
-    can 'summary for why the grades are given for each criteria starts with 'In summary,'
-    summarizeEssay(essae:'essay' str,grades :'grades ' dict)->'summary of why grades are given' str with llm;
+obj Essay {
+    has essay: 'Essay' str;
+
+    can 'Evaluate the given essay based on the given criteria. Provide Detailed Judgement.'
+    essay_judge(criteria: 'Criteria' str) -> 'Judgement' str with llm;
+    can 'Generate a summary'
+    generate_summary(judgements: 'Judgements' dict) -> 'Summary' str with llm;
+    can 'Give essay a letter grade (A-D)'
+    give_grade(summary: 'Summary' str) -> 'Grade' str with llm(except=<self>.essay);
+
+    can 'Evaluate the given essay based on the given criterias. Provide Detailed Judgement'
+    essay_judge_v2(criterias: 'Criterias' list[str]) -> 'Judgements in Detail' dict[str, str] with llm;
 }
+
 
 with entry{
     essay = '''With a population of approximately 45 million Spaniards and 3.5 million immigrants,
@@ -45,10 +48,15 @@ with entry{
                as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at 
                least two different languages, but protecting and preserving that right has not been 
                easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, 
-               in order to preserve and defend what identifies them, and deal with the consequences.'''
-    judge=grader();
-    output=judge.gradeEssay(essay);
-    print(output);
-    summary=judge.summarizeEssay(essay,output);
-    print(summary);
+               in order to preserve and defend what identifies them, and deal with the consequences.''';
+    essay = Essay(essay);
+
+    criterias = ["Clarity", "Originality", "Evidence"];
+    judgements = {};
+    for criteria in criterias {
+        judgement = essay.essay_judge(criteria);
+        judgements[criteria] = judgement;
+    }
+    summary = essay.generate_summary(judgements);
+    grade = essay.give_grade(summary);
 }

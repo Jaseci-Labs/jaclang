@@ -13,20 +13,19 @@
 #     "openai/text-davinci-003"
 
 model llm:openai {
-    has model_name: "gpt-3.5",
+    has model_name: "gpt-4",
         temperature: 0.7,
         do_sample: true;
 }
 
-can 'get the best person to answer the question'
-getExpert(question:'question' str)->' expert  ' str with llm;
-can 'get the answer for the question from the expert(professional)'
-getAnswerForQuestion(question:'question' str,expert:'expert' str)->'answer for the question' str with llm;
+can 'Finds the best professional to answer the given question'
+get_expert(question: 'Question' str)->' Expert Profession' str with llm(ends_at="\n");
+can "Get the answer for the question from expert's perspective"
+get_answer(question:'Question' str, expert: 'Expert' str)-> "Expert's Answer" str with llm(ends_at=".");
 
 with entry{
-    question = '''What are Large Language Models?'''
-    expert=getExpert(question);
-    print(expert);
-    answer=getAnswerForQuestion(question,expert);
-    print(answer);
+    question = "What are Large Language Models?";
+    expert = get_expert(question);
+    answer = get_answer(question, expert);
+    print(f"For instance, {expert} would answer {answer} for the question {question}");
 }
