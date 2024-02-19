@@ -4,19 +4,17 @@ model llm:openai {
         do_sample: true;
 }
 
-glob examples: "Examples of English words translated to french":dict= { 
-               "sea otter": "loutre de mer",
-               "peppermint": "menthe poivrée",
-               "plush giraffe": "girafe en peluche",
-            };
+glob examples: "Examples of English words translated to french" dict[str,str] = { 
+    "sea otter": "loutre de mer",
+    "peppermint": "menthe poivrée",
+    "plush giraffe": "girafe en peluche"
+};
 
 
- can 'Translate English to French'
-    translate_english_to_french (english_word:'english word': str)-> 'translated french word' str with llm;
-
- 
+can 'Translate English to French'
+translate(english_word: 'English Word' str)-> 'French Word' str with llm;
 
 with entry {
-    print(translate_english_to_french("cheese"));
+    print(translate("cheese"));
 }
  

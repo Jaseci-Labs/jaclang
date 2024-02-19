@@ -1,5 +1,5 @@
 ```python
-translate_english_to_french("cheese")
+translate("cheese")
 ```
 
 ```yml
@@ -7,16 +7,16 @@ translate_english_to_french("cheese")
 This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
 
 [Information]
-Examples of English words translated to french (dict) (examples) = { "sea otter": "loutre de mer","peppermint": "menthe poivrée","plush giraffe": "girafe en peluche",}
+Examples of English words translated to french (dict[str,str]) (examples) = {"sea otter":"loutre de mer","peppermint": "menthe poivrée","plush giraffe": "girafe en peluche"}
 
 [Inputs and Input Type Information]
-english word (str)  english_word =cheese
+English Word (str)  (english_word) = 'cheese'
 
 [Output Type]
 str
 
 [Output Type Explanations]
-translated french word (str)
+French Word (str)
 
 [Action]
 Translate English to French
@@ -28,5 +28,7 @@ Generate and return the output result(s) only, adhering to the provided Type in 
 
 Result
 ```yml
-[Output] fromage
+[Output] "fromage"
+[Output Type] str
+return output in the given type to be initialized in python
 ```
