@@ -14,6 +14,13 @@ from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.lang_tools import AstTool
 
+import pygments
+from pygments.formatters import TerminalFormatter
+from pygments.lexers import TextLexer, get_lexer_for_filename
+from pygments.util import ClassNotFound
+
+from support.jac_lang_org.jac_syntax_highlighter import JacLexer
+
 cmd_registry = CommandRegistry()
 
 
@@ -185,6 +192,36 @@ def clean() -> None:
                 shutil.rmtree(folder_to_remove)
                 print(f"Removed folder: {folder_to_remove}")
     print("Done cleaning.")
+
+
+@cmd_registry.register
+def show(filename: str) -> None:
+    """Display the content of a file.
+
+    :param filename: The path to the file that wants to be shown.
+    """
+    if not os.path.exists(filename):
+        print(f"File '{filename}' not found.")
+        return
+
+    ext = os.path.splitext(filename)[1]
+    if ext == ".jac":
+        lexer = JacLexer()
+    else:
+        try:
+            lexer = get_lexer_for_filename(filename)
+        except ClassNotFound:
+            lexer = TextLexer()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    with open(filename, "r") as file:
+        content = file.read()
+
+    formatter = TerminalFormatter()
+
+    highlighted_content = pygments.highlight(content, lexer, formatter)
+    print(highlighted_content)
 
 
 def start_cli() -> None:
