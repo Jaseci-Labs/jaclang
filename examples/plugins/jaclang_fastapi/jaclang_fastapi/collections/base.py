@@ -1,7 +1,7 @@
 """BaseCollection Interface."""
 
 from os import getenv
-from typing import Any
+from typing import Any, Callable
 
 from bson import ObjectId
 
@@ -50,7 +50,7 @@ class BaseCollection:
         This the default parser after getting a list of documents.
         You may override this to specify how/which class it will be casted/based.
         """
-        return docs
+        return [cls.__document__(doc) for doc in docs]
 
     @staticmethod
     def get_client() -> AsyncIOMotorClient:  # type: ignore
@@ -172,33 +172,39 @@ class BaseCollection:
         return await cls.update_one({"_id": ObjectId(id)}, update, session)
 
     @classmethod
-    async def find(cls, **kwargs: dict[str, Any]) -> list[object]:
+    async def find(
+        cls,
+        *args: list[Any],
+        cursor: Callable = lambda x: x,
+        **kwargs: dict[str, Any],
+    ) -> list[object]:
         """Retrieve multiple documents."""
         collection = await cls.collection()
 
         if "projection" not in kwargs:
             kwargs["projection"] = cls.__excluded_obj__
 
-        if results := await collection.find(**kwargs):
-            return cls.__documents__(results)
-        return results
+        docs = cursor(collection.find(*args, **kwargs))
+        return cls.__documents__([doc async for doc in docs])
 
     @classmethod
-    async def find_one(cls, **kwargs: dict[str, Any]) -> object:
+    async def find_one(cls, *args: list[Any], **kwargs: dict[str, Any]) -> object:
         """Retrieve single document from db."""
         collection = await cls.collection()
 
         if "projection" not in kwargs:
             kwargs["projection"] = cls.__excluded_obj__
 
-        if result := await collection.find_one(**kwargs):
+        if result := await collection.find_one(*args, **kwargs):
             return cls.__document__(result)
         return result
 
     @classmethod
-    async def find_by_id(cls, id: str, **kwargs: dict[str, Any]) -> object:
+    async def find_by_id(
+        cls, id: str, *args: list[Any], **kwargs: dict[str, Any]
+    ) -> object:
         """Retrieve single document via ID."""
-        return await cls.find_one(filter={"_id": ObjectId(id)}, **kwargs)
+        return await cls.find_one({"_id": ObjectId(id)}, *args, **kwargs)
 
     @classmethod
     async def delete(cls, filter: dict, session: ClientSession = None) -> int:
