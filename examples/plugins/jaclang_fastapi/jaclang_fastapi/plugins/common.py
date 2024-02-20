@@ -129,10 +129,17 @@ class DocAnchor:
 
     async def connect(self) -> object:
         """Retrieve the Architype from db and return."""
-        cls = self.class_ref()
         data = None
+        jctx: JacContext = JCONTEXT.get()
+
+        if obj := jctx.get(self.id):
+            data = self.obj = obj
+            return data
+
+        cls = self.class_ref()
         if cls:
             data = self.obj = await cls.Collection.find_by_id(self.id)
+            jctx.set(data._jac_doc_.id, data)
         return data
 
 
@@ -246,6 +253,10 @@ class NodeAnchor(_NodeAnchor):
 
         edge_list = []
         edges_dir = self.edges[dir]
+
+        jctx: JacContext = JCONTEXT.get()
+        await jctx.populate([edir for edir in edges_dir if isinstance(edir, DocAnchor)])
+
         for idx, e in enumerate(edges_dir):
             if isinstance(e, DocAnchor):
                 edges_dir[idx] = e = await e.connect()
@@ -255,8 +266,18 @@ class NodeAnchor(_NodeAnchor):
             ) and (not filter_type or isinstance(e, filter_type)):
                 edge_list.append(e)
 
+        edge_list = filter_func(edge_list)
+        await jctx.populate(
+            [
+                t
+                for e in edge_list
+                if (dir == EdgeDir.OUT and isinstance(t := e._jac_.target, DocAnchor))
+                or (isinstance(t := e._jac_.source, DocAnchor))
+            ]
+        )
+
         node_list = []
-        for e in filter_func(edge_list):
+        for e in edge_list:
             ej = e._jac_
             ejt = ej.target
             ejs = ej.source
@@ -435,27 +456,45 @@ class JacContext:
 
     def __init__(self, request: Request) -> None:
         """Create JacContext."""
-        self.__mem__ = {}
+        self.__mem__: dict[ObjectId, object] = {}
         self.request = request
         self.user = getattr(request, "auth_user", None)
         self.root = getattr(request, "auth_root", root)
         self.reports = []
 
+    async def populate(self, danchors: list[DocAnchor]) -> list[object]:
+        """Populate in-memory references."""
+        queue = {}
+        for danchor in danchors:
+            if not self.has(danchor.id):
+                cls = danchor.class_ref()
+                if cls not in queue:
+                    queue[cls] = {"_id": {"$in": []}}
+                qin: list = queue[cls]["_id"]["$in"]
+                qin.append(danchor.id)
+        archs = []
+        for cls, que in queue.items():
+            for arch in await cls.Collection.find(que):
+                self.set(arch._jac_doc_.id, arch)
+                archs.append(arch)
+
+        return archs
+
     def has(self, id: Union[ObjectId, str]) -> bool:
         """Check if Architype is existing in memory."""
-        return str(id) in self.__mem__
+        return ObjectId(id) in self.__mem__
 
     def get(self, id: Union[ObjectId, str], default: object = None) -> object:
         """Retrieve Architype in memory."""
-        return self.__mem__.get(str(id), default)
+        return self.__mem__.get(ObjectId(id), default)
 
     def set(self, id: Union[ObjectId, str], obj: object) -> None:
         """Push Architype in memory via ID."""
-        self.__mem__[str(id)] = obj
+        self.__mem__[ObjectId(id)] = obj
 
     def remove(self, id: Union[ObjectId, str]) -> object:
         """Pull Architype in memory via ID."""
-        return self.__mem__.pop(str(id), None)
+        return self.__mem__.pop(ObjectId(id), None)
 
     def report(self, obj: Any) -> None:  # noqa: ANN401
         """Append report."""
