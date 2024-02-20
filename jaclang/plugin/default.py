@@ -405,3 +405,14 @@ class JacBuiltin:
     def dotgen(node: NodeArchitype, radius: int = 0) -> str:
         """Print the dot graph."""
         return dotgen(node, radius)
+
+
+# from jaclang.cli.cmdreg import CommandRegistry
+# cmd_registry = CommandRegistry()
+class JacCliImpl:
+    """Jac CLI."""
+
+    @staticmethod
+    @hookimpl
+    def gr():
+        print("hiiiiiiiii-----------------")

@@ -13,12 +13,13 @@ from jaclang.core.construct import (
     Root,
     WalkerArchitype,
 )
-from jaclang.plugin.spec import JacFeatureSpec, T
+from jaclang.plugin.spec import JacFeatureSpec, T, JacCliSpec
 
 import pluggy
 
 pm = pluggy.PluginManager("jac")
 pm.add_hookspecs(JacFeatureSpec)
+pm.add_hookspecs(JacCliSpec)
 
 
 class JacFeature:
@@ -220,3 +221,11 @@ class JacBuiltin:
     def dotgen(node: NodeArchitype, radius: int = 0) -> str:
         """Print the dot graph."""
         return pm.hook.dotgen(node=node, radius=radius)
+
+
+class JacCliFeature:
+    """Jac Feature."""
+
+    @staticmethod
+    def gr():
+        return pm.hook.gr()

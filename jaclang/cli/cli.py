@@ -13,6 +13,7 @@ from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.lang_tools import AstTool
+from jaclang.plugin.feature import JacCliFeature as J
 
 cmd_registry = CommandRegistry()
 
@@ -82,6 +83,12 @@ def run(filename: str, main: bool = True) -> None:
             )
     else:
         print("Not a .jac file.")
+
+
+@cmd_registry.register
+def my() -> None:
+    """Run the specified .jac file."""
+    J.gr()
 
 
 @cmd_registry.register

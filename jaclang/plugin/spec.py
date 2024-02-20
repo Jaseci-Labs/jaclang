@@ -5,6 +5,7 @@ from __future__ import annotations
 import types
 from typing import Any, Callable, Optional, Type, TypeVar
 
+# from jaclang.cli.cli import cmd_registry
 from jaclang.compiler.absyntree import Module
 from jaclang.plugin.default import (
     Architype,
@@ -214,4 +215,13 @@ class JacBuiltin:
     @hookspec(firstresult=True)
     def dotgen(node: NodeArchitype, radius: int = 0) -> str:
         """Print the dot graph."""
+        raise NotImplementedError
+
+
+class JacCliSpec:
+    """Jac CLI."""
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def gr() -> None:
         raise NotImplementedError
