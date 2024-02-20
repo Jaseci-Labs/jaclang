@@ -1,9 +1,20 @@
+import inspect
 import json
 import os
 import re
 import typing
+from typing_extensions import TypedDict, Unpack
 import edgedb
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from jaclang_edgedb.queries import delete_node, get_node, get_node_edges, update_node
 from .context import JCONTEXT, JacContext
 from pydantic import create_model
@@ -14,9 +25,10 @@ from jaclang.plugin.default import hookimpl
 from jaclang.plugin.spec import WalkerArchitype, DSFunc
 from jaclang.cli.cli import cmd_registry
 
-from dataclasses import dataclass
+from dataclasses import dataclass, make_dataclass
 from functools import wraps
 from typing import (
+    Annotated,
     Any,
     NamedTuple,
     Optional,
@@ -24,8 +36,44 @@ from typing import (
     Callable,
     TypeVar,
     Union,
+    get_args,
+    get_origin,
 )
 from jaclang.plugin.feature import JacFeature as Jac
+
+
+def add_fn_param(func, param_name, param_type, default_value=inspect.Parameter.empty):
+    # Get the function's signature
+    signature = inspect.signature(func)
+
+    # Create a new parameter with the specified name, type, and default value
+    new_param = inspect.Parameter(
+        param_name,
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        annotation=param_type,
+        default=default_value,
+    )
+
+    # Update the function's signature with the new parameter
+    parameters = list(signature.parameters.values())
+    parameters.append(new_param)
+    new_signature = signature.replace(parameters=parameters)
+
+    # Set the new signature for the function
+    func.__signature__ = new_signature
+
+
+def remove_fn_param(func, param_name):
+    # Get the function's signature
+    signature = inspect.signature(func)
+
+    # Remove the parameter with the specified name
+    parameters = list(signature.parameters.values())
+    parameters = [p for p in parameters if p.name != param_name]
+    new_signature = signature.replace(parameters=parameters)
+
+    # Set the new signature for the function
+    func.__signature__ = new_signature
 
 
 client = edgedb.create_client()
@@ -50,7 +98,6 @@ class DefaultSpecs:
     tags: str = [""]
     exclude: bool = False
     method: str = "post"
-    as_query: Union[str, list[str]] = []
 
 
 class TypeInfo(NamedTuple):
@@ -124,7 +171,6 @@ def insert_node(cls, **kwargs) -> None:
     """
 
     result = client.query(query, name=cls.__name__, properties=json.dumps(kwargs))
-    # print(result[0].id)
     client.close()
     return result[0]
 
@@ -154,7 +200,6 @@ def connect_query(id: str, from_node: str, to_node: str):
                             filter .id = <uuid>$to_node)
         }};
     """
-    print(id)
     client.query(query, id=id, from_node=from_node, to_node=to_node)
     client.close()
 
@@ -181,12 +226,31 @@ def get_specs(cls: type) -> DefaultSpecs:
     return specs
 
 
+def build_dataclass_model(name: str, fields: dict[str, type], origin_cls: type) -> Any:
+    """Build a dataclass model from a dict."""
+    model_fields = []
+
+    for key, val in fields.items():
+        if key == "nd":
+            model_fields.append((key, val, None))
+        else:
+            if callable(origin_cls.__dataclass_fields__[key].default_factory):
+                model_fields.append(
+                    (key, val, origin_cls.__dataclass_fields__[key].default_factory())
+                )
+            else:
+                model_fields.append((key, val))
+
+    Model = make_dataclass(name, model_fields)
+
+    return Model
+
+
 def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     """Build a FastAPI router for the walker."""
     # read from specs object which determines which fields are query params, and other api metadata
     specs = get_specs(cls)
 
-    query = {"nd": (str, "")}
     body = {}
 
     # if path:
@@ -197,54 +261,77 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     path = f"/{to_snake_case(cls.__name__)}"
 
     cls_fields = cls.__dataclass_fields__
-    default_values = {
-        k: v.default for k, v in cls_fields.items() if not k.startswith("_")
-    }
-    print(default_values)
     cls_fields = typing.get_type_hints(cls, include_extras=True)
-    body = {k: (v, ...) for k, v in cls_fields.items() if not k.startswith("_")}
+    body = {}
+
+    form_fields = {}
+    query_fields = {}
 
     for key, val in cls_fields.items():
         if key.startswith("_"):
             continue
+
+        if key in form_fields.keys():
+            continue
+
+        # check for form and query fields
+        if get_args(val) and get_origin(val) is Annotated:
+            arg_classes = [c.__class__ for c in get_args(val)]
+            is_form_field = (
+                Form().__class__ in arg_classes or File().__class__ in arg_classes
+            )
+
+            is_query_field = Query().__class__ in arg_classes
+
+            if is_form_field:
+                form_fields[key] = val
+                continue
+            elif is_query_field:
+                query_fields[key] = val
+                continue
 
         default_val = ...
 
         if callable(cls.__dataclass_fields__[key].default_factory):
             default_val = cls.__dataclass_fields__[key].default_factory()
 
-        if specs.as_query == "*" or key in specs.as_query:
-            query[key] = (val, default_val)
-        else:
-            body[key] = (val, default_val)
+        body[key] = (val, default_val)
 
-    query_model = create_model(f"{cls.__name__.lower()}_query_model", **query)
     body_model = create_model(f"{cls.__name__.lower()}_body_model", **body)
 
     async def api_fn(
-        request: Request, body: body_model = None, query: query_model = Depends()
+        request: Request,
+        body: body_model = None,  # type: ignore
+        query: dict = None,  # type: ignore
+        **kwargs: Any,
     ) -> Response:
+        # make the request object available to the walker
         cls.get_request = lambda self: request
 
         jctx = JacContext(request=request)
         JCONTEXT.set(jctx)
         input = {}
 
-        if body:
+        if body and hasattr(body, "model_dump"):
             input.update(body.model_dump())
+        elif body and isinstance(body, dict):
+            input.update(body)
+
         if query:
-            input.update(query.model_dump())
+            input.update(query)
+            # we need to remove the nd field from the input, as it's not a field of the walker
+            # but it is always present in the query
             del input["nd"]
 
         wlk = cls(**input)
-        # node = wlk._jac_.get_node(query.nd)
-        if not query.nd:
+
+        if not query["nd"]:
             db_root = get_root()
             root_node = Jac.get_root()
             root_node._edge_data = db_root
             wlk._jac_.spawn_call(root_node)
         else:
-            db_node = await get_node(async_client, query.nd)
+            db_node = await get_node(async_client, query["nd"])
 
             if not db_node:
                 raise HTTPException(status_code=404, detail="Node not found")
@@ -259,30 +346,44 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             )
 
             wlk._jac_.spawn_call(node)
-
-            # get the node from the db
-            # create node architype
-            # add edges to node object
-            # spawn walker on the node
             pass
         return jctx.response()
+
+    # setup query fields
+    query_fields.update({"nd": str})
+
+    QueryModel = build_dataclass_model(f"{cls.__name__}_query_model", query_fields, cls)
 
     if specs.method.lower() == "get":
 
         async def api(
             request: Request,
-            query: query_model = Depends(),  # type: ignore
+            query: QueryModel = Depends(),  # type: ignore
         ) -> Response:
-            return await api_fn(request, query=query)
+            return await api_fn(request, query=query.__dict__)
 
     else:
 
         async def api(
             request: Request,
             body: body_model = None,  # type: ignore
-            query: query_model = Depends(),  # type: ignore
+            query: QueryModel = Depends(),  # type: ignore
         ) -> Response:
-            return await api_fn(request, body, query)
+            return await api_fn(request, body, query.__dict__)
+
+    if form_fields:
+        FormModel = build_dataclass_model(
+            f"{cls.__name__.lower()}_body_model", form_fields, cls
+        )
+
+        # when using form fields, the api function signature changes
+        # we no longer accept json body, but instead accept form fields
+        async def api(
+            request: Request,
+            query: QueryModel = Depends(),  # type: ignore
+            form: FormModel = Depends(),  # type: ignore
+        ) -> Response:
+            return await api_fn(request, form.__dict__, query.__dict__)
 
     if not specs.exclude:
         getattr(router, specs.method.lower())(f"{path.lower()}", tags=specs.tags)(api)
@@ -460,8 +561,6 @@ class JacFeature:
         else:
             right_id = right._edge_data.id
 
-        print("LEFT", left_id)
-        print("RIGHT", right_id)
         connect_query(edge_spec._edge_data.id, left_id, right_id)
 
         return left
@@ -480,9 +579,7 @@ class JacFeature:
         expr: list[NodeArchitype | EdgeArchitype] | NodeArchitype | EdgeArchitype,
     ) -> bool:
         """Jac's visit stmt feature."""
-        print("EXPR", expr)
         if isinstance(walker, WalkerArchitype):
-            print("IGNORES", walker._jac_.ignores)
             return walker._jac_.visit_node(expr)
         else:
             raise TypeError("Invalid walker object")
