@@ -86,12 +86,6 @@ def run(filename: str, main: bool = True) -> None:
 
 
 @cmd_registry.register
-def my() -> None:
-    """Run the specified .jac file."""
-    J.gr()
-
-
-@cmd_registry.register
 def build(filename: str) -> None:
     """Build the specified .jac file."""
     if filename.endswith(".jac"):
