@@ -23,6 +23,7 @@ setup(
         "email-validator==2.1.0.post1",
         "orjson==3.9.13",
         "redis==5.0.1",
+        "python-multipart==0.0.9",
     ],
     package_data={},
     entry_points={

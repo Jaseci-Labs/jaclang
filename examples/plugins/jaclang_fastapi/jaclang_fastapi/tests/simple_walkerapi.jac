@@ -1,5 +1,6 @@
 """Example of simple walker walking nodes."""
 import:py from jaclang_fastapi, FastAPI, start;
+import:py from jaclang_fastapi.types, File, Files, OptFile, OptFiles, Defaults;
 import:py from jaclang_fastapi.models, User as BaseUser;
 
 # if possible to support this native class declaration
@@ -115,6 +116,27 @@ walker combination2 {
     obj Specs {
         static has path: str = "/{a}", methods: list = ["post", "get", "put", "patch", "delete", "head", "trace", "options"], as_query: list = ["b"];
     }
+}
+
+walker post_with_file {
+    has single: File;
+    has multiple: Files;
+    has singleOptional: OptFile = None;
+    has multipleOptional: OptFiles = None;
+
+
+    async can enter with `<r> entry {
+        print(<s>.single);
+        print(<s>.multiple);
+        print(<s>.singleOptional);
+        print(<s>.multipleOptional);
+    }
+}
+
+walker post_with_body_and_file {
+    has val: int;
+    has single: File;
+    has multiple: Files;
 }
 
 with entry:__main__ {
