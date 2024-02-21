@@ -1,12 +1,12 @@
 """Walker API Plugin."""
 
-from dataclasses import Field, dataclass
+from dataclasses import Field, _MISSING_TYPE, dataclass
 from inspect import iscoroutine
 from pydoc import locate
 from re import compile
-from typing import Any, Callable, Type, TypeVar, Union
+from typing import Any, Callable, Optional, Type, TypeVar, Union
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 
 from jaclang.core.construct import (
     Architype,
@@ -26,6 +26,12 @@ from ..securities import authenticator
 
 T = TypeVar("T")
 PATH_VARIABLE_REGEX = compile(r"{([^\}]+)}")
+FILE = {
+    "File": UploadFile,
+    "Files": list[UploadFile],
+    "OptFile": Optional[UploadFile],
+    "OptFiles": Optional[list[UploadFile]],
+}
 
 router = APIRouter(prefix="/walker", tags=["walker"])
 
@@ -156,6 +162,19 @@ def get_specs(cls: type) -> DefaultSpecs:
     return specs
 
 
+def gen_model_field(cls: type, field: Field, is_file: False) -> tuple[Any]:
+    """Generate Specs for Model Field."""
+    consts = [cls]
+    if not isinstance(field.default, _MISSING_TYPE):
+        consts.append(field.default)
+    elif callable(field.default_factory):
+        consts.append(field.default_factory())
+    else:
+        consts.append(File(...) if is_file else ...)
+
+    return tuple(consts)
+
+
 def populate_apis(cls: type) -> None:
     """Generate FastAPI endpoint based on WalkerArchitype class."""
     specs = get_specs(cls)
@@ -166,68 +185,58 @@ def populate_apis(cls: type) -> None:
 
     query = {}
     body = {}
+    files = {}
 
     if path:
         if not path.startswith("/"):
             path = f"/{path}"
         as_query += PATH_VARIABLE_REGEX.findall(path)
 
-    walker_url = f"/{cls.__name__}{path}"
+    walker_url = f"/{{node}}/{cls.__name__}{path}"
 
     fields: dict[str, Field] = cls.__dataclass_fields__
     for key, val in fields.items():
-        consts = [locate(val.type)]
-        if callable(val.default_factory):
-            consts.append(val.default_factory())
+        if file_type := FILE.get(val.type):
+            files[key] = gen_model_field(file_type, val, True)
         else:
-            consts.append(...)
-        consts = tuple(consts)
+            consts = gen_model_field(locate(val.type), val, True)
 
-        if as_query == "*" or key in as_query:
-            query[key] = consts
-        else:
-            body[key] = consts
+            if as_query == "*" or key in as_query:
+                query[key] = consts
+            else:
+                body[key] = consts
 
-    query_model = create_model(f"{cls.__name__.lower()}_query_model", **query)
-    body_model = create_model(f"{cls.__name__.lower()}_body_model", **body)
+    payload = {
+        "query": (
+            create_model(f"{cls.__name__.lower()}_query_model", **query),
+            Depends(),
+        ),
+        "files": (
+            create_model(f"{cls.__name__.lower()}_files_model", **files),
+            Depends(),
+        ),
+    }
 
-    if body and query:
+    if body:
+        payload["body"] = (
+            create_model(f"{cls.__name__.lower()}_body_model", **body),
+            ...,
+        )
 
-        async def api(
-            request: Request, body: body_model, query: query_model = Depends()  # type: ignore # noqa: B008
-        ) -> Response:
-            jctx = JacContext(request=request)
-            JCONTEXT.set(jctx)
-            wlk = cls(**body.model_dump(), **query.model_dump())
-            await wlk._jac_.spawn_call(jctx.root)
-            return jctx.response()
+    payload_model = create_model(f"{cls.__name__.lower()}_request_model", **payload)
 
-    elif body:
+    async def api(
+        request: Request,
+        node: str,
+        payload: payload_model = Depends(),  # type: ignore # noqa: B008
+    ) -> Response:
+        jctx = JacContext(request=request)
+        JCONTEXT.set(jctx)
 
-        async def api(request: Request, body: body_model) -> Response:  # type: ignore
-            jctx = JacContext(request=request)
-            JCONTEXT.set(jctx)
-            wlk = cls(**body.model_dump())
-            await wlk._jac_.spawn_call(jctx.root)
-            return jctx.response()
-
-    elif query:
-
-        async def api(request: Request, query: query_model = Depends()) -> Response:  # type: ignore # noqa: B008
-            jctx = JacContext(request=request)
-            JCONTEXT.set(jctx)
-            wlk = cls(**query.model_dump())
-            await wlk._jac_.spawn_call(jctx.root)
-            return jctx.response()
-
-    else:
-
-        async def api(request: Request) -> Response:
-            jctx = JacContext(request=request)
-            JCONTEXT.set(jctx)
-            wlk = cls()
-            await wlk._jac_.spawn_call(jctx.root)
-            return jctx.response()
+        payload = payload.model_dump()
+        wlk = cls(**payload.get("body", {}), **payload["query"], **payload["files"])
+        await wlk._jac_.spawn_call(jctx.root)
+        return jctx.response()
 
     for method in methods:
         method = method.lower()
