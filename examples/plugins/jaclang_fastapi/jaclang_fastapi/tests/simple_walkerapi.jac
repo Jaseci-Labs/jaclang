@@ -58,6 +58,7 @@ walker post_with_body {
         report boys;
         report g;
         report b;
+        report <r>;
     }
 
     async can enter2 with boy entry {

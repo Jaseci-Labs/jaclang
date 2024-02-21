@@ -3,6 +3,7 @@
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+from re import compile, IGNORECASE
 from typing import Any, Callable, Optional, Union
 
 from bson import ObjectId
@@ -26,6 +27,7 @@ from ..collections import BaseCollection
 from ..utils import logger
 
 
+TARGET_NODE_REGEX = compile(r"^([^:]+):(root|node|edge):([a-f\d]{24})$", IGNORECASE)
 JCONTEXT = ContextVar("JCONTEXT")
 JTYPE = ["r", "n", "e"]
 
@@ -114,6 +116,10 @@ class DocAnchor:
     def json(self) -> "dict":
         """Convert to dictionary but id is casted to string."""
         return {"_id": str(self.id), "_type": self.type.value, "_name": self.name}
+
+    def id_dump(self) -> str:
+        """Convert to dictionary that includes reference id."""
+        return {"id": f"{self.name}:{self.type.name}:{self.id}"}
 
     def class_ref(self) -> "type":
         """Return generated class equivalent for DocAnchor."""
@@ -454,13 +460,29 @@ class GenericEdge(EdgeArchitype):
 class JacContext:
     """Jac Lang Context Handler."""
 
-    def __init__(self, request: Request) -> None:
+    def __init__(self, request: Request, entry: str = None) -> None:
         """Create JacContext."""
         self.__mem__: dict[ObjectId, object] = {}
         self.request = request
         self.user = getattr(request, "auth_user", None)
         self.root = getattr(request, "auth_root", root)
         self.reports = []
+        self.entry = self.root if entry.lower() == "root" else entry
+
+    async def get_entry(self) -> NodeArchitype:
+        """Retrieve Node Entry Point."""
+        if isinstance(self.entry, str):
+            if self.entry and (match := TARGET_NODE_REGEX.search(self.entry)):
+                entry = await JCLASS[JType[match.group(2).upper()].value][
+                    match.group(1)
+                ].Collection.find_by_id(ObjectId(match.group(3)))
+                if isinstance(entry, NodeArchitype):
+                    self.entry = entry
+                else:
+                    self.entry = self.root
+            else:
+                self.entry = self.root
+        return self.entry or self.root
 
     async def populate(self, danchors: list[DocAnchor]) -> list[object]:
         """Populate in-memory references."""
@@ -506,7 +528,7 @@ class JacContext:
             if isinstance(val, Architype) and (
                 ret_jd := getattr(val, "_jac_doc_", None)
             ):
-                self.reports[key] = {**ret_jd.json(), "ctx": asdict(val)}
+                self.reports[key] = {**ret_jd.id_dump(), "ctx": asdict(val)}
             else:
                 self.clean_response(key, val, self.reports)
         return self.reports
@@ -524,7 +546,7 @@ class JacContext:
         elif isinstance(val, Architype):
             addons = {}
             if ret_jd := getattr(val, "_jac_doc_", None):
-                addons = ret_jd.json()
+                addons = ret_jd.id_dump()
             obj[key] = {**addons, "ctx": asdict(val)}
 
 

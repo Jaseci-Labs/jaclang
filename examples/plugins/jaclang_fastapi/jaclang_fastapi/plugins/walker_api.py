@@ -230,12 +230,12 @@ def populate_apis(cls: type) -> None:
         node: str,
         payload: payload_model = Depends(),  # type: ignore # noqa: B008
     ) -> Response:
-        jctx = JacContext(request=request)
+        jctx = JacContext(request=request, entry=node)
         JCONTEXT.set(jctx)
 
         payload = payload.model_dump()
         wlk = cls(**payload.get("body", {}), **payload["query"], **payload["files"])
-        await wlk._jac_.spawn_call(jctx.root)
+        await wlk._jac_.spawn_call(await jctx.get_entry())
         return jctx.response()
 
     for method in methods:
