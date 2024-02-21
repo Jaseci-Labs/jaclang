@@ -11,6 +11,10 @@ from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
 from jaclang.utils.log import logging
 
+import target_process
+import multiprocessing
+import importlib
+
 
 def jac_importer(
     target: str,
@@ -93,3 +97,35 @@ def jac_importer(
         sys.path.remove(caller_dir)
 
     return module
+
+
+def multiprocess_importer(module_name:str):
+    # Create a two-way communication pipe
+    parent_conn, child_conn = multiprocessing.Pipe()
+    # Start the target module in a separate process
+    p = multiprocessing.Process(target=target_process.target_process, args=(module_name, child_conn,))
+    p.start()
+
+    def create_hook(func_name):
+        # Define a hook function that will communicate with the child process
+        def hook(*args):
+            print("Hook Called")
+            parent_conn.send((func_name, args))
+            return parent_conn.recv()
+        return hook
+
+    # Dynamically create hooks for functions in the target module
+    target_module = importlib.import_module(module_name)
+    target_module.__file__ = module_name+".py"
+    for func_name in dir(target_module):
+        print(func_name)
+        if callable(getattr(target_module, func_name)) and not func_name.startswith("__"):
+            setattr(target_module, func_name, create_hook(func_name))
+    sys.modules[module_name] = target_module
+
+    # return hooks, p
+
+if __name__ == "__main__":
+    multiprocess_importer("test_module")
+    print(test_module)
+    print(sys.modules["test_module"])
