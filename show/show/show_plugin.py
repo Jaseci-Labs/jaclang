@@ -1,0 +1,48 @@
+"""Show command plugin for the Jac CLI."""
+
+import os
+
+from jaclang.cli.cli import cmd_registry
+from jaclang.plugin.default import hookimpl
+
+import pygments
+from pygments.formatters import TerminalFormatter
+from pygments.lexers import TextLexer, get_lexer_for_filename
+from pygments.util import ClassNotFound
+
+# from jac-highlighter.jac_syntax_highlighter import JacLexer
+
+
+class JacCliFeature:
+    """Jac CLI."""
+
+    @staticmethod
+    @hookimpl
+    @cmd_registry.register
+    def show(filename: str) -> None:
+        """Display the content of a file.
+
+        :param filename: The path to the file that wants to be shown.
+        """
+        if not os.path.exists(filename):
+            print(f"File '{filename}' not found.")
+            return
+
+        # ext = os.path.splitext(filename)[1]
+        # if ext == ".jac":
+        #     lexer = JacLexer()
+        # else:
+        try:
+            lexer = get_lexer_for_filename(filename)
+        except ClassNotFound:
+            lexer = TextLexer()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+        with open(filename, "r") as file:
+            content = file.read()
+
+        formatter = TerminalFormatter()
+
+        highlighted_content = pygments.highlight(content, lexer, formatter)
+        print(highlighted_content)

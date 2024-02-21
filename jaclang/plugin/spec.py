@@ -215,3 +215,16 @@ class JacBuiltin:
     def dotgen(node: NodeArchitype, radius: int = 0) -> str:
         """Print the dot graph."""
         raise NotImplementedError
+
+
+class JacCliSpec:
+    """Jac CLI."""
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def show(filename: str) -> None:
+        """Display the content of a file.
+
+        :param filename: The path to the file that wants to be shown.
+        """
+        raise NotImplementedError
