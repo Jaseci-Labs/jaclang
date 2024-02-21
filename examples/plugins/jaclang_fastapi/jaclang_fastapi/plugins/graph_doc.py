@@ -113,4 +113,6 @@ def populate_collection(cls: type, jtype: JType) -> type:
             coll.__name__, (coll, ArchCollection), {"__collection__": collection}
         )
 
+    cls.Collection.__qualname__ = f"{cls.__qualname__}.{cls.Collection.__name__}"
+
     return cls
