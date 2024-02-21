@@ -243,11 +243,14 @@ def populate_apis(cls: type) -> None:
 
         walker_method = getattr(router, method)
 
-        settings = {}
+        settings = {
+            "tags": ["walker"],
+            "summary": walker_url,
+        }
         if auth:
             settings["dependencies"] = authenticator
 
-        walker_method(walker_url, tags=["walker"], **settings)(api)
+        walker_method(walker_url, **settings)(api)
 
 
 def specs(

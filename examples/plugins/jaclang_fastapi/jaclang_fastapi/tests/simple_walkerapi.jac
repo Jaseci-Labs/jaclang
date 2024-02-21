@@ -45,24 +45,23 @@ walker post_with_body {
     has a: str;
 
     async can enter1 with `<r> entry {
-        boys = await -->;
-        # boys[0].val1 = <s>.a;
-
-        g = await boys[0] -->;
-
-        b = await g[0] -->;
-        # report <r>;
-        # report boys;
-        # await (boys[0].save());
-        # visit boys;
-        report boys;
-        report g;
-        report b;
         report <r>;
+
+        boys = await -->;
+        report boys;
+        visit boys;
     }
 
     async can enter2 with boy entry {
-        report (await -->)[0];
+        girls = await -->;
+        report girls;
+        visit girls;
+    }
+
+    async can enter3 with girl entry {
+        anyone = await -->;
+        report anyone;
+        visit anyone;
     }
 }
 
