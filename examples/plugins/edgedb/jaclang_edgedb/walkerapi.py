@@ -11,10 +11,13 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Header,
     Query,
     Request,
     Response,
+    Security,
 )
+from fastapi.security import APIKeyHeader
 from jaclang_edgedb.queries import delete_node, get_node, get_node_edges, update_node
 from .context import JCONTEXT, JacContext
 from pydantic import create_model
@@ -258,6 +261,7 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     #         path = f"/{path}"
     #     as_query += PATH_VARIABLE_REGEX.findall(path)
 
+    is_guarded = False
     path = f"/{to_snake_case(cls.__name__)}"
 
     cls_fields = cls.__dataclass_fields__
@@ -266,6 +270,8 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
 
     form_fields = {}
     query_fields = {}
+    header_fields = {}
+    security_fields = {}
 
     for key, val in cls_fields.items():
         if key.startswith("_"):
@@ -282,12 +288,21 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             )
 
             is_query_field = Query().__class__ in arg_classes
+            is_header_field = Header().__class__ in arg_classes
+
+            is_security_field = Security().__class__ in arg_classes
 
             if is_form_field:
                 form_fields[key] = val
                 continue
             elif is_query_field:
                 query_fields[key] = val
+                continue
+            elif is_header_field:
+                header_fields[key] = val
+                continue
+            elif is_security_field:
+                security_fields[key] = val
                 continue
 
         default_val = ...
@@ -302,7 +317,9 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     async def api_fn(
         request: Request,
         body: body_model = None,  # type: ignore
-        query: dict = None,  # type: ignore
+        query: dict = None,
+        headers: dict = None,
+        security: dict = None,
         **kwargs: Any,
     ) -> Response:
         # make the request object available to the walker
@@ -322,6 +339,12 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             # we need to remove the nd field from the input, as it's not a field of the walker
             # but it is always present in the query
             del input["nd"]
+
+        if headers:
+            input.update(headers)
+
+        if security:
+            input.update(security)
 
         wlk = cls(**input)
 
@@ -353,14 +376,27 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     query_fields.update({"nd": str})
 
     QueryModel = build_dataclass_model(f"{cls.__name__}_query_model", query_fields, cls)
+    HeaderModel = build_dataclass_model(
+        f"{cls.__name__}_header_model", header_fields, cls
+    )
+    SecurityModel = build_dataclass_model(
+        f"{cls.__name__}_security_model", security_fields, cls
+    )
 
     if specs.method.lower() == "get":
 
         async def api(
             request: Request,
             query: QueryModel = Depends(),  # type: ignore
+            headers: HeaderModel = Depends(),  # type: ignore
+            security: SecurityModel = Depends(),  # type: ignore
         ) -> Response:
-            return await api_fn(request, query=query.__dict__)
+            return await api_fn(
+                request,
+                query=query.__dict__,
+                headers=headers.__dict__,
+                security=security.__dict__,
+            )
 
     else:
 
@@ -368,8 +404,16 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             request: Request,
             body: body_model = None,  # type: ignore
             query: QueryModel = Depends(),  # type: ignore
+            headers: HeaderModel = Depends(),  # type: ignore
+            security: SecurityModel = Depends(),  # type: ignore
         ) -> Response:
-            return await api_fn(request, body, query.__dict__)
+            return await api_fn(
+                request,
+                body,
+                query.__dict__,
+                headers=headers.__dict__,
+                security=security.__dict__,
+            )
 
     if form_fields:
         FormModel = build_dataclass_model(
@@ -382,8 +426,16 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             request: Request,
             query: QueryModel = Depends(),  # type: ignore
             form: FormModel = Depends(),  # type: ignore
+            headers: HeaderModel = Depends(),  # type: ignore
+            security: SecurityModel = Depends(),  # type: ignore
         ) -> Response:
-            return await api_fn(request, form.__dict__, query.__dict__)
+            return await api_fn(
+                request,
+                form.__dict__,
+                query.__dict__,
+                headers=headers.__dict__,
+                security=security.__dict__,
+            )
 
     if not specs.exclude:
         getattr(router, specs.method.lower())(f"{path.lower()}", tags=specs.tags)(api)
