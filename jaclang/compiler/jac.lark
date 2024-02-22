@@ -36,8 +36,7 @@ architype_def: abil_to_arch_chain member_block
 decorators: (DECOR_OP atomic_chain)+
 access_tag: COLON ( KW_PROT | KW_PUB | KW_PRIV )
 
-inherited_archs: LT (atomic_chain COMMA)* atomic_chain GT
-               | COLON (atomic_chain COMMA)* atomic_chain COLON
+inherited_archs: COLON (atomic_chain COMMA)* atomic_chain COLON
 
 arch_type: KW_WALKER
           | KW_OBJECT
@@ -50,7 +49,7 @@ member_block: LBRACE member_stmt* RBRACE
 member_stmt: doc_tag? (py_code_block | abstract_ability | ability | architype | has_stmt | free_code)
 has_stmt: KW_STATIC? (KW_LET | KW_HAS) access_tag? has_assign_list SEMI
 has_assign_list: (has_assign_list COMMA)? typed_has_clause
-typed_has_clause: STRING? named_ref type_tag (EQ expression | KW_BY POST_INIT_OP)?
+typed_has_clause: STRING? named_ref type_tag (EQ expression | KW_BY INIT_OP)?
 type_tag: COLON expression
 
 // Enumerations
@@ -361,6 +360,7 @@ atom: any_ref
     | LPAREN (expression | yield_expr) RPAREN
     | atom_collection
     | atom_literal
+    | JSX_SNIPPET
 
 atom_literal: builtin_type
             | NULL
@@ -430,6 +430,7 @@ connect_any: CARROW_BI | CARROW_L_P1 expression (COLON kw_expr_list)? CARROW_R_P
 // Special Comprehensions
 filter_compr: LPAREN NULL_OK filter_compare_list RPAREN
             | LPAREN TYPE_OP NULL_OK expression (COLON filter_compare_list)? RPAREN
+
 assign_compr: LPAREN EQ kw_expr_list RPAREN
 filter_compare_list: (filter_compare_list COMMA)? filter_compare_item
 filter_compare_item: named_ref cmp_op expression
@@ -445,7 +446,6 @@ named_ref: special_ref
 type_ref: TYPE_OP (named_ref | builtin_type)
 
 special_ref: INIT_OP
-            | POST_INIT_OP
             | ROOT_OP
             | SUPER_OP
             | SELF_OP
@@ -463,6 +463,15 @@ builtin_type: TYP_TYPE
             | TYP_INT
             | TYP_BYTES
             | TYP_STRING
+
+// f-string tokens
+FSTR_START.1: "f\""
+FSTR_END: "\""
+FSTR_SQ_START.1: "f'"
+FSTR_SQ_END: "'"
+FSTR_PIECE.-1: /[^\{\}\"]+/
+FSTR_SQ_PIECE.-1: /[^\{\}\']+/
+FSTR_BESC.1: /{{|}}/
 
 // Lexer Tokens
 FLOAT: /(\d+(\.\d*)|\.\d+)([eE][+-]?\d+)?/
@@ -545,6 +554,11 @@ KW_STATIC: "static"
 KW_OVERRIDE: "override"
 KW_MATCH: "match"
 KW_CASE: "case"
+HERE_OP: "here"
+SELF_OP: "self"
+INIT_OP: "init"
+SUPER_OP: "super"
+ROOT_OP: "root"
 
 ARROW_BI: /<-->/
 ARROW_L: /<--/
@@ -560,13 +574,6 @@ CARROW_L_P1: /<\+\:/
 CARROW_R_P2: /:\+>/
 CARROW_L_P2: /:\+/
 CARROW_R_P1: /\+\:/
-
-HERE_OP: /<h>|<here>/
-SELF_OP: /<s>|<self>/
-INIT_OP: /<i>|<init>/
-POST_INIT_OP: /<pi>|<post_init>/
-SUPER_OP: /<sup>|<super>/
-ROOT_OP: /<r>|<root>/
 
 GLOBAL_OP: /:g:|:global:/
 NONLOCAL_OP: /:nl:|:nonlocal:/
@@ -639,17 +646,10 @@ RPAREN: /\)/
 LSQUARE: /\[/
 RSQUARE: /\]/
 
-
-// f-string tokens
-FSTR_START.1: "f\""
-FSTR_END: "\""
-FSTR_SQ_START.1: "f'"
-FSTR_SQ_END: "'"
-FSTR_PIECE.-1: /[^\{\}\"]+/
-FSTR_SQ_PIECE.-1: /[^\{\}\']+/
-FSTR_BESC.1: /{{|}}/
-
 COMMENT: /#\*(.|\n|\r)*?\*#|#.*/
 WS.-2: /[ \t\f\r\n]/+
+JSX_SNIPPET: /<jsx>(.|\n|\r)*<\/jsx>/
 %ignore COMMENT
 %ignore WS
+===
+
