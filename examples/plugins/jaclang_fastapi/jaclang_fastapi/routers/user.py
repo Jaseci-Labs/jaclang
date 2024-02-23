@@ -22,7 +22,7 @@ async def register(req: User.register_type()) -> ORJSONResponse:  # type: ignore
         async with session.start_transaction():
             try:
 
-                root = await Root().save(session=session)
+                root = await Root.register(session=session)
                 req_obf = req.obfuscate()
                 req_obf["root_id"] = root.id
                 result = await User.Collection.insert_one(req_obf, session=session)
