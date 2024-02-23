@@ -1,5 +1,6 @@
 """Special Imports for Jac Code."""
 
+import importlib
 import marshal
 import sys
 import types
@@ -10,6 +11,16 @@ from jaclang.compiler.absyntree import Module
 from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
 from jaclang.utils.log import logging
+
+
+def py_importer(target: str, base_path: str) -> types.ModuleType:
+    """Use importlib to import a Python module."""
+    print(f"Importing {target}")
+    sys.path.append(base_path)
+    res = importlib.import_module(target)
+    sys.path.remove(base_path)
+    return res
+
 
 
 def jac_importer(
@@ -93,3 +104,9 @@ def jac_importer(
         sys.path.remove(caller_dir)
 
     return module
+
+def general_importer(target: str, base_path: str):
+    try:
+        return py_importer(target, base_path)
+    except ModuleNotFoundError:
+        return jac_importer(target, base_path)
