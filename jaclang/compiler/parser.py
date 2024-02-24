@@ -687,7 +687,7 @@ class JacParser(Pass):
                     )
             raise self.ice()
 
-        def ability(self, kid: list[ast.AstNode]) -> ast.Ability | ast.AbilityDef:
+        def ability(self, kid: list[ast.AstNode]) -> ast.Ability | ast.AbilityDef | ast.FuncCall:
             """Grammer rule,
 
             ability: decorators? ability_def
@@ -870,9 +870,9 @@ class JacParser(Pass):
             has_with = isinstance(chomp[0], ast.Token) and chomp[0].name == Tok.KW_WITH
             chomp = chomp[1:] if has_with else chomp
             is_funccall = isinstance(chomp[0],ast.FuncCall)
-            if isinstance(name, ast.NameSpec) and isinstance(
+            if isinstance(name, ast.NameSpec) and is_funccall and has_with and isinstance(
                 signature, (ast.FuncSignature, ast.EventSignature)
-            ) and is_funccall and has_with:
+            ):
                 return self.nu(
                     ast.Ability(
                         name_ref=name,

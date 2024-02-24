@@ -362,6 +362,7 @@ class PyastGenPass(Pass):
                         kwargs=None,
                         kw_defaults=[],
                         defaults=[],
+
                     )
                 ),
                 body=self.resolve_stmt_block(node.body, doc=node.doc),
@@ -793,7 +794,7 @@ class PyastGenPass(Pass):
         is_abstract: bool,
         access: Optional[SubTag[Token]],
         signature: Optional[FuncSignature | ExprType | EventSignature],
-        body: Optional[SubNodeList[CodeBlockStmt]],
+        body: Optional[SubNodeList[CodeBlockStmt] | AbilityDef | FuncCall],
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
@@ -805,15 +806,36 @@ class PyastGenPass(Pass):
             ]
             if node.doc and node.is_abstract
             else (
-                [self.sync(ast3.Pass(), node.body)]
-                if node.is_abstract
-                else self.resolve_stmt_block(
-                    (
-                        node.body.body
-                        if isinstance(node.body, ast.AbilityDef)
-                        else node.body
-                    ),
-                    doc=node.doc,
+                [self.sync(ast3.Return(
+                    value=self.sync(ast3.Call(
+                                func=self.sync(ast3.Attribute(
+                                        value=node.body.target.gen.py_ast[0],
+                                        attr="__infer__",
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                                args=[],
+                                keywords=[
+                                    param.gen.py_ast[0]
+                                    for param in node.body.params.items
+                                ]
+                            )
+                        )    
+                    )
+                )
+                ]
+                if node.is_genai_ability
+                else (
+                    [self.sync(ast3.Pass(), node.body)]
+                    if node.is_abstract
+                    else self.resolve_stmt_block(
+                        (
+                            node.body.body
+                            if isinstance(node.body, ast.AbilityDef)
+                            else node.body
+                        ),
+                        doc=node.doc,
+                    )
                 )
             )
         )
@@ -857,7 +879,7 @@ class PyastGenPass(Pass):
             decorator_list.insert(
                 0, self.sync(ast3.Name(id="staticmethod", ctx=ast3.Load()))
             )
-        if not body:
+        if not body and not node.is_genai_ability:
             self.error("Ability has no body. Perhaps an impl must be imported.", node)
         node.gen.py_ast = [
             self.sync(
