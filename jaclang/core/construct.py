@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
 
-from jaclang.compiler.constant import EdgeDir
+from jaclang.compiler.constant import EdgeDir, EdgeDirGroup
 from jaclang.core.utils import collect_node_connections
 
 
@@ -34,7 +34,13 @@ class NodeAnchor(ObjectAnchor):
     """Node Anchor."""
 
     obj: NodeArchitype
-    edges: list[EdgeArchitype] = field(default_factory=lambda: [])
+    edges_in: list[EdgeArchitype] = field(default_factory=list)
+    edges_out: list[EdgeArchitype] = field(default_factory=list)
+
+    def clear_edges(self) -> None:
+        """Clear all edges."""
+        self.edges_in.clear()
+        self.edges_out.clear()
 
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
@@ -48,26 +54,25 @@ class NodeAnchor(ObjectAnchor):
         target_obj: Optional[list[NodeArchitype]],
     ) -> list[EdgeArchitype]:
         """Get edges connected to this node."""
-        edge_list: list[EdgeArchitype] = [*self.edges]
-        ret_edges: list[EdgeArchitype] = []
-        edge_list = filter_func(edge_list) if filter_func else edge_list
-        for e in edge_list:
-            if (
-                e._jac_.target
-                and e._jac_.source
-                and (
-                    dir in [EdgeDir.OUT, EdgeDir.ANY]
-                    and self.obj == e._jac_.source
-                    and (not target_obj or e._jac_.target in target_obj)
-                )
-                or (
-                    dir in [EdgeDir.IN, EdgeDir.ANY]
-                    and self.obj == e._jac_.target
-                    and (not target_obj or e._jac_.source in target_obj)
-                )
-            ):
-                ret_edges.append(e)
-        return ret_edges
+        edge_list: list[EdgeArchitype] = []
+
+        if dir in EdgeDirGroup.OUT:
+            edge_list += [
+                e
+                for e in self.edges_out
+                if e._jac_.source == self.obj
+                and (not target_obj or e._jac_.target in target_obj)
+            ]
+
+        if dir in EdgeDirGroup.IN:
+            edge_list += [
+                e
+                for e in self.edges_in
+                if e._jac_.target == self.obj
+                and (not target_obj or e._jac_.source in target_obj)
+            ]
+
+        return filter_func(edge_list) if filter_func else edge_list
 
     def edges_to_nodes(
         self,
@@ -76,23 +81,22 @@ class NodeAnchor(ObjectAnchor):
         target_obj: Optional[list[NodeArchitype]],
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
-        edge_list: list[EdgeArchitype] = [*self.edges]
         node_list: list[NodeArchitype] = []
-        edge_list = filter_func(edge_list) if filter_func else edge_list
-        for e in edge_list:
-            if e._jac_.target and e._jac_.source:
-                if (
-                    dir in [EdgeDir.OUT, EdgeDir.ANY]
-                    and self.obj == e._jac_.source
-                    and (not target_obj or e._jac_.target in target_obj)
-                ):
-                    node_list.append(e._jac_.target)
-                if (
-                    dir in [EdgeDir.IN, EdgeDir.ANY]
-                    and self.obj == e._jac_.target
-                    and (not target_obj or e._jac_.source in target_obj)
-                ):
-                    node_list.append(e._jac_.source)
+        for e in self.get_edges(
+            dir, filter_func, None  # target_obj should be allowed here seperately
+        ):
+            if (
+                dir in EdgeDirGroup.OUT
+                and (tgt := e._jac_.target)
+                and (not target_obj or tgt in target_obj)
+            ):
+                node_list.append(tgt)
+            if (
+                dir in EdgeDirGroup.IN
+                and (src := e._jac_.source)
+                and (not target_obj or src in target_obj)
+            ):
+                node_list.append(src)
         return node_list
 
     def gen_dot(self, dot_file: Optional[str] = None) -> str:
@@ -135,19 +139,17 @@ class EdgeAnchor(ObjectAnchor):
         self.source = src
         self.target = trg
         self.is_undirected = is_undirected
-        src._jac_.edges.append(self.obj)
-        trg._jac_.edges.append(self.obj)
+        src._jac_.edges_out.append(self.obj)
+        trg._jac_.edges_in.append(self.obj)
         return self
 
-    def detach(
-        self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
-    ) -> EdgeAnchor:
+    def detach(self) -> EdgeAnchor:
         """Detach edge from nodes."""
-        self.source = src  # TODO: Delete me, don't keep attached
-        self.target = trg  # TODO: Delete me, don't keep attached
-        self.is_undirected = is_undirected
-        src._jac_.edges.remove(self.obj)
-        trg._jac_.edges.remove(self.obj)
+        if isinstance(self.source, NodeArchitype):
+            self.source._jac_.edges_out.remove(self.obj)
+
+        if isinstance(self.target, NodeArchitype):
+            self.target._jac_.edges_in.remove(self.obj)
         return self
 
     def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
@@ -305,7 +307,8 @@ class Root(NodeArchitype):
         """Reset the root."""
         self.reachable_nodes = []
         self.connections = set()
-        self._jac_.edges = []
+        self._jac_.edges_in.clear()
+        self._jac_.edges_out.clear()
 
 
 class GenericEdge(EdgeArchitype):

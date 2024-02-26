@@ -17,12 +17,10 @@ def collect_node_connections(
     """Nodes and edges representing the graph are collected in visited_nodes and connections."""
     if current_node not in visited_nodes:
         visited_nodes.add(current_node)
-        edges = current_node.edges
-
-        for edge_ in edges:
-            target = edge_._jac_.target
+        for edge in [*current_node.edges_in, *current_node.edges_out]:
+            target = edge._jac_.target
             if target:
                 connections.add(
-                    (current_node.obj, target._jac_.obj, edge_.__class__.__name__)
+                    (current_node.obj, target._jac_.obj, edge.__class__.__name__)
                 )
                 collect_node_connections(target._jac_, visited_nodes, connections)
