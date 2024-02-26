@@ -33,6 +33,8 @@ walker post_no_body {
     }
 }
 
+edge to {}
+
 node boy {
     has val1: str, val2: str;
 }
@@ -47,19 +49,19 @@ walker post_with_body {
     async can enter1 with `<r> entry {
         report <r>;
 
-        boys = await -->;
+        boys = await [-:to:val==10:->];
         report boys;
         visit boys;
     }
 
     async can enter2 with boy entry {
-        girls = await -->;
+        girls = await [-->];
         report girls;
         visit girls;
     }
 
     async can enter3 with girl entry {
-        anyone = await -->;
+        anyone = await [-->];
         report anyone;
         visit anyone;
     }

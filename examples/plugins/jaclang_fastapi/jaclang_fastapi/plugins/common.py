@@ -382,51 +382,114 @@ class NodeArchitype(_NodeArchitype, DocArchitype):
 class NodeAnchor(_NodeAnchor):
     """Overridden NodeAnchor."""
 
-    async def edges_to_nodes(
-        self, dir: EdgeDir, filter_type: Optional[type], filter_func: Optional[Callable]
-    ) -> list[NodeArchitype]:
-        """Return set of nodes connected to this node."""
-        filter_func = filter_func or (lambda x: x)
-
-        edge_list = []
-        edges_dir = self.edges[dir]
-
+    async def get_edges(
+        self,
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list["EdgeArchitype"]], list["EdgeArchitype"]]],
+        target_obj: Optional[list[NodeArchitype]],
+    ) -> list["EdgeArchitype"]:
+        """Get edges connected to this node."""
+        # to be improved
+        # currently, filter are done on service not on db
         jctx: JacContext = JCONTEXT.get()
-        await jctx.populate([edir for edir in edges_dir if isinstance(edir, DocAnchor)])
-
-        for idx, e in enumerate(edges_dir):
-            if isinstance(e, DocAnchor):
-                edges_dir[idx] = e = await e.connect()
-
-            if getattr(
-                e._jac_, "target" if dir == EdgeDir.OUT else "source", None
-            ) and (not filter_type or isinstance(e, filter_type)):
-                edge_list.append(e)
-
-        edge_list = filter_func(edge_list)
         await jctx.populate(
             [
-                t
-                for e in edge_list
-                if (dir == EdgeDir.OUT and isinstance(t := e._jac_.target, DocAnchor))
-                or (isinstance(t := e._jac_.source, DocAnchor))
+                e
+                for edge in self.edges
+                if isinstance(e := edge, DocAnchor) and not jctx.has(e.id)
             ]
         )
 
-        node_list = []
+        edge_list: list[EdgeArchitype] = [
+            edge.connect() if isinstance(edge, DocAnchor) else edge
+            for edge in self.edges
+        ]
+        ret_edges: list[EdgeArchitype] = []
+        edge_list = filter_func(edge_list) if filter_func else edge_list
+        for e in edge_list:
+            if (
+                e._jac_.target
+                and e._jac_.source
+                and (
+                    dir in [EdgeDir.OUT, EdgeDir.ANY]
+                    and self.obj == e._jac_.source
+                    and (not target_obj or e._jac_.target in target_obj)
+                )
+                or (
+                    dir in [EdgeDir.IN, EdgeDir.ANY]
+                    and self.obj == e._jac_.target
+                    and (not target_obj or e._jac_.source in target_obj)
+                )
+            ):
+                ret_edges.append(e)
+        return ret_edges
+
+    async def edges_to_nodes(
+        self,
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list["EdgeArchitype"]], list["EdgeArchitype"]]],
+        target_obj: Optional[list[NodeArchitype]],
+    ) -> list[NodeArchitype]:
+        """Get set of nodes connected to this node."""
+        # to be improved
+        # currently, filter are done on service not on db
+        jctx: JacContext = JCONTEXT.get()
+        await jctx.populate(
+            [
+                e
+                for edge in self.edges
+                if isinstance(e := edge, DocAnchor) and not jctx.has(e.id)
+            ]
+        )
+
+        edge_list: list[EdgeArchitype] = [
+            edge.connect() if isinstance(edge, DocAnchor) else edge
+            for edge in self.edges
+        ]
+        node_list: list[NodeArchitype] = []
+        edge_list = filter_func(edge_list) if filter_func else edge_list
+
+        await jctx.populate(
+            [
+                n
+                for e in edge_list
+                if (
+                    (
+                        (
+                            dir in [EdgeDir.OUT, EdgeDir.ANY]
+                            and self.obj == (n := e._jac_.target)
+                        )
+                        or (
+                            dir in [EdgeDir.IN, EdgeDir.ANY]
+                            and self.obj == (n := e._jac_.source)
+                        )
+                    )
+                    and (not target_obj or n in target_obj)
+                )
+                and isinstance(n, DocAnchor)
+                and not jctx.has(n.id)
+            ]
+        )
+
         for e in edge_list:
             ej = e._jac_
-            ejt = ej.target
-            ejs = ej.source
-
-            if dir == EdgeDir.OUT:
-                if isinstance(ejt, DocAnchor):
-                    ej.target = ejt = await ejt.connect()
-                node_list.append(ejt)
-            else:
-                if isinstance(ejs, DocAnchor):
-                    ej.source = ejs = await ejs.connect()
-                node_list.append(ejs)
+            if (tgt := ej.target) and (src := ej.source):
+                if (
+                    dir in [EdgeDir.OUT, EdgeDir.ANY]
+                    and self.obj == src
+                    and (not target_obj or tgt in target_obj)
+                ):
+                    if isinstance(tgt, DocAnchor):
+                        ej.target = tgt = await tgt.connect()
+                    node_list.append(tgt)
+                if (
+                    dir in [EdgeDir.IN, EdgeDir.ANY]
+                    and self.obj == tgt
+                    and (not target_obj or src in target_obj)
+                ):
+                    if isinstance(src, DocAnchor):
+                        ej.source = src = await src.connect()
+                    node_list.append(src)
         return node_list
 
 
@@ -613,9 +676,10 @@ class JacContext:
         self.user = getattr(request, "auth_user", None)
         self.root = getattr(request, "auth_root", base_root)
         self.reports = []
-        self.entry = self.root if entry.lower() == "root" else entry
+        self.entry = entry
 
     def get_root_id(self) -> ObjectId:
+        """Retrieve Root Doc Id."""
         if self.root is base_root:
             return None
         return self.root._jac_doc_.id
@@ -633,25 +697,27 @@ class JacContext:
                     self.entry = self.root
             else:
                 self.entry = self.root
-        return self.entry or self.root
+        elif self.entry is None:
+            self.entry = self.root
 
-    async def populate(self, danchors: list[DocAnchor]) -> list[object]:
+        return self.entry
+
+    async def populate(self, danchors: list[DocAnchor]) -> None:
         """Populate in-memory references."""
+        # For optimization, danchors.ids should be checked if existing on memory before passing to populate
+        # this is to avoid unnecessary loops even tho it returns the same
+
         queue = {}
         for danchor in danchors:
-            if not self.has(danchor.id):
-                cls = danchor.class_ref()
-                if cls not in queue:
-                    queue[cls] = {"_id": {"$in": []}}
-                qin: list = queue[cls]["_id"]["$in"]
-                qin.append(danchor.id)
-        archs = []
+            cls = danchor.class_ref()
+            if cls not in queue:
+                queue[cls] = {"_id": {"$in": []}}
+            qin: list = queue[cls]["_id"]["$in"]
+            qin.append(danchor.id)
+
         for cls, que in queue.items():
             for arch in await cls.Collection.find(que):
                 self.set(arch._jac_doc_.id, arch)
-                archs.append(arch)
-
-        return archs
 
     def has(self, id: Union[ObjectId, str]) -> bool:
         """Check if Architype is existing in memory."""
