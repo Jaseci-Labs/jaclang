@@ -613,9 +613,10 @@ class JacContext:
         self.user = getattr(request, "auth_user", None)
         self.root = getattr(request, "auth_root", base_root)
         self.reports = []
-        self.entry = self.root if entry.lower() == "root" else entry
+        self.entry = entry
 
     def get_root_id(self) -> ObjectId:
+        """Retrieve Root Doc Id."""
         if self.root is base_root:
             return None
         return self.root._jac_doc_.id
@@ -633,9 +634,12 @@ class JacContext:
                     self.entry = self.root
             else:
                 self.entry = self.root
-        return self.entry or self.root
+        elif self.entry is None:
+            self.entry = self.root
 
-    async def populate(self, danchors: list[DocAnchor]) -> list[object]:
+        return self.entry
+
+    async def populate(self, danchors: list[DocAnchor]) -> None:
         """Populate in-memory references."""
         queue = {}
         for danchor in danchors:
@@ -645,13 +649,9 @@ class JacContext:
                     queue[cls] = {"_id": {"$in": []}}
                 qin: list = queue[cls]["_id"]["$in"]
                 qin.append(danchor.id)
-        archs = []
         for cls, que in queue.items():
             for arch in await cls.Collection.find(que):
                 self.set(arch._jac_doc_.id, arch)
-                archs.append(arch)
-
-        return archs
 
     def has(self, id: Union[ObjectId, str]) -> bool:
         """Check if Architype is existing in memory."""

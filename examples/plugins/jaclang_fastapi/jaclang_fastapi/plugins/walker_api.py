@@ -192,8 +192,6 @@ def populate_apis(cls: type) -> None:
             path = f"/{path}"
         as_query += PATH_VARIABLE_REGEX.findall(path)
 
-    walker_url = f"/{{node}}/{cls.__name__}{path}"
-
     fields: dict[str, Field] = cls.__dataclass_fields__
     for key, val in fields.items():
         if file_type := FILE.get(val.type):
@@ -225,7 +223,7 @@ def populate_apis(cls: type) -> None:
 
     payload_model = create_model(f"{cls.__name__.lower()}_request_model", **payload)
 
-    async def api(
+    async def api_entry(
         request: Request,
         node: str,
         payload: payload_model = Depends(),  # type: ignore # noqa: B008
@@ -238,19 +236,27 @@ def populate_apis(cls: type) -> None:
         await wlk._jac_.spawn_call(await jctx.get_entry())
         return jctx.response()
 
+    async def api_root(
+        request: Request,
+        payload: payload_model = Depends(),  # type: ignore # noqa: B008
+    ) -> Response:
+        return await api_entry(request, None, payload)
+
     for method in methods:
         method = method.lower()
 
         walker_method = getattr(router, method)
 
-        settings = {
-            "tags": ["walker"],
-            "summary": walker_url,
-        }
+        settings = {"tags": ["walker"]}
         if auth:
             settings["dependencies"] = authenticator
 
-        walker_method(walker_url, **settings)(api)
+        walker_method(url := f"/{cls.__name__}{path}", summary=url, **settings)(
+            api_root
+        )
+        walker_method(
+            url := f"/{cls.__name__}/{{node}}{path}", summary=url, **settings
+        )(api_entry)
 
 
 def specs(
