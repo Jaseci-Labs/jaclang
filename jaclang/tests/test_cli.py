@@ -1,6 +1,7 @@
 """Test Jac cli module."""
 
 import io
+import os
 import subprocess
 import sys
 
@@ -22,7 +23,7 @@ class JacCliTests(TestCase):
         sys.stdout = captured_output
 
         # Execute the function
-        cli.run(self.fixture_abs_path("hello.jac"))  # type: ignore
+        cli.run(self.fixture_abs_path("hello.jac"))
 
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
@@ -52,7 +53,7 @@ class JacCliTests(TestCase):
         captured_output = io.StringIO()
         sys.stdout = captured_output
 
-        cli.ast_tool("pass_template")
+        cli.tool("pass_template")
 
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
@@ -77,7 +78,7 @@ class JacCliTests(TestCase):
         captured_output = io.StringIO()
         sys.stdout = captured_output
 
-        cli.ast_tool("print", [f"{self.fixture_abs_path('hello.jac')}"])
+        cli.tool("ir", ["ast", f"{self.fixture_abs_path('hello.jac')}"])
 
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
@@ -88,7 +89,7 @@ class JacCliTests(TestCase):
         captured_output = io.StringIO()
         sys.stdout = captured_output
 
-        cli.ast_tool("dot_gen", [f"{self.fixture_abs_path('hello.jac')}"])
+        cli.tool("ir", ["ast.", f"{self.fixture_abs_path('hello.jac')}"])
 
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
@@ -98,7 +99,54 @@ class JacCliTests(TestCase):
         """Testing for print AstTool."""
         captured_output = io.StringIO()
         sys.stdout = captured_output
-        cli.type_check(f"{self.fixture_abs_path('game1.jac')}")
+        cli.check(f"{self.fixture_abs_path('game1.jac')}")
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
         self.assertIn("Errors: 0, Warnings: 1", stdout_value)
+
+    def test_build_and_run(self) -> None:
+        """Testing for print AstTool."""
+        if os.path.exists(f"{self.fixture_abs_path('needs_import.jir')}"):
+            os.remove(f"{self.fixture_abs_path('needs_import.jir')}")
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        cli.build(f"{self.fixture_abs_path('needs_import.jac')}")
+        cli.run(f"{self.fixture_abs_path('needs_import.jir')}")
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("Errors: 0, Warnings: 0", stdout_value)
+        self.assertIn("<module 'pyfunc' from", stdout_value)
+
+    def test_cache_no_cache_on_run(self) -> None:
+        """Basic test for pass."""
+        process = subprocess.Popen(
+            ["jac", "run", f"{self.fixture_abs_path('hello_nc.jac')}", "-nc"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        stdout, _ = process.communicate()
+        self.assertFalse(
+            os.path.exists(
+                f"{self.fixture_abs_path(os.path.join('__jac_gen__', 'hello_nc.jbc'))}"
+            )
+        )
+        self.assertIn("Hello World!", stdout)
+        process = subprocess.Popen(
+            ["jac", "run", f"{self.fixture_abs_path('hello_nc.jac')}", "-c"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        stdout, _ = process.communicate()
+        self.assertIn("Hello World!", stdout)
+        self.assertTrue(
+            os.path.exists(
+                f"{self.fixture_abs_path(os.path.join('__jac_gen__', 'hello_nc.jbc'))}"
+            )
+        )
+        os.remove(
+            f"{self.fixture_abs_path(os.path.join('__jac_gen__', 'hello_nc.jbc'))}"
+        )

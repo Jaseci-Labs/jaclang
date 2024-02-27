@@ -11,12 +11,15 @@ from jaclang.plugin.default import (
     WalkerArchitype as WalkerArchitype,
 )
 from jaclang.plugin.spec import DSFunc as DSFunc, JacFeatureSpec as JacFeatureSpec
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, TypeAlias
 
 class JacFeature:
     pm: Incomplete
-    RootType: Type[Root]
-    EdgeDir: Type[EdgeDir]
+    import abc
+    from jaclang.plugin.spec import DSFunc
+    from jaclang.compiler.constant import EdgeDir
+
+    RootType: TypeAlias = Root
     @staticmethod
     def make_obj(
         on_entry: list[DSFunc], on_exit: list[DSFunc]
@@ -47,9 +50,9 @@ class JacFeature:
     @staticmethod
     def elvis(op1: Optional[T], op2: T) -> T: ...
     @staticmethod
-    def has_instance_default(gen_func: Callable) -> list[Any] | dict[Any, Any]: ...
+    def has_instance_default(gen_func: Callable[[], T]) -> T: ...
     @staticmethod
-    def spawn_call(op1: Architype, op2: Architype) -> Architype: ...
+    def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype: ...
     @staticmethod
     def report(expr: Any) -> Any: ...
     @staticmethod
@@ -66,19 +69,27 @@ class JacFeature:
     def disengage(walker: WalkerArchitype) -> bool: ...
     @staticmethod
     def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
         dir: EdgeDir,
         filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]: ...
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]: ...
     @staticmethod
     def connect(
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
-        edge_spec: EdgeArchitype,
-    ) -> NodeArchitype | list[NodeArchitype]: ...
+        edge_spec: Callable[[], EdgeArchitype],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]: ...
     @staticmethod
-    def disconnect(op1: Optional[T], op2: T, op: Any) -> T: ...
+    def disconnect(
+        left: NodeArchitype | list[NodeArchitype],
+        right: NodeArchitype | list[NodeArchitype],
+        dir: EdgeDir,
+        filter_type: Optional[type],
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+    ) -> bool: ...
     @staticmethod
     def assign_compr(
         target: list[T], attr_val: tuple[tuple[str], tuple[Any]]
@@ -87,7 +98,11 @@ class JacFeature:
     def get_root() -> Architype: ...
     @staticmethod
     def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
+        is_undirected: bool,
+        conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype: ...
+    ) -> Callable[[], EdgeArchitype]: ...
+
+class JacBuiltin:
+    @staticmethod
+    def dotgen(node: NodeArchitype, radius: int = 0) -> str: ...

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+# import shelve
 import types
 import unittest
 from dataclasses import dataclass, field
@@ -23,9 +24,9 @@ class ElementAnchor:
 class ObjectAnchor(ElementAnchor):
     """Object Anchor."""
 
-    def spawn_call(self, walk: WalkerArchitype) -> None:
+    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
         """Invoke data spatial call."""
-        walk._jac_.spawn_call(self.obj)
+        return walk._jac_.spawn_call(self.obj)
 
 
 @dataclass(eq=False)
@@ -33,30 +34,66 @@ class NodeAnchor(ObjectAnchor):
     """Node Anchor."""
 
     obj: NodeArchitype
-    edges: dict[EdgeDir, list[EdgeArchitype]] = field(
-        default_factory=lambda: {EdgeDir.IN: [], EdgeDir.OUT: []}
-    )
+    edges: list[EdgeArchitype] = field(default_factory=lambda: [])
 
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
         edg._jac_.attach(self.obj, nd)
         return self.obj
 
+    def get_edges(
+        self,
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        target_obj: Optional[list[NodeArchitype]],
+    ) -> list[EdgeArchitype]:
+        """Get edges connected to this node."""
+        edge_list: list[EdgeArchitype] = [*self.edges]
+        ret_edges: list[EdgeArchitype] = []
+        edge_list = filter_func(edge_list) if filter_func else edge_list
+        for e in edge_list:
+            if (
+                e._jac_.target
+                and e._jac_.source
+                and (
+                    dir in [EdgeDir.OUT, EdgeDir.ANY]
+                    and self.obj == e._jac_.source
+                    and (not target_obj or e._jac_.target in target_obj)
+                )
+                or (
+                    dir in [EdgeDir.IN, EdgeDir.ANY]
+                    and self.obj == e._jac_.target
+                    and (not target_obj or e._jac_.source in target_obj)
+                )
+            ):
+                ret_edges.append(e)
+        return ret_edges
+
     def edges_to_nodes(
-        self, dir: EdgeDir, filter_type: Optional[type], filter_func: Optional[Callable]
+        self,
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        target_obj: Optional[list[NodeArchitype]],
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
-        filter_func = filter_func or (lambda x: x)
-        edge_list = [
-            e
-            for e in self.edges[dir]
-            if getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source", None)
-            and (not filter_type or isinstance(e, filter_type))
-        ]
-        return [
-            getattr(e._jac_, "target" if dir == EdgeDir.OUT else "source")
-            for e in filter_func(edge_list)
-        ]
+        edge_list: list[EdgeArchitype] = [*self.edges]
+        node_list: list[NodeArchitype] = []
+        edge_list = filter_func(edge_list) if filter_func else edge_list
+        for e in edge_list:
+            if e._jac_.target and e._jac_.source:
+                if (
+                    dir in [EdgeDir.OUT, EdgeDir.ANY]
+                    and self.obj == e._jac_.source
+                    and (not target_obj or e._jac_.target in target_obj)
+                ):
+                    node_list.append(e._jac_.target)
+                if (
+                    dir in [EdgeDir.IN, EdgeDir.ANY]
+                    and self.obj == e._jac_.target
+                    and (not target_obj or e._jac_.source in target_obj)
+                ):
+                    node_list.append(e._jac_.source)
+        return node_list
 
     def gen_dot(self, dot_file: Optional[str] = None) -> str:
         """Generate Dot file for visualizing nodes and edges."""
@@ -89,31 +126,36 @@ class EdgeAnchor(ObjectAnchor):
     obj: EdgeArchitype
     source: Optional[NodeArchitype] = None
     target: Optional[NodeArchitype] = None
-    dir: Optional[EdgeDir] = None
+    is_undirected: bool = False
 
-    def apply_dir(self, dir: EdgeDir) -> EdgeAnchor:
-        """Apply direction to edge."""
-        self.dir = dir
-        return self
-
-    def attach(self, src: NodeArchitype, trg: NodeArchitype) -> EdgeAnchor:
+    def attach(
+        self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
+    ) -> EdgeAnchor:
         """Attach edge to nodes."""
-        if self.dir == EdgeDir.IN:
-            self.source = trg
-            self.target = src
-            self.source._jac_.edges[EdgeDir.IN].append(self.obj)
-            self.target._jac_.edges[EdgeDir.OUT].append(self.obj)
-        else:
-            self.source = src
-            self.target = trg
-            self.source._jac_.edges[EdgeDir.OUT].append(self.obj)
-            self.target._jac_.edges[EdgeDir.IN].append(self.obj)
+        self.source = src
+        self.target = trg
+        self.is_undirected = is_undirected
+        src._jac_.edges.append(self.obj)
+        trg._jac_.edges.append(self.obj)
         return self
 
-    def spawn_call(self, walk: WalkerArchitype) -> None:
+    def detach(
+        self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
+    ) -> EdgeAnchor:
+        """Detach edge from nodes."""
+        self.source = src  # TODO: Delete me, don't keep attached
+        self.target = trg  # TODO: Delete me, don't keep attached
+        self.is_undirected = is_undirected
+        src._jac_.edges.remove(self.obj)
+        trg._jac_.edges.remove(self.obj)
+        return self
+
+    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
         """Invoke data spatial call."""
         if self.target:
-            walk._jac_.spawn_call(self.target)
+            return walk._jac_.spawn_call(self.target)
+        else:
+            raise ValueError("Edge has no target.")
 
 
 @dataclass(eq=False)
@@ -174,7 +216,7 @@ class WalkerAnchor(ObjectAnchor):
         """Disengage walker from traversal."""
         self.disengaged = True
 
-    def spawn_call(self, nd: Architype) -> None:
+    def spawn_call(self, nd: Architype) -> WalkerArchitype:
         """Invoke data spatial call."""
         self.path = []
         self.next = [nd]
@@ -187,7 +229,7 @@ class WalkerAnchor(ObjectAnchor):
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in self.obj._jac_entry_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
@@ -195,7 +237,7 @@ class WalkerAnchor(ObjectAnchor):
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in self.obj._jac_exit_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
@@ -203,7 +245,7 @@ class WalkerAnchor(ObjectAnchor):
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in nd._jac_exit_funcs_:
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
@@ -211,8 +253,9 @@ class WalkerAnchor(ObjectAnchor):
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
         self.ignores = []
+        return self.obj
 
 
 class Architype:
@@ -255,6 +298,14 @@ class Root(NodeArchitype):
 
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
+    reachable_nodes: list[NodeArchitype] = []
+    connections: set[tuple[NodeArchitype, NodeArchitype, EdgeArchitype]] = set()
+
+    def reset(self) -> None:
+        """Reset the root."""
+        self.reachable_nodes = []
+        self.connections = set()
+        self._jac_.edges = []
 
 
 class GenericEdge(EdgeArchitype):

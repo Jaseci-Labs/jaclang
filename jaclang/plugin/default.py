@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 import types
-from dataclasses import dataclass, field
+from dataclasses import field
 from functools import wraps
 from typing import Any, Callable, Optional, Type
 
+from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.construct import (
     Architype,
@@ -25,6 +26,7 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
+from jaclang.core.jacbuiltins import dotgen
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -68,14 +70,13 @@ class JacFeatureDefaults:
         on_exit: list[DSFunc],
     ) -> Type[Architype]:
         """Create a new architype."""
-        cls = dataclass(eq=False)(cls)
         for i in on_entry + on_exit:
             i.resolve(cls)
         if not issubclass(cls, arch_base):
             cls = type(cls.__name__, (cls, arch_base), {})
-        cls._jac_entry_funcs_ = on_entry
-        cls._jac_exit_funcs_ = on_exit
-        inner_init = cls.__init__
+        cls._jac_entry_funcs_ = on_entry  # type: ignore
+        cls._jac_exit_funcs_ = on_exit  # type: ignore
+        inner_init = cls.__init__  # type: ignore
 
         @wraps(inner_init)
         def new_init(self: Architype, *args: object, **kwargs: object) -> None:
@@ -156,6 +157,7 @@ class JacFeatureDefaults:
         base_path: str,
         cachable: bool,
         override_name: Optional[str],
+        mod_bundle: Optional[Module],
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
         result = jac_importer(
@@ -163,6 +165,7 @@ class JacFeatureDefaults:
             base_path=base_path,
             cachable=cachable,
             override_name=override_name,
+            mod_bundle=mod_bundle,
         )
         return result
 
@@ -205,21 +208,20 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def has_instance_default(gen_func: Callable) -> list[Any] | dict[Any, Any]:
+    def has_instance_default(gen_func: Callable[[], T]) -> T:
         """Jac's has container default feature."""
         return field(default_factory=lambda: gen_func())
 
     @staticmethod
     @hookimpl
-    def spawn_call(op1: Architype, op2: Architype) -> bool:
+    def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype:
         """Jac's spawn operator feature."""
         if isinstance(op1, WalkerArchitype):
-            op1._jac_.spawn_call(op2)
+            return op1._jac_.spawn_call(op2)
         elif isinstance(op2, WalkerArchitype):
-            op2._jac_.spawn_call(op1)
+            return op2._jac_.spawn_call(op1)
         else:
             raise TypeError("Invalid walker object")
-        return True
 
     @staticmethod
     @hookimpl
@@ -257,49 +259,90 @@ class JacFeatureDefaults:
     @staticmethod
     @hookimpl
     def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
+        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
-        filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]:
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's apply_dir stmt feature."""
         if isinstance(node_obj, NodeArchitype):
-            return node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+            node_obj = [node_obj]
+        targ_obj_set: Optional[list[NodeArchitype]] = (
+            [target_obj]
+            if isinstance(target_obj, NodeArchitype)
+            else target_obj if target_obj else None
+        )
+        if edges_only:
+            connected_edges: list[EdgeArchitype] = []
+            for node in node_obj:
+                connected_edges += node._jac_.get_edges(
+                    dir, filter_func, target_obj=targ_obj_set
+                )
+            return list(set(connected_edges))
         else:
-            raise TypeError("Invalid node object")
+            connected_nodes: list[NodeArchitype] = []
+            for node in node_obj:
+                connected_nodes.extend(
+                    node._jac_.edges_to_nodes(dir, filter_func, target_obj=targ_obj_set)
+                )
+            return list(set(connected_nodes))
 
     @staticmethod
     @hookimpl
     def connect(
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
-        edge_spec: EdgeArchitype,
-    ) -> NodeArchitype | list[NodeArchitype]:
+        edge_spec: Callable[[], EdgeArchitype],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's connect operator feature.
 
         Note: connect needs to call assign compr with tuple in op
         """
-        if isinstance(left, list):
-            if isinstance(right, list):
-                for i in left:
-                    for j in right:
-                        i._jac_.connect_node(j, edge_spec)
-            else:
-                for i in left:
-                    i._jac_.connect_node(right, edge_spec)
-        else:
-            if isinstance(right, list):
-                for i in right:
-                    left._jac_.connect_node(i, edge_spec)
-            else:
-                left._jac_.connect_node(right, edge_spec)
-        return left
+        left = [left] if isinstance(left, NodeArchitype) else left
+        right = [right] if isinstance(right, NodeArchitype) else right
+        edges = []
+        for i in left:
+            for j in right:
+                conn_edge = edge_spec()
+                edges.append(conn_edge)
+                i._jac_.connect_node(j, conn_edge)
+        return right if not edges_only else edges
 
     @staticmethod
     @hookimpl
-    def disconnect(op1: Optional[T], op2: T, op: Any) -> T:  # noqa: ANN401
-        """Jac's connect operator feature."""
-        return ret if (ret := op1) is not None else op2
+    def disconnect(
+        left: NodeArchitype | list[NodeArchitype],
+        right: NodeArchitype | list[NodeArchitype],
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+    ) -> bool:  # noqa: ANN401
+        """Jac's disconnect operator feature."""
+        disconnect_occurred = False
+        left = [left] if isinstance(left, NodeArchitype) else left
+        right = [right] if isinstance(right, NodeArchitype) else right
+        for i in left:
+            for j in right:
+                edge_list: list[EdgeArchitype] = [*i._jac_.edges]
+                edge_list = filter_func(edge_list) if filter_func else edge_list
+                for e in edge_list:
+                    if e._jac_.target and e._jac_.source:
+                        if (
+                            dir in ["OUT", "ANY"]  # TODO: Not ideal
+                            and i._jac_.obj == e._jac_.source
+                            and e._jac_.target == j._jac_.obj
+                        ):
+                            e._jac_.detach(i._jac_.obj, e._jac_.target)
+                            disconnect_occurred = True
+                        if (
+                            dir in ["IN", "ANY"]
+                            and i._jac_.obj == e._jac_.target
+                            and e._jac_.source == j._jac_.obj
+                        ):
+                            e._jac_.detach(i._jac_.obj, e._jac_.source)
+                            disconnect_occurred = True
+        return disconnect_occurred
 
     @staticmethod
     @hookimpl
@@ -322,21 +365,42 @@ class JacFeatureDefaults:
     @staticmethod
     @hookimpl
     def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
+        is_undirected: bool,
+        conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype:
+    ) -> Callable[[], EdgeArchitype]:
         """Jac's root getter."""
         conn_type = conn_type if conn_type else GenericEdge
-        edge = conn_type()
-        if isinstance(edge._jac_, EdgeAnchor):
-            edge._jac_.dir = edge_dir
-        else:
-            raise TypeError("Invalid edge object")
-        if conn_assign:
-            for fld, val in zip(conn_assign[0], conn_assign[1]):
-                if hasattr(edge, fld):
-                    setattr(edge, fld, val)
-                else:
-                    raise ValueError(f"Invalid attribute: {fld}")
-        return edge
+
+        def builder() -> EdgeArchitype:
+            edge = conn_type()
+            edge._jac_.is_undirected = is_undirected
+            if conn_assign:
+                for fld, val in zip(conn_assign[0], conn_assign[1]):
+                    if hasattr(edge, fld):
+                        setattr(edge, fld, val)
+                    else:
+                        raise ValueError(f"Invalid attribute: {fld}")
+            return edge
+
+        return builder
+
+
+class JacBuiltin:
+    """Jac Builtins."""
+
+    @staticmethod
+    @hookimpl
+    def dotgen(node: NodeArchitype, radius: int = 0) -> str:
+        """Print the dot graph."""
+        return dotgen(node, radius)
+
+
+class JacCmdDefaults:
+    """Jac CLI command."""
+
+    @staticmethod
+    @hookimpl
+    def create_cmd() -> None:
+        """Create Jac CLI cmds."""
+        pass
