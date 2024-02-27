@@ -1,12 +1,10 @@
 """JacLang FastAPI Core."""
 
-from ctypes import Union
-import time
-from typing import Any, Callable
+from typing import Any
 from annotated_types import T
 from uvicorn.config import LOGGING_CONFIG
 
-from fastapi import FastAPI as _FaststAPI, Request
+from fastapi import FastAPI as _FaststAPI
 from jaclang_edgedb.walkerapi import DefaultSpecs
 
 from uvicorn import run as _run

@@ -44,41 +44,6 @@ from typing import (
 )
 from jaclang.plugin.feature import JacFeature as Jac
 
-
-def add_fn_param(func, param_name, param_type, default_value=inspect.Parameter.empty):
-    # Get the function's signature
-    signature = inspect.signature(func)
-
-    # Create a new parameter with the specified name, type, and default value
-    new_param = inspect.Parameter(
-        param_name,
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        annotation=param_type,
-        default=default_value,
-    )
-
-    # Update the function's signature with the new parameter
-    parameters = list(signature.parameters.values())
-    parameters.append(new_param)
-    new_signature = signature.replace(parameters=parameters)
-
-    # Set the new signature for the function
-    func.__signature__ = new_signature
-
-
-def remove_fn_param(func, param_name):
-    # Get the function's signature
-    signature = inspect.signature(func)
-
-    # Remove the parameter with the specified name
-    parameters = list(signature.parameters.values())
-    parameters = [p for p in parameters if p.name != param_name]
-    new_signature = signature.replace(parameters=parameters)
-
-    # Set the new signature for the function
-    func.__signature__ = new_signature
-
-
 client = edgedb.create_client()
 async_client = edgedb.create_async_client()
 
@@ -261,7 +226,6 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     #         path = f"/{path}"
     #     as_query += PATH_VARIABLE_REGEX.findall(path)
 
-    is_guarded = False
     path = f"/{to_snake_case(cls.__name__)}"
 
     cls_fields = cls.__dataclass_fields__
