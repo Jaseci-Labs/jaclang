@@ -673,16 +673,21 @@ class JacContext:
         """Append report."""
         self.reports.append(obj)
 
-    def response(self) -> list:
+    def response(self, ret: Any, status: int = 200) -> list:  # noqa: ANN401
         """Return serialized version of reports."""
-        for key, val in enumerate(self.reports):
-            if isinstance(val, Architype) and (
-                ret_jd := getattr(val, "_jac_doc_", None)
-            ):
-                self.reports[key] = {"id": ret_jd.ref_id, "ctx": asdict(val)}
-            else:
-                self.clean_response(key, val, self.reports)
-        return self.reports
+        resp = {"status": status, "data": ret}
+
+        if self.reports:
+            for key, val in enumerate(self.reports):
+                if isinstance(val, Architype) and (
+                    ret_jd := getattr(val, "_jac_doc_", None)
+                ):
+                    self.reports[key] = {"id": ret_jd.ref_id, "ctx": asdict(val)}
+                else:
+                    self.clean_response(key, val, self.reports)
+            resp["report"] = self.reports
+
+        return resp
 
     def clean_response(
         self, key: str, val: Any, obj: Union[list, dict]  # noqa: ANN401

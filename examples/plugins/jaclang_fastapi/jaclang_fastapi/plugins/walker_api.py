@@ -53,6 +53,8 @@ class WalkerAnchor(_WalkerAnchor):
         """Await return if it's a coroutine."""
         if iscoroutine(ret):
             ret = await ret
+        if not hasattr(self.obj, "_jac_return_"):
+            self.obj._jac_return_ = ret
 
     async def spawn_call(self, nd: Architype) -> None:
         """Invoke data spatial call."""
@@ -234,7 +236,7 @@ def populate_apis(cls: type) -> None:
         payload = payload.model_dump()
         wlk = cls(**payload.get("body", {}), **payload["query"], **payload["files"])
         await wlk._jac_.spawn_call(await jctx.get_entry())
-        return jctx.response()
+        return jctx.response(getattr(wlk, "_jac_return_", None))
 
     async def api_root(
         request: Request,

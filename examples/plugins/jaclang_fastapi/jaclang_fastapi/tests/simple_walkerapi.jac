@@ -50,12 +50,14 @@ walker post_with_body {
         boys = await -->;
         report boys;
         visit boys;
+        return {"sample_return":"1"};
     }
 
     async can enter2 with boy entry {
         girls = await -->;
         report girls;
         visit girls;
+        return 2;
     }
 
     async can enter3 with girl entry {
