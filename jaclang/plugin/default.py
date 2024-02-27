@@ -9,7 +9,7 @@ from functools import wraps
 from typing import Any, Callable, Optional, Type
 
 from jaclang.compiler.absyntree import Module
-from jaclang.compiler.constant import EdgeDir
+from jaclang.compiler.constant import EdgeDir, EdgeDirGroup
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -323,25 +323,23 @@ class JacFeatureDefaults:
         left = [left] if isinstance(left, NodeArchitype) else left
         right = [right] if isinstance(right, NodeArchitype) else right
         for i in left:
-            for j in right:
-                edge_list: list[EdgeArchitype] = [*i._jac_.edges]
-                edge_list = filter_func(edge_list) if filter_func else edge_list
-                for e in edge_list:
-                    if e._jac_.target and e._jac_.source:
-                        if (
-                            dir in ["OUT", "ANY"]  # TODO: Not ideal
-                            and i._jac_.obj == e._jac_.source
-                            and e._jac_.target == j._jac_.obj
-                        ):
-                            e._jac_.detach(i._jac_.obj, e._jac_.target)
-                            disconnect_occurred = True
-                        if (
-                            dir in ["IN", "ANY"]
-                            and i._jac_.obj == e._jac_.target
-                            and e._jac_.source == j._jac_.obj
-                        ):
-                            e._jac_.detach(i._jac_.obj, e._jac_.source)
-                            disconnect_occurred = True
+            edge_list: list[EdgeArchitype] = []
+            if dir in EdgeDirGroup.IN:
+                edge_list += [
+                    e
+                    for e in i._jac_.edges_in
+                    if e._jac_.target == i and e._jac_.source in right
+                ]
+            if dir in EdgeDirGroup.OUT:
+                edge_list += [
+                    e
+                    for e in i._jac_.edges_out
+                    if e._jac_.source == i and e._jac_.target in right
+                ]
+
+            for e in filter_func(edge_list) if filter_func else edge_list:
+                e._jac_.detach()
+                disconnect_occurred = True
         return disconnect_occurred
 
     @staticmethod

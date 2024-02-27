@@ -234,3 +234,10 @@ class Tokens(str, Enum):
     def __str__(self) -> str:
         """Return the string representation of the token."""
         return self.value
+
+
+class EdgeDirGroup:
+    """Edge direction group."""
+
+    OUT: list[EdgeDir] = [EdgeDir.OUT, EdgeDir.ANY]
+    IN: list[EdgeDir] = [EdgeDir.IN, EdgeDir.ANY]
