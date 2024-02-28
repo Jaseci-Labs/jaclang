@@ -47,21 +47,21 @@ walker post_with_body {
     async can enter1 with `<r> entry {
         report <r>;
 
-        boys = await -->;
+        boys = await [-->];
         report boys;
         visit boys;
         return {"sample_return":"1"};
     }
 
     async can enter2 with boy entry {
-        girls = await -->;
+        girls = await [-->];
         report girls;
         visit girls;
         return 2;
     }
 
     async can enter3 with girl entry {
-        anyone = await -->;
+        anyone = await [-->];
         report anyone;
         visit anyone;
     }

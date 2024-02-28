@@ -9,7 +9,6 @@ from jaclang.plugin.feature import JacFeature as Jac
 
 from .common import (
     ArchCollection,
-    EdgeAnchor,
     EdgeArchitype,
     GenericEdge,
     JCLASS,
@@ -58,38 +57,59 @@ class JacPlugin:
     @staticmethod
     @hookimpl
     async def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
+        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
-        filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]:
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's apply_dir stmt feature."""
         if isinstance(node_obj, NodeArchitype):
-            return await node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+            node_obj = [node_obj]
+        targ_obj_set: Optional[list[NodeArchitype]] = (
+            [target_obj]
+            if isinstance(target_obj, NodeArchitype)
+            else target_obj if target_obj else None
+        )
+        if edges_only:
+            connected_edges: list[EdgeArchitype] = []
+            for node in node_obj:
+                connected_edges += await node._jac_.get_edges(
+                    dir, filter_func, target_obj=targ_obj_set
+                )
+            return list(set(connected_edges))
         else:
-            raise TypeError("Invalid node object")
+            connected_nodes: list[NodeArchitype] = []
+            for node in node_obj:
+                connected_nodes.extend(
+                    await node._jac_.edges_to_nodes(
+                        dir, filter_func, target_obj=targ_obj_set
+                    )
+                )
+            return list(set(connected_nodes))
 
     @staticmethod
     @hookimpl
     def build_edge(
-        edge_dir: EdgeDir,
-        conn_type: Optional[Type[Architype]],
+        is_undirected: bool,
+        conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
-    ) -> Architype:
+    ) -> Callable[[], EdgeArchitype]:
         """Jac's root getter."""
         conn_type = conn_type if conn_type else GenericEdge
-        edge = conn_type()
-        if isinstance(edge._jac_, EdgeAnchor):
-            edge._jac_.dir = edge_dir
-        else:
-            raise TypeError("Invalid edge object")
-        if conn_assign:
-            for fld, val in zip(conn_assign[0], conn_assign[1]):
-                if hasattr(edge, fld):
-                    setattr(edge, fld, val)
-                else:
-                    raise ValueError(f"Invalid attribute: {fld}")
-        return edge
+
+        def builder() -> EdgeArchitype:
+            edge = conn_type()
+            edge._jac_.is_undirected = is_undirected
+            if conn_assign:
+                for fld, val in zip(conn_assign[0], conn_assign[1]):
+                    if hasattr(edge, fld):
+                        setattr(edge, fld, val)
+                    else:
+                        raise ValueError(f"Invalid attribute: {fld}")
+            return edge
+
+        return builder
 
 
 def populate_collection(cls: type, jtype: JType) -> type:
