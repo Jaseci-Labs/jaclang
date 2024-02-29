@@ -35,7 +35,7 @@ class JacPlugin:
             cls = Jac.make_architype(
                 cls, arch_base=NodeArchitype, on_entry=on_entry, on_exit=on_exit
             )
-            populate_collection(cls, JType.NODE)
+            populate_collection(cls, JType.node)
             return cls
 
         return decorator
@@ -52,7 +52,7 @@ class JacPlugin:
             cls = Jac.make_architype(
                 cls, arch_base=EdgeArchitype, on_entry=on_entry, on_exit=on_exit
             )
-            populate_collection(cls, JType.EDGE)
+            populate_collection(cls, JType.edge)
             return cls
 
         return decorator
@@ -157,12 +157,12 @@ class JacPlugin:
 
 def populate_collection(cls: type, jtype: JType) -> type:
     """Override Architype's Collection to support MongoDB operations."""
-    class_name = cls.__name__.lower()
-    JCLASS[jtype.value][class_name] = cls
+    cls_name = cls.__name__
+    JCLASS[jtype.value][cls_name] = cls
 
     cls._jac_fields_ = [field.name for field in fields(cls)]
 
-    collection = f"{jtype}_{class_name}"
+    collection = f"{jtype.name.lower()}"
     if (coll := getattr(cls, "Collection", None)) is None:
 
         class Collection(ArchCollection):
@@ -175,7 +175,7 @@ def populate_collection(cls: type, jtype: JType) -> type:
         cls.Collection = type(
             coll.__name__, (coll, ArchCollection), {"__collection__": collection}
         )
-
-    cls.Collection.__qualname__ = f"{cls.__qualname__}.{cls.Collection.__name__}"
+    else:
+        cls.Collection = type(coll.__name__, (coll,), {})
 
     return cls

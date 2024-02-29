@@ -5,14 +5,13 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from re import IGNORECASE, compile
-from typing import Any, Callable, ClassVar, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from bson import ObjectId
 
 from fastapi import Request
 
 from jaclang.core.construct import (
-    Architype,
     EdgeAnchor as _EdgeAnchor,
     EdgeArchitype as _EdgeArchitype,
     EdgeDir,
@@ -22,31 +21,22 @@ from jaclang.core.construct import (
     root as base_root,
 )
 
-from pymongo import UpdateOne
+from pymongo import ASCENDING, UpdateOne
 from pymongo.client_session import ClientSession
 
 from ..collections import BaseCollection
 from ..utils import logger
 
 
-TARGET_NODE_REGEX = compile(r"^([^:]+):(r|n|e):([a-f\d]{24})$", IGNORECASE)
+TARGET_NODE_REGEX = compile(r"^(n|e):([^:]*):([a-f\d]{24})$", IGNORECASE)
 JCONTEXT = ContextVar("JCONTEXT")
 
 
 class JType(Enum):
     """Enum For Graph Types."""
 
-    ROOT = 0
-    NODE = 1
-    EDGE = 2
-
-    def __str__(self) -> str:
-        """Return equivalent shorthand name."""
-        return JTYPE[self.value]
-
-
-JTYPE = ["r", "n", "e"]
-JTYPE_DICT = {"r": JType.ROOT, "n": JType.NODE, "e": JType.EDGE}
+    node = "n"
+    edge = "e"
 
 
 class ArchCollection(BaseCollection):
@@ -73,14 +63,6 @@ class ArchCollection(BaseCollection):
 
         return arch
 
-    @classmethod
-    def get_model(cls, default: str) -> str:
-        """Return Outter Model Class."""
-        qual = cls.__qualname__.split(f".{cls.__name__}")
-        if len(qual) > 1:
-            return qual[0].split(".")[-1]
-        return default
-
 
 @dataclass
 class DocAccess:
@@ -100,7 +82,7 @@ class DocAnchor:
     """DocAnchor for Mongodb Referencing."""
 
     type: JType
-    name: str
+    name: str = ""
     id: ObjectId = field(default_factory=ObjectId)
     root: Optional["Root"] = None
     access: DocAccess = field(default_factory=DocAccess)
@@ -111,7 +93,7 @@ class DocAnchor:
     @property
     def ref_id(self) -> str:
         """Return id in reference type."""
-        return f"{self.name}:{self.type}:{self.id}"
+        return f"{self.type.value}:{self.name}:{self.id}"
 
     @property
     def _set(self) -> dict:
@@ -221,7 +203,7 @@ class DocAnchor:
         self.changes = {}
         return changes
 
-    def build(self, **kwargs: "dict[str, Any]") -> object:
+    def build(self, **kwargs: Any) -> object:  # noqa ANN401
         """Return generated class instance equivalent for DocAnchor."""
         self.arch = self.class_ref()(**kwargs)
         self.arch._jac_doc_ = self
@@ -229,15 +211,20 @@ class DocAnchor:
 
     def json(self) -> dict:
         """Return in dictionary type."""
-        return {"_id": self.id, "root": self.root, "access": self.access.json()}
+        return {
+            "_id": self.id,
+            "name": self.name,
+            "root": self.root,
+            "access": self.access.json(),
+        }
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional["DocAnchor"]:
         """Return DocAnchor instance if ."""
         if ref_id and (match := TARGET_NODE_REGEX.search(ref_id)):
             return cls(
-                type=JTYPE_DICT[match.group(2)],
-                name=match.group(1),
+                type=JType(match.group(1)),
+                name=match.group(2),
                 id=ObjectId(match.group(3)),
             )
         return None
@@ -312,6 +299,10 @@ class DocArchitype:
 
         return super().__setattr__(__name, __value)
 
+    def get_context(self) -> dict:
+        """Retrieve context dictionary."""
+        return {"context": asdict(self)}
+
     async def propagate_save(
         self, changes: dict, session: ClientSession
     ) -> list[UpdateOne]:
@@ -362,14 +353,19 @@ class DocArchitype:
 class NodeArchitype(_NodeArchitype, DocArchitype):
     """Overriden NodeArchitype."""
 
-    _jac_type_ = JType.NODE
+    _jac_type_ = JType.node
 
     def __init__(self) -> None:
         """Create node architype."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
 
-    class Collection:
+    class Collection(ArchCollection):
         """Default NodeArchitype Collection."""
+
+        __collection__ = "node"
+        __indexes__ = [
+            {"fields": [("_id", ASCENDING), ("name", ASCENDING), ("root", ASCENDING)]}
+        ]
 
         @classmethod
         def __document__(cls, doc: dict) -> "NodeArchitype":
@@ -377,8 +373,8 @@ class NodeArchitype(_NodeArchitype, DocArchitype):
             access: dict = doc.get("access")
             return cls.build_node(
                 DocAnchor(
-                    type=JType.NODE,
-                    name=cls.get_model("node"),
+                    type=JType.node,
+                    name=doc.get("name"),
                     id=doc.get("_id"),
                     root=doc.get("root"),
                     access=DocAccess(
@@ -443,7 +439,7 @@ class NodeArchitype(_NodeArchitype, DocArchitype):
                         (await edge.save(session)).ref_id for edge in self._jac_.edges
                     ]
                     await self.Collection.insert_one(
-                        {**jd.json(), "edge": edges, "context": asdict(self)},
+                        {**jd.json(), "edge": edges, **self.get_context()},
                         session=session,
                     )
                 except Exception:
@@ -557,8 +553,6 @@ class NodeAnchor(_NodeAnchor):
 class Root(NodeArchitype, _Root):
     """Overridden Root."""
 
-    _jac_type_: ClassVar[JType] = JType.ROOT
-
     def __init__(self) -> None:
         """Create Root."""
         self._jac_: NodeAnchor = NodeAnchor(obj=self)
@@ -569,18 +563,19 @@ class Root(NodeArchitype, _Root):
         root = cls()
         root_id = ObjectId()
         root._jac_doc_ = DocAnchor(
-            type=JType.ROOT,
-            name=root.__class__.__name__,
+            type=JType.node,
             id=root_id,
             root=root_id,
             arch=root,
         )
         return await root.save(session)
 
-    class Collection(ArchCollection):
-        """Default Root Collection."""
+    def get_context(self) -> None:
+        """Override context retrieval."""
+        return {}
 
-        __collection__ = "root"
+    class Collection(NodeArchitype.Collection):
+        """Default Root Collection."""
 
         @classmethod
         def __document__(cls, doc: dict) -> "Root":
@@ -588,8 +583,7 @@ class Root(NodeArchitype, _Root):
             access: dict = doc.get("access")
             return cls.build_node(
                 DocAnchor(
-                    type=JType.ROOT,
-                    name="root",
+                    type=JType.node,
                     id=doc.get("_id"),
                     root=doc.get("root"),
                     access=DocAccess(
@@ -606,14 +600,19 @@ class Root(NodeArchitype, _Root):
 class EdgeArchitype(_EdgeArchitype, DocArchitype):
     """Overriden EdgeArchitype."""
 
-    _jac_type_ = JType.EDGE
+    _jac_type_ = JType.edge
 
     def __init__(self) -> None:
         """Create EdgeArchitype."""
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
 
-    class Collection:
+    class Collection(ArchCollection):
         """Default EdgeArchitype Collection."""
+
+        __collection__ = "edge"
+        __indexes__ = [
+            {"fields": [("_id", ASCENDING), ("name", ASCENDING), ("root", ASCENDING)]}
+        ]
 
         @classmethod
         def __document__(cls, doc: dict) -> "EdgeArchitype":
@@ -621,8 +620,8 @@ class EdgeArchitype(_EdgeArchitype, DocArchitype):
             access: dict = doc.get("access")
             return cls.build_edge(
                 DocAnchor(
-                    type=JType.EDGE,
-                    name=cls.get_model("edge"),
+                    type=JType.edge,
+                    name=doc.get("name"),
                     id=doc.get("_id"),
                     root=doc.get("root"),
                     access=DocAccess(
@@ -676,7 +675,7 @@ class EdgeArchitype(_EdgeArchitype, DocArchitype):
                             "source": (await self._jac_.source.save(session)).ref_id,
                             "target": (await self._jac_.target.save(session)).ref_id,
                             "is_undirected": self._jac_.is_undirected,
-                            "context": asdict(self),
+                            **self.get_context(),
                         },
                         session=session,
                     )
@@ -747,10 +746,14 @@ class GenericEdge(EdgeArchitype):
         """Create Generic Edge."""
         self._jac_: EdgeAnchor = EdgeAnchor(obj=self)
 
-    class Collection(EdgeArchitype.Collection, ArchCollection):
+    def get_context(self) -> None:
+        """Override context retrieval."""
+        return {}
+
+    class Collection(EdgeArchitype.Collection):
         """Default GenericEdge Collection."""
 
-        __collection__ = "e"
+        __collection__ = "edge"
 
         @classmethod
         def __document__(cls, doc: dict) -> "EdgeArchitype":
@@ -758,8 +761,7 @@ class GenericEdge(EdgeArchitype):
             access: dict = doc.get("access")
             return cls.build_edge(
                 DocAnchor(
-                    type=JType.EDGE,
-                    name="edge",
+                    type=JType.edge,
                     id=doc.get("_id"),
                     root=doc.get("root"),
                     access=DocAccess(
@@ -795,8 +797,8 @@ class JacContext:
         """Retrieve Node Entry Point."""
         if isinstance(self.entry, str):
             if self.entry and (match := TARGET_NODE_REGEX.search(self.entry)):
-                entry = await JCLASS[JTYPE_DICT[match.group(2)].value][
-                    match.group(1)
+                entry = await JCLASS[match.group(1)][
+                    match.group(2)
                 ].Collection.find_by_id(ObjectId(match.group(3)))
                 if isinstance(entry, NodeArchitype):
                     self.entry = entry
@@ -849,10 +851,10 @@ class JacContext:
 
         if self.reports:
             for key, val in enumerate(self.reports):
-                if isinstance(val, Architype) and (
+                if isinstance(val, DocArchitype) and (
                     ret_jd := getattr(val, "_jac_doc_", None)
                 ):
-                    self.reports[key] = {"id": ret_jd.ref_id, "ctx": asdict(val)}
+                    self.reports[key] = {"id": ret_jd.ref_id, **val.get_context()}
                 else:
                     self.clean_response(key, val, self.reports)
             resp["report"] = self.reports
@@ -869,11 +871,13 @@ class JacContext:
         elif isinstance(val, dict):
             for key, dval in val.items():
                 self.clean_response(key, dval, val)
-        elif isinstance(val, Architype) and (ret_jd := getattr(val, "_jac_doc_", None)):
-            obj[key] = {"id": ret_jd.ref_id, "context": asdict(val)}
+        elif isinstance(val, DocArchitype) and (
+            ret_jd := getattr(val, "_jac_doc_", None)
+        ):
+            obj[key] = {"id": ret_jd.ref_id, **val.get_context()}
 
 
-Root.__name__ = "root"
-GenericEdge.__name__ = "edge"
+Root.__name__ = ""
+GenericEdge.__name__ = ""
 
-JCLASS = [{"root": Root}, {}, {"edge": GenericEdge}]
+JCLASS = {"n": {"": Root}, "e": {"": GenericEdge}}
