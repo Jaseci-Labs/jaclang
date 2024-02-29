@@ -141,6 +141,28 @@ walker post_with_body_and_file {
     has multiple: Files;
 }
 
+walker change_new_girl {
+    async can enter1 with `<r> entry {
+        boys = await [-->];
+        visit boys;
+
+        return "your return";
+    }
+
+    async can enter2 with boy entry {
+        old = await [-->];
+        report old;
+
+        new = girl(val="new");
+        <h> ++> new;
+        await new.save();
+
+        await old[0].destroy();
+
+        report await [-->];
+    }
+}
+
 with entry:__main__ {
     start(
         host="0.0.0.0",

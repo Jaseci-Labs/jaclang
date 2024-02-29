@@ -1,13 +1,13 @@
 """BaseCollection Interface."""
 
 from os import getenv
-from typing import Any, Callable
+from typing import Any, Callable, Union
 
 from bson import ObjectId
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from pymongo import IndexModel
+from pymongo import DeleteMany, DeleteOne, IndexModel, InsertOne, UpdateMany, UpdateOne
 from pymongo.client_session import ClientSession
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -166,7 +166,7 @@ class BaseCollection:
 
     @classmethod
     async def update_by_id(
-        cls, id: dict, update: dict, session: ClientSession = None
+        cls, id: Union[str, ObjectId], update: dict, session: ClientSession = None
     ) -> int:
         """Update single document via ID and return if it's modified or not."""
         return await cls.update_one({"_id": ObjectId(id)}, update, session)
@@ -201,7 +201,7 @@ class BaseCollection:
 
     @classmethod
     async def find_by_id(
-        cls, id: str, *args: list[Any], **kwargs: dict[str, Any]
+        cls, id: Union[str, ObjectId], *args: list[Any], **kwargs: dict[str, Any]
     ) -> object:
         """Retrieve single document via ID."""
         return await cls.find_one({"_id": ObjectId(id)}, *args, **kwargs)
@@ -233,6 +233,25 @@ class BaseCollection:
         return 0
 
     @classmethod
-    async def delete_by_id(cls, id: str, session: ClientSession = None) -> int:
+    async def delete_by_id(
+        cls, id: Union[str, ObjectId], session: ClientSession = None
+    ) -> int:
         """Delete single document via ID and return if it's deleted or not."""
         return await cls.delete_one({"_id": ObjectId(id)}, session)
+
+    @classmethod
+    async def bulk_write(
+        cls,
+        ops: list[Union[InsertOne, DeleteMany, DeleteOne, UpdateMany, UpdateOne]],
+        session: ClientSession = None,
+    ) -> dict:  # noqa ANN401
+        """Bulk write operations."""
+        try:
+            collection = await cls.collection(session=session)
+            result = await collection.bulk_write(ops, session=session)
+            return result.bulk_api_result
+        except Exception:
+            if session:
+                raise
+            logger.exception(f"Error bulk write:\n{ops}")
+        return {}

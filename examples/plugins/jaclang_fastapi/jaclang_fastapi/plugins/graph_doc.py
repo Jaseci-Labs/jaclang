@@ -9,10 +9,13 @@ from jaclang.plugin.feature import JacFeature as Jac
 
 from .common import (
     ArchCollection,
+    DocAnchor,
     EdgeArchitype,
     GenericEdge,
     JCLASS,
+    JCONTEXT,
     JType,
+    JacContext,
     NodeArchitype,
 )
 
@@ -110,6 +113,46 @@ class JacPlugin:
             return edge
 
         return builder
+
+    @staticmethod
+    @hookimpl
+    async def disconnect(
+        left: NodeArchitype | list[NodeArchitype],
+        right: NodeArchitype | list[NodeArchitype],
+        dir: EdgeDir,
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+    ) -> bool:  # noqa: ANN401
+        """Jac's disconnect operator feature."""
+        disconnect_occurred = False
+        left = [left] if isinstance(left, NodeArchitype) else left
+        right = [right] if isinstance(right, NodeArchitype) else right
+        for i in left:
+            edge_list: list[EdgeArchitype] = [*i._jac_.edges]
+
+            jctx: JacContext = JCONTEXT.get()
+            await jctx.populate(edge_list)
+
+            edge_list = [
+                await el.connect() if isinstance(el, DocAnchor) else el
+                for el in edge_list
+            ]
+            edge_list = filter_func(edge_list) if filter_func else edge_list
+            for e in edge_list:
+                if (
+                    dir in ["OUT", "ANY"]  # TODO: Not ideal
+                    and i._jac_.obj == e._jac_.source
+                    and e._jac_.target in right
+                ):
+                    await e.destroy()
+                    disconnect_occurred = True
+                if (
+                    dir in ["IN", "ANY"]
+                    and i._jac_.obj == e._jac_.target
+                    and e._jac_.source in right
+                ):
+                    await e.destroy()
+                    disconnect_occurred = True
+        return disconnect_occurred
 
 
 def populate_collection(cls: type, jtype: JType) -> type:
