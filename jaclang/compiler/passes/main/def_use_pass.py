@@ -118,6 +118,14 @@ class DefUsePass(SymTabPass):
         right: AtomType,
         is_scope_contained: bool,
         """
+        if node.target.__class__.__name__ == "FuncCall":
+            print('func call', node.target.target.target.value)
+        if node.target.__class__.__name__ == "Name":
+            print('atom trailer', node.target.value )
+        if node.right.__class__.__name__ == "FuncCall":
+            print('func call', node.right.value.kjkj)
+        if node.right.__class__.__name__ == "Name":
+            print(node.right.value,'\n\n\n')
         chain = self.unwind_atom_trailer(node)
         self.chain_use_lookup(chain)
 
@@ -127,6 +135,7 @@ class DefUsePass(SymTabPass):
         target: AtomType,
         params: Optional[SubNodeList[ExprType | Assignment]],
         """
+        print(12345)
 
     def enter_index_slice(self, node: ast.IndexSlice) -> None:
         """Sub objects.

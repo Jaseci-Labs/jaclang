@@ -15,6 +15,7 @@ from .pyout_pass import PyOutPass  # noqa: I100
 from .pybc_gen_pass import PyBytecodeGenPass  # noqa: I100
 from .pyast_gen_pass import PyastGenPass  # noqa: I100
 from .type_check_pass import JacTypeCheckPass  # noqa: I100
+from .accesscheck_pass import AccessCheckPass  # noqa: I100
 
 py_code_gen = [
     SubNodeTabPass,
@@ -22,6 +23,7 @@ py_code_gen = [
     SymTabBuildPass,
     DeclDefMatchPass,
     DefUsePass,
+    AccessCheckPass,
     PyastGenPass,
     PyBytecodeGenPass,
 ]
