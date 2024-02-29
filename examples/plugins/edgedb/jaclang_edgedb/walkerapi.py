@@ -228,8 +228,10 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
 
     path = f"/{to_snake_case(cls.__name__)}"
 
-    cls_fields = cls.__dataclass_fields__
+    cls_fields = cls
+    print(cls_fields)
     cls_fields = typing.get_type_hints(cls, include_extras=True)
+    print(cls_fields)
     body = {}
 
     form_fields = {}
@@ -581,12 +583,12 @@ class JacFeature:
 
         return left
 
-    @staticmethod
-    @hookimpl
-    def disconnect(op1: Optional[T], op2: T, op: Any) -> T:
-        """Jac's connect operator feature."""
+    # @staticmethod
+    # @hookimpl
+    # def disconnect(op1: Optional[T], op2: T, op: Any) -> T:
+    #     """Jac's connect operator feature."""
 
-        return ret if (ret := op1) is not None else op2
+    #     return ret if (ret := op1) is not None else op2
 
     @staticmethod
     @hookimpl
@@ -607,23 +609,78 @@ class JacFeature:
         jctx: JacContext = JCONTEXT.get()
         jctx.report(expr)
 
+    # @staticmethod
+    # @hookimpl
+    # def edge_ref(
+    #     node_obj: NodeArchitype,
+    #     dir: EdgeDir,
+    #     filter_type: Optional[type],
+    #     filter_func: Optional[Callable],
+    # ) -> list[NodeArchitype]:
+    #     """Jac's apply_dir stmt feature."""
+    #     if isinstance(node_obj, NodeArchitype):
+    #         node_obj._jac_.edges[EdgeDir.IN] = []
+    #         node_obj._jac_.edges[EdgeDir.OUT] = []
+
+    #         db_edges = get_node_edges(client, node_obj._edge_data.id)
+    #         for edge in db_edges:
+    #             # create the edge architype
+    #             # source node
+    #             if edge.from_node.id == node_obj._edge_data.id:
+    #                 from_node_obj = node_obj
+    #             else:
+    #                 # root node is named RootNode in the db, this node type isn't defined anywhere in the jac code
+    #                 if edge.from_node.name == "RootNode":
+    #                     from_node_obj = Jac.get_root()
+    #                     from_node_obj._edge_data = edge.from_node
+    #                 else:
+    #                     from_node_cls = JacFeature._node_types[edge.from_node.name]
+    #                     from_node_obj: NodeArchitype = from_node_cls(
+    #                         **json.loads(edge.from_node.properties),
+    #                         _edge_data=edge.from_node,
+    #                     )
+
+    #             # target node
+    #             if edge.to_node.id == node_obj._edge_data.id:
+    #                 to_node_obj = node_obj
+    #             else:
+    #                 if edge.to_node.name == "RootNode":
+    #                     to_node_cls = Jac.get_root()
+    #                     to_node_cls._edge_data = edge.to_node
+    #                 else:
+    #                     to_node_cls = JacFeature._node_types[edge.to_node.name]
+    #                     to_node_obj: NodeArchitype = to_node_cls(
+    #                         **json.loads(edge.to_node.properties),
+    #                         _edge_data=edge.to_node,
+    #                     )
+
+    #             edge_cls = JacFeature._edge_types[edge.name]
+    #             edge_obj: EdgeArchitype = edge_cls(
+    #                 **json.loads(edge.properties), _edge_data=edge
+    #             )
+    #             edge_obj._jac_.apply_dir(dir)
+    #             edge_obj._jac_.attach(src=from_node_obj, trg=to_node_obj)
+
+    #         return node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+    #     else:
+    #         raise TypeError("Invalid node object")
     @staticmethod
     @hookimpl
     def edge_ref(
-        node_obj: NodeArchitype,
+        node_obj: NodeArchitype | list[NodeArchitype],
+        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
-        filter_type: Optional[type],
-        filter_func: Optional[Callable],
-    ) -> list[NodeArchitype]:
+        filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
+        edges_only: bool,
+    ) -> list[NodeArchitype] | list[EdgeArchitype]:
         """Jac's apply_dir stmt feature."""
         if isinstance(node_obj, NodeArchitype):
-            node_obj._jac_.edges[EdgeDir.IN] = []
-            node_obj._jac_.edges[EdgeDir.OUT] = []
-
             db_edges = get_node_edges(client, node_obj._edge_data.id)
+            print(db_edges)
+
             for edge in db_edges:
                 # create the edge architype
-                # source node
+                # grab source node
                 if edge.from_node.id == node_obj._edge_data.id:
                     from_node_obj = node_obj
                 else:
@@ -638,7 +695,7 @@ class JacFeature:
                             _edge_data=edge.from_node,
                         )
 
-                # target node
+                # grab target node
                 if edge.to_node.id == node_obj._edge_data.id:
                     to_node_obj = node_obj
                 else:
@@ -652,13 +709,34 @@ class JacFeature:
                             _edge_data=edge.to_node,
                         )
 
+                # build the edge class obj
                 edge_cls = JacFeature._edge_types[edge.name]
                 edge_obj: EdgeArchitype = edge_cls(
                     **json.loads(edge.properties), _edge_data=edge
                 )
-                edge_obj._jac_.apply_dir(dir)
+
+                # attach the edge to the source and target nodes
                 edge_obj._jac_.attach(src=from_node_obj, trg=to_node_obj)
 
-            return node_obj._jac_.edges_to_nodes(dir, filter_type, filter_func)
+            node_obj = [node_obj]
+
+        targ_obj_set: Optional[list[NodeArchitype]] = (
+            [target_obj]
+            if isinstance(target_obj, NodeArchitype)
+            else target_obj if target_obj else None
+        )
+
+        if edges_only:
+            connected_edges: list[EdgeArchitype] = []
+            for node in node_obj:
+                connected_edges += node._jac_.get_edges(
+                    dir, filter_func, target_obj=targ_obj_set
+                )
+            return list(set(connected_edges))
         else:
-            raise TypeError("Invalid node object")
+            connected_nodes: list[NodeArchitype] = []
+            for node in node_obj:
+                connected_nodes.extend(
+                    node._jac_.edges_to_nodes(dir, filter_func, target_obj=targ_obj_set)
+                )
+            return list(set(connected_nodes))
