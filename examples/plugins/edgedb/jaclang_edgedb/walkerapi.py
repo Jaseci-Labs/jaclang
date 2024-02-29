@@ -229,9 +229,7 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
     path = f"/{to_snake_case(cls.__name__)}"
 
     cls_fields = cls
-    print(cls_fields)
     cls_fields = typing.get_type_hints(cls, include_extras=True)
-    print(cls_fields)
     body = {}
 
     form_fields = {}
@@ -676,7 +674,6 @@ class JacFeature:
         """Jac's apply_dir stmt feature."""
         if isinstance(node_obj, NodeArchitype):
             db_edges = get_node_edges(client, node_obj._edge_data.id)
-            print(db_edges)
 
             for edge in db_edges:
                 # create the edge architype
