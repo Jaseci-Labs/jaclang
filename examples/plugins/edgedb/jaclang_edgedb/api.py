@@ -33,7 +33,7 @@ class FastAPI:
         cls, host: str = "0.0.0.0", port: int = 8000, **kwargs: dict[str, Any]
     ) -> None:
         """Run FastAPI Handler via Uvicorn."""
-        _run(cls.get(), host=host, port=port, **kwargs)
+        _run(cls.get(), loop="asyncio", host=host, port=port, **kwargs)
 
 
 def api_exclude(cls: type) -> None:

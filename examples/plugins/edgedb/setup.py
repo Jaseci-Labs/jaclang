@@ -11,7 +11,13 @@ setup(
     name="jaclang-edgedb",
     version=VERSION,
     packages=find_packages(include=["jaclang_edgedb", "jaclang_edgedb.*"]),
-    install_requires=["edgedb==1.8.0"],
+    install_requires=[
+        "edgedb==1.8.0",
+        "nest-asyncio==1.6.0",
+        "fastapi==0.109.2",
+        "uvicorn==0.27.0.post1",
+        "gunicorn==21.2.0",
+    ],
     package_data={
         "": ["*.ini"],
     },
