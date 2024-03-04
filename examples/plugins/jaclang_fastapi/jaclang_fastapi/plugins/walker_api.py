@@ -49,52 +49,62 @@ class DefaultSpecs:
 class WalkerAnchor(_WalkerAnchor):
     """Overriden WalkerAnchor."""
 
-    async def await_if_coroutine(self, ret: Any) -> None:  # noqa: ANN401
+    async def await_if_coroutine(self, ret: Any) -> Any:  # noqa: ANN401
         """Await return if it's a coroutine."""
         if iscoroutine(ret):
             ret = await ret
-        if not hasattr(self.obj, "_jac_return_"):
-            self.obj._jac_return_ = ret
+        return ret
 
-    async def spawn_call(self, nd: Architype) -> None:
+    async def spawn_call(self, nd: Architype) -> "WalkerArchitype":
         """Invoke data spatial call."""
         self.path = []
         self.next = [nd]
+        self.returns = []
+
         while len(self.next):
             nd = self.next.pop(0)
             for i in nd._jac_entry_funcs_:
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
-                        await self.await_if_coroutine(i.func(nd, self.obj))
+                        self.returns.append(
+                            await self.await_if_coroutine(i.func(nd, self.obj))
+                        )
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in self.obj._jac_entry_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
-                        await self.await_if_coroutine(i.func(self.obj, nd))
+                        self.returns.append(
+                            await self.await_if_coroutine(i.func(self.obj, nd))
+                        )
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in self.obj._jac_exit_funcs_:
                 if not i.trigger or isinstance(nd, i.trigger):
                     if i.func:
-                        await self.await_if_coroutine(i.func(self.obj, nd))
+                        self.returns.append(
+                            await self.await_if_coroutine(i.func(self.obj, nd))
+                        )
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
             for i in nd._jac_exit_funcs_:
                 if not i.trigger or isinstance(self.obj, i.trigger):
                     if i.func:
-                        await self.await_if_coroutine(i.func(nd, self.obj))
+                        self.returns.append(
+                            await self.await_if_coroutine(i.func(nd, self.obj))
+                        )
                     else:
                         raise ValueError(f"No function {i.name} to call.")
                 if self.disengaged:
-                    return
+                    return self.obj
         self.ignores = []
+        return self.obj
 
 
 class WalkerArchitype(_WalkerArchitype):
@@ -127,15 +137,14 @@ class JacPlugin:
 
     @staticmethod
     @hookimpl
-    async def spawn_call(op1: Architype, op2: Architype) -> bool:
+    async def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype:
         """Jac's spawn operator feature."""
         if isinstance(op1, WalkerArchitype):
-            await op1._jac_.spawn_call(op2)
+            return await op1._jac_.spawn_call(op2)
         elif isinstance(op2, WalkerArchitype):
-            await op2._jac_.spawn_call(op1)
+            return await op2._jac_.spawn_call(op1)
         else:
             raise TypeError("Invalid walker object")
-        return True
 
     @staticmethod
     @hookimpl
@@ -234,9 +243,11 @@ def populate_apis(cls: type) -> None:
         JCONTEXT.set(jctx)
 
         payload = payload.model_dump()
-        wlk = cls(**payload.get("body", {}), **payload["query"], **payload["files"])
-        await wlk._jac_.spawn_call(await jctx.get_entry())
-        return jctx.response(getattr(wlk, "_jac_return_", None))
+        wlk = cls(
+            **payload.get("body", {}), **payload["query"], **payload["files"]
+        )._jac_
+        await wlk.spawn_call(await jctx.get_entry())
+        return jctx.response(wlk.returns)
 
     async def api_root(
         request: Request,

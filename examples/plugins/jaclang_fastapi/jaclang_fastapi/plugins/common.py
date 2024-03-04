@@ -854,9 +854,9 @@ class JacContext:
         """Append report."""
         self.reports.append(obj)
 
-    def response(self, ret: Any, status: int = 200) -> list:  # noqa: ANN401
+    def response(self, returns: list[Any], status: int = 200) -> list:  # noqa: ANN401
         """Return serialized version of reports."""
-        resp = {"status": status, "data": ret}
+        resp = {"status": status, "returns": returns}
 
         if self.reports:
             for key, val in enumerate(self.reports):
@@ -866,7 +866,7 @@ class JacContext:
                     self.reports[key] = {"id": ret_jd.ref_id, **val.get_context()}
                 else:
                     self.clean_response(key, val, self.reports)
-            resp["report"] = self.reports
+            resp["reports"] = self.reports
 
         return resp
 

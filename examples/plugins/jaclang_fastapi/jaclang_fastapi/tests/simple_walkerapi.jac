@@ -68,6 +68,7 @@ walker post_with_body {
         anyone = await [-->];
         report anyone;
         visit anyone;
+        return 3;
     }
 }
 
