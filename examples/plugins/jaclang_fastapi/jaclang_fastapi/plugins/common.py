@@ -295,7 +295,7 @@ class DocArchitype:
             and (fields := getattr(self, "_jac_fields_", None))
             and __name in fields
         ):
-            jd.update_context({f"ctx.{__name}": __value})
+            jd.update_context({f"context.{__name}": __value})
 
         return super().__setattr__(__name, __value)
 

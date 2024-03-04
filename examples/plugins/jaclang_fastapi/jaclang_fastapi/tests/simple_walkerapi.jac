@@ -41,6 +41,10 @@ node girl {
     has val: str;
 }
 
+node someone {
+    has val: list = [];
+}
+
 walker post_with_body {
     has a: str;
 
@@ -160,6 +164,19 @@ walker change_new_girl {
         await old[0].destroy();
 
         report await [-->];
+    }
+}
+
+walker test_array {
+    async can enter1 with `<r> entry {
+         visit await [-->];
+    }
+
+    async can enter2 with someone entry {
+        <h>.val.append(1);
+        <h>.val = <h>.val;
+        await <h>.save();
+        report <h>;
     }
 }
 
