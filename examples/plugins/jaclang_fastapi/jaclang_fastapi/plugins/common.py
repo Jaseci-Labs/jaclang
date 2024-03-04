@@ -479,31 +479,32 @@ class NodeAnchor(_NodeAnchor):
         target_obj: Optional[list[NodeArchitype]],
     ) -> list["EdgeArchitype"]:
         """Get edges connected to this node."""
-        edge_list: list[EdgeArchitype] = [*self.edges]
-        ret_edges: list[EdgeArchitype] = []
-
         jctx: JacContext = JCONTEXT.get()
-        await jctx.populate(edge_list)
+        await jctx.populate(self.edges)
 
-        edge_list = [
-            await el.connect() if isinstance(el, DocAnchor) else el for el in edge_list
-        ]
-
-        edge_list = filter_func(edge_list) if filter_func else edge_list
-        for e in edge_list:
+        ret_edges: list[EdgeArchitype] = []
+        async for s, t, e in (
+            (src, tgt, ed)
+            async for ed in (
+                await edge.connect() if isinstance(edge, DocAnchor) else edge
+                for edge in self.edges
+            )
+            if (src := ed._jac_.source)
+            and (tgt := ed._jac_.target)
+            and (
+                not filter_func or filter_func([ed])
+            )  # to be update once filter func allow non list
+        ):
             if (
-                e._jac_.target
-                and e._jac_.source
-                and (
-                    dir in [EdgeDir.OUT, EdgeDir.ANY]
-                    and self.obj == e._jac_.source
-                    and (not target_obj or e._jac_.target in target_obj)
-                )
-                or (
-                    dir in [EdgeDir.IN, EdgeDir.ANY]
-                    and self.obj == e._jac_.target
-                    and (not target_obj or e._jac_.source in target_obj)
-                )
+                dir in [EdgeDir.OUT, EdgeDir.ANY]
+                and self.obj == s
+                and (not target_obj or t.__class__ in target_obj)
+            ):
+                ret_edges.append(e)
+            if (
+                dir in [EdgeDir.IN, EdgeDir.ANY]
+                and self.obj == t
+                and (not target_obj or s.__class__ in target_obj)
             ):
                 ret_edges.append(e)
         return ret_edges
@@ -515,38 +516,40 @@ class NodeAnchor(_NodeAnchor):
         target_obj: Optional[list[NodeArchitype]],
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
-        edge_list: list[EdgeArchitype] = [*self.edges]
-        node_list: list[NodeArchitype] = []
-
         jctx: JacContext = JCONTEXT.get()
-        await jctx.populate(edge_list)
+        await jctx.populate(self.edges)
 
-        edge_list = [
-            await el.connect() if isinstance(el, DocAnchor) else el for el in edge_list
-        ]
+        ret_nodes: list[EdgeArchitype] = []
 
-        edge_list = filter_func(edge_list) if filter_func else edge_list
-
-        for e in edge_list:
-            if (tgt := e._jac_.target) and (src := e._jac_.source):
-                if isinstance(tgt, DocAnchor):
-                    e._jac_.target = await tgt.connect()
-                if isinstance(src, DocAnchor):
-                    e._jac_.source = await src.connect()
-
-                if (
-                    dir in [EdgeDir.OUT, EdgeDir.ANY]
-                    and self.obj == e._jac_.source
-                    and (not target_obj or e._jac_.target in target_obj)
-                ):
-                    node_list.append(e._jac_.target)
-                if (
-                    dir in [EdgeDir.IN, EdgeDir.ANY]
-                    and self.obj == e._jac_.target
-                    and (not target_obj or e._jac_.source in target_obj)
-                ):
-                    node_list.append(e._jac_.source)
-        return node_list
+        async for s, t, e in (
+            (src, tgt, ed)
+            async for ed in (
+                await edge.connect() if isinstance(edge, DocAnchor) else edge
+                for edge in self.edges
+            )
+            if (src := ed._jac_.source)
+            and (tgt := ed._jac_.target)
+            and (
+                not filter_func or filter_func([ed])
+            )  # to be update once filter func allow non list
+        ):
+            if (
+                dir in [EdgeDir.OUT, EdgeDir.ANY]
+                and self.obj == s
+                and (not target_obj or t.__class__ in target_obj)
+            ):
+                if isinstance(t, DocAnchor):
+                    e._jac_.target = t = await t.connect()
+                ret_nodes.append(t)
+            if (
+                dir in [EdgeDir.IN, EdgeDir.ANY]
+                and self.obj == t
+                and (not target_obj or s.__class__ in target_obj)
+            ):
+                if isinstance(s, DocAnchor):
+                    e._jac_.source = s = await s.connect()
+                ret_nodes.append(s)
+        return ret_nodes
 
 
 @dataclass(eq=False)
@@ -640,6 +643,12 @@ class EdgeArchitype(_EdgeArchitype, DocArchitype):
             ea = self._jac_
             if (jd := self._jac_doc_).connected:
                 try:
+                    if isinstance(src := ea.source, DocAnchor):
+                        ea.source = await src.connect()
+
+                    if isinstance(tgt := ea.target, DocAnchor):
+                        ea.target = await tgt.connect()
+
                     ea.detach()
                     await ea.source.save(session)
                     await ea.target.save(session)
@@ -822,7 +831,7 @@ class JacContext:
                 qin: list = queue[cls]["_id"]["$in"]
                 qin.append(danchor.id)
         for cls, que in queue.items():
-            for arch in await cls.Collection.find(que):
+            async for arch in await cls.Collection.find(que):
                 self.set(arch._jac_doc_.id, arch)
 
     def has(self, id: Union[ObjectId, str]) -> bool:

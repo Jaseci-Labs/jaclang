@@ -52,25 +52,6 @@ class User(UserCommon):
                 **doc,
             )
 
-        @classmethod
-        def __documents__(cls, docs: list[dict]) -> list["User"]:
-            """
-            Return list of parsed User from list of document.
-
-            This the default User list parser after getting multiple documents.
-            You may override this to specify how/which class it will be casted/based.
-            """
-            return [
-                User.model()(
-                    id=str(doc.get("_id")),
-                    email=doc.get("email"),
-                    password=doc.get("password") or NULL_BYTES,
-                    root_id=str(doc.pop("root_id")),
-                    **doc,
-                )
-                for doc in docs
-            ]
-
     @staticmethod
     def model() -> type["User"]:
         """Retrieve the preferred User Model from subclasses else this class."""

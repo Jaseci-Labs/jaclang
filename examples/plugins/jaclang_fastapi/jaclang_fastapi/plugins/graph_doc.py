@@ -70,9 +70,9 @@ class JacPlugin:
         if isinstance(node_obj, NodeArchitype):
             node_obj = [node_obj]
         targ_obj_set: Optional[list[NodeArchitype]] = (
-            [target_obj]
-            if isinstance(target_obj, NodeArchitype)
-            else target_obj if target_obj else None
+            (target_obj if isinstance(target_obj, list) else [target_obj])
+            if target_obj
+            else None
         )
         if edges_only:
             connected_edges: list[EdgeArchitype] = []

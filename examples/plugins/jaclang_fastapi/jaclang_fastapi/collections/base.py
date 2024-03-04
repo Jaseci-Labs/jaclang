@@ -1,11 +1,11 @@
 """BaseCollection Interface."""
 
 from os import getenv
-from typing import Any, Callable, Union
+from typing import Any, AsyncGenerator, Callable, Union
 
 from bson import ObjectId
 
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCursor
 
 from pymongo import DeleteMany, DeleteOne, IndexModel, InsertOne, UpdateMany, UpdateOne
 from pymongo.client_session import ClientSession
@@ -43,14 +43,14 @@ class BaseCollection:
         return doc
 
     @classmethod
-    def __documents__(cls, docs: list[dict]) -> list[dict]:
+    async def __documents__(cls, docs: AsyncIOMotorCursor) -> AsyncGenerator[Any, None]:  # type: ignore
         """
         Return parsed version of multiple documents.
 
         This the default parser after getting a list of documents.
         You may override this to specify how/which class it will be casted/based.
         """
-        return [cls.__document__(doc) for doc in docs]
+        return (cls.__document__(doc) async for doc in docs)
 
     @staticmethod
     def get_client() -> AsyncIOMotorClient:  # type: ignore
@@ -185,7 +185,7 @@ class BaseCollection:
             kwargs["projection"] = cls.__excluded_obj__
 
         docs = cursor(collection.find(*args, **kwargs))
-        return cls.__documents__([doc async for doc in docs])
+        return await cls.__documents__(docs)
 
     @classmethod
     async def find_one(cls, *args: list[Any], **kwargs: dict[str, Any]) -> object:
