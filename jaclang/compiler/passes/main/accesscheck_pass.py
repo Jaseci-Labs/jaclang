@@ -10,13 +10,14 @@ from jaclang.compiler.symtable import SymbolAccess
 from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass
 from jaclang.compiler.symtable import Symbol, SymbolTable
 
+
 class AccessCheckPass(SymTabPass):
     """Jac Ast Access Check pass."""
 
     def after_pass(self) -> None:
         """After pass."""
         pass
-   
+
     def enter_global_vars(self, node: ast.GlobalVars) -> None:
         """Sub objects.
 
@@ -38,6 +39,7 @@ class AccessCheckPass(SymTabPass):
         # print('hi : ',self.use_lookup(node))
         # pass
         # print(node.get_all_sub_nodes(ast.Module))
+
     def enter_architype(self, node: ast.Architype) -> None:
         """Sub objects.
 
@@ -89,10 +91,9 @@ class AccessCheckPass(SymTabPass):
         """
         # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
         # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
-       
 
     def enter_arch_has(self, node: ast.ArchHas) -> None:
-        """ Sub objects.
+        """Sub objects.
 
         is_static: bool,
         access: Optional[SubTag[Token]],
@@ -100,7 +101,7 @@ class AccessCheckPass(SymTabPass):
         is_frozen: bool,
         """
         pass
-    
+
     def enter_atom_trailer(self, node: ast.AtomTrailer) -> None:
         """Sub objects.
 
@@ -114,7 +115,7 @@ class AccessCheckPass(SymTabPass):
         target: AtomType,
         params: Optional[SubNodeList[ExprType | Assignment]],
         """
-       
+
     def enter_name(self, node: ast.Name) -> None:
         """Sub objects.
 
@@ -128,10 +129,15 @@ class AccessCheckPass(SymTabPass):
         # print(node.sym_name_node)
         # print(node.sym_tab.kid)
         # print(node.sym_tab.owner,'\n')
-        print('----------------')
+        print("----------------")
         print(node.sym_name)
-        print(' symlink of this node(name) \n',node.sym_link)
-        print('lookup(name) \n',self.use_lookup(node))
-        x=node.sym_tab.lookup(node.sym_name)
-        print('symtab lookup(name)\n',x)
+        print(
+            " symlink of this node(name) \n",
+            node.sym_link,
+            (node.sym_link.decl.sym_tab.name) if node.sym_link else None,
+            (node.sym_tab.name),
+        )
+        print("lookup(name) \n", self.use_lookup(node))
+        x = node.sym_tab.lookup(node.sym_name)
+        print("symtab lookup(name)\n", x)
         pass

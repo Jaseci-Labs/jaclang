@@ -11,7 +11,7 @@ from typing import Optional, Sequence
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Tokens as Tok
 from jaclang.compiler.passes import Pass
-from jaclang.compiler.symtable import Symbol, SymbolTable
+from jaclang.compiler.symtable import Symbol, SymbolAccess, SymbolTable
 
 
 class SymTabPass(Pass):
@@ -33,7 +33,7 @@ class SymTabPass(Pass):
     def def_insert(
         self,
         node: ast.AstSymbolNode,
-        access_spec: Optional[ast.AstAccessNode] = None,
+        access_spec: Optional[ast.AstAccessNode] | SymbolAccess = None,
         single_use: Optional[str] = None,
         table_override: Optional[SymbolTable] = None,
     ) -> Optional[Symbol]:
@@ -271,7 +271,9 @@ class SymTabBuildPass(SymTabPass):
             and node.sym_tab
         ):
             for v in node.sym_tab.tab.values():
-                self.def_insert(v.decl, table_override=self.cur_scope())
+                self.def_insert(
+                    v.decl, access_spec=v.access, table_override=self.cur_scope()
+                )
 
     def enter_global_vars(self, node: ast.GlobalVars) -> None:
         """Sub objects.
@@ -392,7 +394,9 @@ class SymTabBuildPass(SymTabPass):
                 )
             else:
                 for v in node.paths[0].sub_module.sym_tab.tab.values():
-                    self.def_insert(v.decl, table_override=self.cur_scope())
+                    self.def_insert(
+                        v.decl, access_spec=v.access, table_override=self.cur_scope()
+                    )
 
     def enter_module_path(self, node: ast.ModulePath) -> None:
         """Sub objects.
