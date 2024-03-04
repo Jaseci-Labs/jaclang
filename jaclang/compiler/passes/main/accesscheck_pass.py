@@ -6,15 +6,17 @@ This pass checks for access to variables and functions in the Jac language.
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
+from jaclang.compiler.symtable import SymbolAccess
+from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass
+from jaclang.compiler.symtable import Symbol, SymbolTable
 
-
-class AccessCheckPass(Pass):
+class AccessCheckPass(SymTabPass):
     """Jac Ast Access Check pass."""
 
     def after_pass(self) -> None:
         """After pass."""
         pass
-
+   
     def enter_global_vars(self, node: ast.GlobalVars) -> None:
         """Sub objects.
 
@@ -22,9 +24,20 @@ class AccessCheckPass(Pass):
         assignments: SubNodeList[Assignment],
         is_frozen: bool,
         """
-        print('globals')
         pass
 
+    def enter_module(self, node: ast.Module) -> None:
+        """Sub objects.
+
+        name: str,
+        doc: Token,
+        body: Optional['Elements'],
+        mod_path: str,
+        is_imported: bool,
+        """
+        # print('hi : ',self.use_lookup(node))
+        # pass
+        # print(node.get_all_sub_nodes(ast.Module))
     def enter_architype(self, node: ast.Architype) -> None:
         """Sub objects.
 
@@ -35,7 +48,11 @@ class AccessCheckPass(Pass):
         body: Optional[SubNodeList[ArchBlockStmt] | ArchDef],
         decorators: Optional[SubNodeList[Expr]] = None,
         """
-       
+        # print(1111,node.sym_tab.tab)
+        # print('...| ',node.sym_tab.lookup(node.sym_name))
+        # print(1234,node.sym_tab.use)
+        # print('hii : ',self.use_lookup(node.sym_name))
+        # print(1111,node.sym_link)
         pass
 
     def enter_enum(self, node: ast.Enum) -> None:
@@ -65,6 +82,15 @@ class AccessCheckPass(Pass):
         """
         pass
 
+    def enter_sub_node_list(self, node: ast.SubNodeList) -> None:
+        """Sub objects.
+
+        items: list[T]
+        """
+        # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
+        # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
+       
+
     def enter_arch_has(self, node: ast.ArchHas) -> None:
         """ Sub objects.
 
@@ -73,4 +99,39 @@ class AccessCheckPass(Pass):
         vars: SubNodeList[HasVar],
         is_frozen: bool,
         """
+        pass
+    
+    def enter_atom_trailer(self, node: ast.AtomTrailer) -> None:
+        """Sub objects.
+
+        access: Optional[SubTag[Token]],
+        """
+        pass
+
+    def enter_func_call(self, node: ast.FuncCall) -> None:
+        """Sub objects.
+
+        target: AtomType,
+        params: Optional[SubNodeList[ExprType | Assignment]],
+        """
+       
+    def enter_name(self, node: ast.Name) -> None:
+        """Sub objects.
+
+        name: str,
+        value: str,
+        col_start: int,
+        col_end: int,
+        pos_start: int,
+        pos_end: int,
+        """
+        # print(node.sym_name_node)
+        # print(node.sym_tab.kid)
+        # print(node.sym_tab.owner,'\n')
+        print('----------------')
+        print(node.sym_name)
+        print(' symlink of this node(name) \n',node.sym_link)
+        print('lookup(name) \n',self.use_lookup(node))
+        x=node.sym_tab.lookup(node.sym_name)
+        print('symtab lookup(name)\n',x)
         pass
