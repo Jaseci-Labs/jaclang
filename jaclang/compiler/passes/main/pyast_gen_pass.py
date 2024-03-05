@@ -600,7 +600,11 @@ class PyastGenPass(Pass):
             node.body.body if isinstance(node.body, ast.ArchDef) else node.body,
             doc=node.doc,
         )
-        decorators = []
+        decorators = (
+            node.decorators.gen.py_ast
+            if isinstance(node.decorators, ast.SubNodeList)
+            else []
+        )
         ds_on_entry, ds_on_exit = self.collect_events(node)
         if node.arch_type.name != Tok.KW_CLASS:
             decorators.append(
@@ -655,10 +659,6 @@ class PyastGenPass(Pass):
                 )
             )
         )
-
-        if isinstance(node.decorators, ast.SubNodeList):
-            decorators += node.decorators.gen.py_ast
-
         base_classes = node.base_classes.gen.py_ast if node.base_classes else []
         if node.is_abstract:
             self.needs_jac_feature()

@@ -1,6 +1,9 @@
 """Walker API Authenticator."""
 
 from os import getenv
+from random import choice
+from string import ascii_letters, digits
+
 
 from fastapi import Depends, Request
 from fastapi.exceptions import HTTPException
@@ -16,8 +19,10 @@ from ..plugins import Root
 from ..utils import logger, utc_now
 
 
-TOKEN_SECRET = getenv("TOKEN_SECRET")
-TOKEN_ALGORITHM = getenv("TOKEN_ALGORITHM")
+TOKEN_SECRET = getenv(
+    "TOKEN_SECRET", "".join(choice(ascii_letters + digits) for _ in range(50))
+)
+TOKEN_ALGORITHM = getenv("TOKEN_ALGORITHM", "HS256")
 
 
 def encrypt(data: dict) -> str:

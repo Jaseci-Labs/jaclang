@@ -293,6 +293,9 @@ def specs(
             auth: bool = a
 
         cls.Specs = Specs
+
+        populate_apis(cls)
+
         return cls
 
     return wrapper

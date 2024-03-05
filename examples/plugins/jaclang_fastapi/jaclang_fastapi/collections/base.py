@@ -57,7 +57,10 @@ class BaseCollection:
         """Return pymongo.database.Database for mongodb connection."""
         if not isinstance(__class__.__client__, AsyncIOMotorClient):
             __class__.__client__ = AsyncIOMotorClient(
-                getenv("DATABASE_HOST"),
+                getenv(
+                    "DATABASE_HOST",
+                    "mongodb://localhost/?retryWrites=true&w=majority",
+                ),
                 server_api=ServerApi("1"),
             )
 
@@ -73,7 +76,7 @@ class BaseCollection:
         """Return pymongo.database.Database for database connection based from current client connection."""
         if not isinstance(__class__.__database__, Database):
             __class__.__database__ = __class__.get_client().get_database(
-                getenv("DATABASE_NAME")
+                getenv("DATABASE_NAME", "jaclang")
             )
 
         return __class__.__database__

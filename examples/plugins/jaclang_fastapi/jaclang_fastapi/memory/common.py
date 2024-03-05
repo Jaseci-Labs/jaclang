@@ -25,8 +25,8 @@ class CommonMemory:
         """Return redis.Redis for Redis connection."""
         if not isinstance(__class__.__redis__, Redis):
             __class__.__redis__ = aioredis.from_url(
-                getenv("REDIS_HOST"),
-                port=int(getenv("REDIS_PORT")),
+                getenv("REDIS_HOST", "redis://localhost"),
+                port=int(getenv("REDIS_PORT", "6379")),
                 username=getenv("REDIS_USER"),
                 password=getenv("REDIS_PASS"),
             )

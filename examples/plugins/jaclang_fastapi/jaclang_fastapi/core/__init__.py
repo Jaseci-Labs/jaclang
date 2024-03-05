@@ -28,7 +28,7 @@ class FastAPI:
 
     @classmethod
     def start(
-        cls, host: str = "0.0.0.0", port: int = 8000, **kwargs: dict[str, Any]
+        cls, host: str = "0.0.0.0", port: int = 8000, **kwargs: Any  # noqa ANN401
     ) -> None:
         """Run FastAPI Handler via Uvicorn."""
         _run(cls.get(), host=host, port=port, **kwargs)

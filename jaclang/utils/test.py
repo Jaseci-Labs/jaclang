@@ -71,11 +71,14 @@ class TestCaseMicroSuite(ABC, TestCase):
             for name in files
             if name.endswith(".jac") and not name.startswith("err")
         ]:
-            method_name = (
-                f"test_micro_{filename.replace('.jac', '').replace(os.sep, '_')}"
-            )
-            cls.methods.append(method_name)
-            setattr(cls, method_name, lambda self, f=filename: self.micro_suite_test(f))
+            if "examples/plugins" not in filename:  # plugin should have their own tests
+                method_name = (
+                    f"test_micro_{filename.replace('.jac', '').replace(os.sep, '_')}"
+                )
+                cls.methods.append(method_name)
+                setattr(
+                    cls, method_name, lambda self, f=filename: self.micro_suite_test(f)
+                )
 
         def test_micro_jac_files_fully_tested(self: TestCase) -> None:  # noqa: ANN001
             """Test that all micro jac files are fully tested."""

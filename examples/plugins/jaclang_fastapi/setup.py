@@ -24,6 +24,7 @@ setup(
         "orjson==3.9.13",
         "redis==5.0.1",
         "python-multipart==0.0.9",
+        "httpx==0.27.0",
     ],
     package_data={},
     entry_points={
