@@ -14,7 +14,7 @@
 
 # obj Dog: Animal: {
 #     has :pub breed: str;
-    
+
 #     can init(name: str, age: int, sound: str, breed: str) {
 #         self.name = name;
 #         self.age = age;
@@ -47,18 +47,18 @@
 
     # Accessing protected method
     # no error will araise as it is a protected method and can be accessed by the subclass
-    # print( " Sound: " + myDog.makeSound()); 
+    # print( " Sound: " + myDog.makeSound());
 # }
 
 
-#lets create a person 
+#lets create a person
 # obj Person {
 #     has :pub name: str;
 #     has :priv age: int;
 #     has :protect sound: str='meow';
 
-   
-    
+
+
 # }
 # with entry {
 #     myPerson = Person(name= "Buddy", age= 3);
@@ -75,9 +75,9 @@ enum enumy{
     ctriangle=a
 }
 with entry{
-    xx=a; 
+    xx=a;
     print(b);
-    print(obj1().func1());
+    print(obj902().obj90232());
     print(obj1().jj1);
     print(ShapeType.CIRCLE.value);
 }
@@ -93,7 +93,7 @@ with entry{
 #     obj Person {
 #     has :pub name: str;
 #     has :priv age: int;
- 
+
 # }
 #     myPerson = Person(name= "Buddy", age= 3);
 #     print( " Name: " + myPerson.name );

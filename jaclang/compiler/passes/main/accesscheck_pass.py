@@ -5,10 +5,8 @@ This pass checks for access to variables and functions in the Jac language.
 """
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes import Pass
-from jaclang.compiler.symtable import SymbolAccess
 from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass
-from jaclang.compiler.symtable import Symbol, SymbolTable
+from jaclang.compiler.symtable import SymbolAccess
 
 
 class AccessCheckPass(SymTabPass):
@@ -36,9 +34,6 @@ class AccessCheckPass(SymTabPass):
         mod_path: str,
         is_imported: bool,
         """
-        # print('hi : ',self.use_lookup(node))
-        # pass
-        # print(node.get_all_sub_nodes(ast.Module))
 
     def enter_architype(self, node: ast.Architype) -> None:
         """Sub objects.
@@ -50,11 +45,6 @@ class AccessCheckPass(SymTabPass):
         body: Optional[SubNodeList[ArchBlockStmt] | ArchDef],
         decorators: Optional[SubNodeList[Expr]] = None,
         """
-        # print(1111,node.sym_tab.tab)
-        # print('...| ',node.sym_tab.lookup(node.sym_name))
-        # print(1234,node.sym_tab.use)
-        # print('hii : ',self.use_lookup(node.sym_name))
-        # print(1111,node.sym_link)
         pass
 
     def enter_enum(self, node: ast.Enum) -> None:
@@ -89,8 +79,6 @@ class AccessCheckPass(SymTabPass):
 
         items: list[T]
         """
-        # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
-        # print(node.sym_tab.kid[0]) if node.sym_tab.kid else print('no kid')
 
     def enter_arch_has(self, node: ast.ArchHas) -> None:
         """Sub objects.
@@ -126,27 +114,35 @@ class AccessCheckPass(SymTabPass):
         pos_start: int,
         pos_end: int,
         """
-        # print(node.sym_name_node)
-        # print(node.sym_tab.kid)
-        # print(node.sym_tab.owner,'\n')
-        print("----------------")
-        print(node.sym_name)
-        print(
-            " symlink of this node(name) \n",
-            node.sym_link,
-            (node.sym_link.decl.sym_tab.name) if node.sym_link else None,
-            ('type of decl ' ,type(node.sym_link.decl)) if node.sym_link else None,
-            (node.sym_tab.name),
-            (node.sym_link.decl.loc.mod_path) if node.sym_link else None,
-            ('mod-> ',node.loc.mod_path),
-            # ('mod-> ',node.sym_link.decl.loc.mod_path),
-        )
-        if node.sym_tab.name=='enumy':
 
-            print('enumy',444)
-        print("lookup(name) \n", self.use_lookup(node))
-        x = node.sym_tab.lookup(node.sym_name)
-        print("symtab lookup(name)\n", x)
-        if  node.sym_link and node.sym_link.decl.sym_tab.name==node.sym_tab.name and x.access==SymbolAccess.PRIVATE:
-            print('errorrr ...!!!! ') #.loc.mod_path
-        pass
+        def are_files_same(file_path1: str, file_path2: str) -> bool:
+            lines1 = [
+                line.strip() for line in file_path1 if not line.strip().startswith("/")
+            ]
+            lines2 = [
+                line.strip() for line in file_path2 if not line.strip().startswith("//")
+            ]
+            return lines1 == lines2
+
+        # print(
+        #     (node.sym_link.decl.loc.mod_path) if node.sym_link else None,
+        #     ("mod-> ", node.loc.mod_path),
+        # )
+        if isinstance(node.sym_tab, ast.SymbolTable):
+            x = node.sym_tab.lookup(node.sym_name)
+        # if node.sym_link and node.sym_link.decl.sym_tab.name==node.sym_tab.name and x.access==SymbolAccess.PRIVATE:
+        #     print('errorrr ...!!!! ')
+        if (
+            x
+            and node.sym_link
+            and x.access == SymbolAccess.PRIVATE
+            and not (are_files_same(node.sym_link.decl.loc.mod_path, node.loc.mod_path))
+        ):
+            # raise self.error(
+            #     f'Access to private variable "{node.sym_name}" from {node.loc.mod_path}'
+            #     f" to {node.sym_link.decl.loc.mod_path}"
+            # )
+            return self.error(
+                f'Access to private variable "{node.sym_name}" from {node.loc.mod_path}'
+                f" to {node.sym_link.decl.loc.mod_path}"
+            )

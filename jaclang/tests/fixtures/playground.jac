@@ -14,14 +14,14 @@ obj Divider {
         can hh() -> int {
             return 10;
         }
-        
+
     }
 }
 
 with entry {
     div = Divider();
     print(div.divide(10, 2));
-    print(div.dd().hh()); 
+    print(div.dd().hh());
     # print(a, X, y, z);
     # print(X);
 
@@ -43,7 +43,7 @@ obj Animal {
 
 obj Dog: Animal: {
     has :pub breed: str;
-    
+
     can <init>(name: str, age: int, sound: str, breed: str) {
         self.name = name;
         self.age = age;
@@ -76,5 +76,5 @@ with entry {
 
     # Accessing protected method
     # no error will araise as it is a protected method and can be accessed by the subclass
-    print( " Sound: " + myDog.makeSound()); 
+    print( " Sound: " + myDog.makeSound());
 }

@@ -60,7 +60,7 @@ class SymTabPass(Pass):
         if isinstance(node.sym_name_node, ast.AstSymbolNode):
             node.sym_name_node.py_ctx_func = ast3.Store
         if isinstance(node, (ast.TupleVal, ast.ListVal)) and node.values:
-            print('omqwe ', node.values)
+
             def fix(item: ast.TupleVal | ast.ListVal) -> None:
                 for i in item.values.items if item.values else []:
                     if isinstance(i, ast.AstSymbolNode):
@@ -72,7 +72,7 @@ class SymTabPass(Pass):
 
             fix(node)
         self.handle_hit_outcome(node)
-    
+
         return node.sym_link
 
     def use_lookup(
@@ -97,7 +97,6 @@ class SymTabPass(Pass):
 
     def chain_def_insert(self, node_list: Sequence[ast.AstSymbolNode]) -> None:
         """Link chain of containing names to symbol."""
-        print('chain def: ',node_list)
         if not node_list:
             return
         cur_sym_tab = node_list[0].sym_tab
@@ -107,7 +106,6 @@ class SymTabPass(Pass):
 
         node_list = node_list[:-1]  # Just performs lookup mappings of pre assign chain
         for i in node_list:
-            print(i)
             if cur_sym_tab is None:
                 break
             cur_sym_tab = (
@@ -123,10 +121,6 @@ class SymTabPass(Pass):
 
     def chain_use_lookup(self, node_list: Sequence[ast.AstSymbolNode]) -> None:
         """Link chain of containing names to symbol."""
-        print('chain : ',node_list)
-        # print('\n\n\n\n')
-        for i in node_list:
-            print(i.sym_name)
         if not node_list:
             return
         cur_sym_tab = node_list[0].sym_tab
@@ -151,15 +145,11 @@ class SymTabPass(Pass):
         right: AtomType,
         is_scope_contained: bool,
         """
-        print('unwind',node)
         left = node.right if isinstance(node.right, ast.AtomTrailer) else node.target
         right = node.target if isinstance(node.right, ast.AtomTrailer) else node.right
-        print('left : ',left,type(left) )   
-        print('right : ',right,type(right))
         trag_list: list[ast.AstSymbolNode] = (
             [right] if isinstance(right, ast.AstSymbolNode) else []
         )
-        print('have a look : ',trag_list[0].sym_name)
         if not trag_list:
             self.ice("Something went very wrong with atom trailer not valid")
         while isinstance(left, ast.AtomTrailer) and left.is_attr:
@@ -168,9 +158,7 @@ class SymTabPass(Pass):
             else:
                 raise self.ice("Something went very wrong with atom trailer not valid")
             left = left.target
-            print('left :: ',left)
         if isinstance(left, ast.AstSymbolNode):
-            # print('8989',trag_list)
             trag_list.insert(0, left)
         return trag_list
 
@@ -407,7 +395,6 @@ class SymTabBuildPass(SymTabPass):
                 )
             else:
                 for v in node.paths[0].sub_module.sym_tab.tab.values():
-                    # print(type(v.access))
                     self.def_insert(
                         v.decl, access_spec=v.access, table_override=self.cur_scope()
                     )
@@ -456,10 +443,15 @@ class SymTabBuildPass(SymTabPass):
         body: Optional[ArchBlock],
         """
         access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-        access={"priv": SymbolAccess.PRIVATE, "protect": SymbolAccess.PROTECTED}.get(access, access)
+
+        if access is not None and isinstance(access, (str)):
+            access = {
+                "priv": SymbolAccess.PRIVATE,
+                "protect": SymbolAccess.PROTECTED,
+            }.get(access, access)
         self.sync_node_to_scope(node)
-        self.def_insert(node,access_spec= access , single_use="architype")
-        # self.def_insert(node, single_use="architype")
+        if isinstance(access, SymbolAccess):
+            self.def_insert(node, access_spec=access, single_use="architype")
         self.push_scope(node.name.value, node)
         self.sync_node_to_scope(node)
 
@@ -512,11 +504,17 @@ class SymTabBuildPass(SymTabPass):
         signature: Optional[FuncSignature | TypeSpec | EventSignature],
         body: Optional[CodeBlock],
         """
+        if node.sym_link:
+            print(type(node), type(node.sym_link.access), node.sym_link.decl)
         access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-        access = {"priv": SymbolAccess.PRIVATE, "protect": SymbolAccess.PROTECTED}.get(access, access)
-
+        if access is not None and isinstance(access, (str)):
+            access = {
+                "priv": SymbolAccess.PRIVATE,
+                "protect": SymbolAccess.PROTECTED,
+            }.get(access, access)
         self.sync_node_to_scope(node)
-        self.def_insert(node,access_spec=access, single_use="ability")
+        if isinstance(access, SymbolAccess):
+            self.def_insert(node, access_spec=access, single_use="ability")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
@@ -603,12 +601,16 @@ class SymTabBuildPass(SymTabPass):
         base_classes: 'BaseClasses',
         body: Optional['EnumBlock'],
         """
-        print('hooray : ',(node.sym_link.decl.loc.mod_path) if node.sym_link else None,)
         access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-        access={"priv": SymbolAccess.PRIVATE, "protect": SymbolAccess.PROTECTED}.get(access, access)
-        print('type :',access,type(access))
+        if access is not None and isinstance(access, (str)):
+            access = {
+                "priv": SymbolAccess.PRIVATE,
+                "protect": SymbolAccess.PROTECTED,
+            }.get(access, access)
+
         self.sync_node_to_scope(node)
-        self.def_insert(node,access_spec=access, single_use="enum")
+        if isinstance(access, SymbolAccess):
+            self.def_insert(node, access_spec=access, single_use="enum")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
