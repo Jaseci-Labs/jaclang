@@ -8,7 +8,7 @@ from setuptools import find_packages, setup  # type: ignore
 VERSION = "0.0.1"
 
 setup(
-    name="jaclang-fastapi",
+    name="jaclang_fastapi",
     version=VERSION,
     packages=find_packages(include="jaclang_fastapi"),
     install_requires=[

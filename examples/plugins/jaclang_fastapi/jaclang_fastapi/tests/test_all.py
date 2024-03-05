@@ -1,12 +1,11 @@
 """Temporary."""
 
 from contextlib import suppress
-from multiprocessing import Process
+from os import getenv
+from unittest import TestCase
 
 from httpx import get
 
-from jaclang.cli import cli
-from jaclang.utils.test import TestCase
 
 paths = {
     "/user/register": ["post"],
@@ -61,27 +60,25 @@ class JacLangFastAPITests(TestCase):
 
     def setUp(self) -> None:
         """Temporary."""
-        self.server = Process(
-            target=cli.run,
-            args=(self.fixture_abs_path("simple_walkerapi.jac"),),
-            daemon=True,
-        )
-        self.server.start()
+        self.host = getenv("TEST_HOST", "0.0.0.0")
+        count = 0
         while True:
-            with suppress(Exception):
+            if count > 5:
                 self.get_openapi_json(1)
                 break
+            else:
+                with suppress(Exception):
+                    self.get_openapi_json(1)
+                    break
+            count += 1
 
         return super().setUp()
 
-    def tearDown(self) -> None:
-        """Temporary."""
-        self.server.terminate()
-        return super().tearDown()
-
     def get_openapi_json(self, timeout: int = None) -> None:
         """Temporary."""
-        return get("http://localhost:8000/openapi.json", timeout=timeout).json()
+        res = get(f"http://{self.host}:8000/openapi.json", timeout=timeout)
+        res.raise_for_status()
+        return res.json()
 
     def test_all_features(self) -> None:
         """Temporary."""

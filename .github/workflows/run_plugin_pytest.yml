@@ -25,7 +25,7 @@ jobs:
     - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
-        python-version: 3.12
+        python-version: 3.12.2
 
     - name: Start MongoDB
       uses: supercharge/mongodb-github-action@1.10.0
@@ -43,4 +43,6 @@ jobs:
     - name: Run tests
       run: |
         cd examples/plugins/jaclang_fastapi
+        jac run jaclang_fastapi/tests/fixtures/simple_walkerapi.jac &
+        sleep 1
         pytest
