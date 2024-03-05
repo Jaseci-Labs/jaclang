@@ -71,11 +71,13 @@
 
 include:jac check;
 glob b: int=5;
-
+enum enumy{
+    ctriangle=a
+}
 with entry{
     xx=a; 
     print(b);
-    print(obj1().sdsd());
+    print(obj1().func1());
     print(ShapeType.CIRCLE.value);
 }
 
