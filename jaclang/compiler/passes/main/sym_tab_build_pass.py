@@ -504,8 +504,6 @@ class SymTabBuildPass(SymTabPass):
         signature: Optional[FuncSignature | TypeSpec | EventSignature],
         body: Optional[CodeBlock],
         """
-        if node.sym_link:
-            print(type(node), type(node.sym_link.access), node.sym_link.decl)
         access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
         if access is not None and isinstance(access, (str)):
             access = {
