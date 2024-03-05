@@ -171,11 +171,15 @@ walker change_new_girl {
 walker test_array {
     async can enter1 with `<r> entry {
          visit await [-->];
+
+        # a = someone();
+        # <r> ++> a;
+        # await <r>.save();
+        # report a;
     }
 
     async can enter2 with someone entry {
         <h>.val.append(1);
-        <h>.val = <h>.val;
         await <h>.save();
         report <h>;
     }

@@ -1,7 +1,7 @@
 """Common Classes for FastAPI Graph Integration."""
 
 from contextvars import ContextVar
-from copy import deepcopy
+from copy import copy, deepcopy
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from re import IGNORECASE, compile
@@ -20,6 +20,8 @@ from jaclang.core.construct import (
     Root as _Root,
     root as base_root,
 )
+
+from orjson import dumps
 
 from pymongo import ASCENDING, UpdateOne
 from pymongo.client_session import ClientSession
@@ -47,6 +49,7 @@ class ArchCollection(BaseCollection):
         """Translate EdgeArchitypes edges into DocAnchor edges."""
         arch: NodeArchitype = doc_anc.build(**(doc.get("context") or {}))
         arch._jac_.edges = [DocAnchor.ref(edge) for edge in (doc.get("edge") or [])]
+
         return arch
 
     @classmethod
@@ -89,18 +92,14 @@ class DocAnchor:
     connected: bool = False
     arch: Union["NodeArchitype", "EdgeArchitype", "Root", "GenericEdge"] = None
     changes: Optional[dict] = field(default_factory=dict)
+    hashes: Optional[dict[str, int]] = field(default_factory=dict)
+    rollback_changes: Optional[dict] = field(default_factory=dict)
+    rollback_hashes: Optional[dict[str, int]] = field(default_factory=dict)
 
     @property
     def ref_id(self) -> str:
         """Return id in reference type."""
         return f"{self.type.value}:{self.name}:{self.id}"
-
-    @property
-    def _set(self) -> dict:
-        if "$set" not in self.changes:
-            self.changes["$set"] = {}
-
-        return self.changes.get("$set")
 
     def _add_to_set(
         self, field: str, obj: Union["DocAnchor", ObjectId], remove: bool = False
@@ -141,10 +140,6 @@ class DocAnchor:
         else:
             ops.add(obj)
             self._add_to_set(field, obj, True)
-
-    def update_context(self, up: dict) -> None:
-        """Push update that there's a change happen in context."""
-        self._set.update(up)
 
     def connect_edge(self, doc_anc: "DocAnchor", rollback: bool = False) -> None:
         """Push update that there's newly added edge."""
@@ -199,9 +194,27 @@ class DocAnchor:
 
     def pull_changes(self) -> dict:
         """Return changes and clear current reference."""
+        self.rollback_changes = deepcopy(self.changes)
+        self.rollback_hashes = copy(self.hashes)
+
         changes = self.changes
-        self.changes = {}
+        self.changes = {}  # renew reference
+
+        _set = {}
+        for key, val in asdict(self.arch).items():
+            if (h := hash(dumps(val))) != self.hashes.get(key):
+                self.hashes[key] = h
+                _set[f"context.{key}"] = val
+
+        if _set:
+            changes["$set"] = _set
+
         return changes
+
+    def rollback(self) -> None:
+        """Rollback hashes so set update still available."""
+        self.hashes = self.rollback_hashes
+        self.changes = self.rollback_changes
 
     def build(self, **kwargs: Any) -> object:  # noqa ANN401
         """Return generated class instance equivalent for DocAnchor."""
@@ -288,17 +301,6 @@ class DocArchitype:
     def _jac_doc_(self, val: DocAnchor) -> None:
         self.__jac_doc__ = val
 
-    def __setattr__(self, __name: str, __value: Any) -> None:  # noqa: ANN401
-        """Catch variable set to include in changes holder for db updates."""
-        if (
-            isinstance(jd := getattr(self, "__jac_doc__", None), DocAnchor)
-            and (fields := getattr(self, "_jac_fields_", None))
-            and __name in fields
-        ):
-            jd.update_context({f"context.{__name}": __value})
-
-        return super().__setattr__(__name, __value)
-
     def get_context(self) -> dict:
         """Retrieve context dictionary."""
         return {"context": asdict(self)}
@@ -383,6 +385,10 @@ class NodeArchitype(_NodeArchitype, DocArchitype):
                         roots=set(access.get("roots")),
                     ),
                     connected=True,
+                    hashes={
+                        key: hash(dumps(val))
+                        for key, val in doc.get("context", {}).items()
+                    },
                 ),
                 doc,
             )
@@ -452,7 +458,7 @@ class NodeArchitype(_NodeArchitype, DocArchitype):
                         session=session,
                     )
                 except Exception:
-                    jd.changes = changes
+                    jd.rollback()
                     raise
         else:
             async with await ArchCollection.get_session() as session:
@@ -595,6 +601,10 @@ class Root(NodeArchitype, _Root):
                         roots=set(access.get("roots")),
                     ),
                     connected=True,
+                    hashes={
+                        key: hash(dumps(val))
+                        for key, val in doc.get("context", {}).items()
+                    },
                 ),
                 doc,
             )
@@ -633,6 +643,10 @@ class EdgeArchitype(_EdgeArchitype, DocArchitype):
                         roots=set(access.get("roots")),
                     ),
                     connected=True,
+                    hashes={
+                        key: hash(dumps(val))
+                        for key, val in doc.get("context", {}).items()
+                    },
                 ),
                 doc,
             )
@@ -699,7 +713,7 @@ class EdgeArchitype(_EdgeArchitype, DocArchitype):
                         session=session,
                     )
                 except Exception:
-                    jd.changes = changes
+                    jd.rollback()
                     raise
         else:
             async with await ArchCollection.get_session() as session:
@@ -779,6 +793,10 @@ class GenericEdge(EdgeArchitype):
                         roots=set(access.get("roots")),
                     ),
                     connected=True,
+                    hashes={
+                        key: hash(dumps(val))
+                        for key, val in doc.get("context", {}).items()
+                    },
                 ),
                 doc,
             )
