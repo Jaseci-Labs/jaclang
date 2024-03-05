@@ -374,3 +374,23 @@ class JacLanguageTests(TestCase):
         self.assertIn("node_a(val=1)", stdout_value)
         self.assertIn("node_a(val=2)", stdout_value)
         self.assertIn("[node_b(val=42), node_b(val=42)]\n", stdout_value)
+
+    def test_modulelevel_access(self) -> None:
+        """Test walking through edges."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("access_modifiers", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn(
+            'line 75, col 15: Access to private variable "a" from'
+            " C:\\Users\\DELL\\jaclang\\jaclang\\tests\\fixtures\\access_modifiers.jac "
+            "to C:\\Users\\DELL\\jaclang\\jaclang\\tests\\fixtures\\check.jac",
+            stdout_value,
+        )
+        self.assertIn(
+            'line 81, col 11: Access to private variable "obj1" from'
+            " C:\\Users\\DELL\\jaclang\\jaclang\\tests\\fixtures\\access_modifiers.jac "
+            "to C:\\Users\\DELL\\jaclang\\jaclang\\tests\\fixtures\\check.jac",
+            stdout_value,
+        )
