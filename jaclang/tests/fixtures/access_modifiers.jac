@@ -78,6 +78,7 @@ with entry{
     xx=a; 
     print(b);
     print(obj1().func1());
+    print(obj1().jj1);
     print(ShapeType.CIRCLE.value);
 }
 

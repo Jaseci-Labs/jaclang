@@ -3,6 +3,7 @@ can :priv kukku(){}
 obj : priv obj1{
     has :priv jj1 : int=9;
     has :priv llll1 : int=9;
+    
     can:priv func1(){
         print(self.jj1);
     

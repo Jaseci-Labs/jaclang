@@ -135,12 +135,14 @@ class AccessCheckPass(SymTabPass):
             " symlink of this node(name) \n",
             node.sym_link,
             (node.sym_link.decl.sym_tab.name) if node.sym_link else None,
+            ('type of decl ' ,type(node.sym_link.decl)) if node.sym_link else None,
             (node.sym_tab.name),
-            # (node.sym_link.decl.sym_tab.loc.mod_path) if node.sym_link else None,
+            (node.sym_link.decl.loc.mod_path) if node.sym_link else None,
             ('mod-> ',node.loc.mod_path),
+            # ('mod-> ',node.sym_link.decl.loc.mod_path),
         )
         if node.sym_tab.name=='enumy':
-            
+
             print('enumy',444)
         print("lookup(name) \n", self.use_lookup(node))
         x = node.sym_tab.lookup(node.sym_name)

@@ -603,6 +603,7 @@ class SymTabBuildPass(SymTabPass):
         base_classes: 'BaseClasses',
         body: Optional['EnumBlock'],
         """
+        print('hooray : ',(node.sym_link.decl.loc.mod_path) if node.sym_link else None,)
         access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
         access={"priv": SymbolAccess.PRIVATE, "protect": SymbolAccess.PROTECTED}.get(access, access)
         print('type :',access,type(access))
