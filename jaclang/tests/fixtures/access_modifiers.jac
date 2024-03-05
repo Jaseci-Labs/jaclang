@@ -75,6 +75,8 @@ glob b: int=5;
 with entry{
     xx=a; 
     print(b);
+    print(obj1().sdsd());
+    print(ShapeType.CIRCLE.value);
 }
 
 

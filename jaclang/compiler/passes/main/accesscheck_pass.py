@@ -140,4 +140,6 @@ class AccessCheckPass(SymTabPass):
         print("lookup(name) \n", self.use_lookup(node))
         x = node.sym_tab.lookup(node.sym_name)
         print("symtab lookup(name)\n", x)
+        if  node.sym_link and node.sym_link.decl.sym_tab.name==node.sym_tab.name and x.access==SymbolAccess.PRIVATE:
+            print('errorrr ...!!!! ')
         pass
