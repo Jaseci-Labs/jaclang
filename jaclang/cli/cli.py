@@ -2,7 +2,6 @@
 
 import marshal
 import os
-import pdb
 import pickle
 import shutil
 import types
@@ -17,6 +16,7 @@ from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
+from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
 
 
@@ -200,8 +200,9 @@ def debug(filename: str) -> None:
             code = marshal.loads(bytecode)
 
             func = types.FunctionType(code, globals())
-
-            pdb.runcall(func)
+            print("Debugging with Jac debugger.")
+            db.runcall(func)
+            print("Done debugging.")
         else:
             print(f"Error while generating bytecode in {filename}.")
     else:
