@@ -10,7 +10,7 @@ VERSION = "0.0.1"
 setup(
     name="jaclang-fastapi",
     version=VERSION,
-    packages=find_packages(include="jaclang_fastapi"),
+    packages=find_packages(include=["jaclang_fastapi", "jaclang_fastapi.*"]),
     install_requires=[
         "fastapi==0.109.0",
         "pydantic==2.6.0",
