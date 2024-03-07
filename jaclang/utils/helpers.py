@@ -1,8 +1,9 @@
 """Utility functions and classes for Jac compilation toolchain."""
 
 import os
+import pdb
 import re
-
+from types import FrameType
 
 import jaclang.compiler.absyntree as ast
 
@@ -104,3 +105,26 @@ def import_target_to_relative_path(
         base_path = os.path.dirname(base_path)
     relative_path = os.path.join(base_path, *actual_parts) + file_extension
     return relative_path
+
+
+class Jdb(pdb.Pdb):
+    """Jac debugger."""
+
+    def __init__(self, *args, **kwargs) -> None:  # noqa
+        """Initialize the Jac debugger."""
+        super().__init__(*args, **kwargs)
+        self.prompt = "Jdb > "
+
+    def user_line(self, frame: FrameType) -> None:
+        """Call when we stop or break at this line."""
+        module_name = frame.f_globals["__name__"]
+
+        modules_to_skip = ["jaclang*", "importlib._bootstrap*"]
+
+        if any(module in module_name for module in modules_to_skip):
+            self.set_continue()
+        else:
+            super().user_line(frame)
+
+
+debugger = Jdb()
