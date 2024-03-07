@@ -442,16 +442,8 @@ class SymTabBuildPass(SymTabPass):
         base_classes: BaseClasses,
         body: Optional[ArchBlock],
         """
-        access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-
-        if access is not None and isinstance(access, (str)):
-            access = {
-                "priv": SymbolAccess.PRIVATE,
-                "protect": SymbolAccess.PROTECTED,
-            }.get(access, access)
         self.sync_node_to_scope(node)
-        if isinstance(access, SymbolAccess):
-            self.def_insert(node, access_spec=access, single_use="architype")
+        self.def_insert(node, access_spec=node, single_use="architype")
         self.push_scope(node.name.value, node)
         self.sync_node_to_scope(node)
 
@@ -504,15 +496,8 @@ class SymTabBuildPass(SymTabPass):
         signature: Optional[FuncSignature | TypeSpec | EventSignature],
         body: Optional[CodeBlock],
         """
-        access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-        if access is not None and isinstance(access, (str)):
-            access = {
-                "priv": SymbolAccess.PRIVATE,
-                "protect": SymbolAccess.PROTECTED,
-            }.get(access, access)
         self.sync_node_to_scope(node)
-        if isinstance(access, SymbolAccess):
-            self.def_insert(node, access_spec=access, single_use="ability")
+        self.def_insert(node, access_spec=node, single_use="ability")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
@@ -599,16 +584,8 @@ class SymTabBuildPass(SymTabPass):
         base_classes: 'BaseClasses',
         body: Optional['EnumBlock'],
         """
-        access = node.access.tag.value if node.access else SymbolAccess.PUBLIC
-        if access is not None and isinstance(access, (str)):
-            access = {
-                "priv": SymbolAccess.PRIVATE,
-                "protect": SymbolAccess.PROTECTED,
-            }.get(access, access)
-
         self.sync_node_to_scope(node)
-        if isinstance(access, SymbolAccess):
-            self.def_insert(node, access_spec=access, single_use="enum")
+        self.def_insert(node, access_spec=node, single_use="enum")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
