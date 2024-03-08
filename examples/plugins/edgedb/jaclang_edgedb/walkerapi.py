@@ -23,6 +23,7 @@ from jaclang_edgedb.queries import (
     get_node_edges,
     insert_edge,
     insert_node,
+    update_edge,
     update_node,
 )
 from .context import JCONTEXT, JacContext
@@ -32,6 +33,7 @@ from jaclang.core.construct import Architype, EdgeArchitype, NodeArchitype
 from jaclang.plugin.default import hookimpl
 from jaclang.plugin.spec import WalkerArchitype, DSFunc
 from jaclang.cli.cli import cmd_registry
+from fastapi.responses import ORJSONResponse
 
 from dataclasses import dataclass, make_dataclass
 from functools import wraps
@@ -357,7 +359,9 @@ def build_router(cls: Type[WalkerArchitype]) -> APIRouter:
             )
 
     if not specs.exclude:
-        getattr(router, specs.method.lower())(f"{path.lower()}", tags=specs.tags)(api)
+        getattr(router, specs.method.lower())(
+            f"{path.lower()}", tags=specs.tags, response_class=ORJSONResponse
+        )(api)
 
     return router
 
@@ -471,6 +475,7 @@ class JacFeature:
             cls._jac_entry_funcs_ = on_entry
             cls._jac_exit_funcs_ = on_exit
             inner_init = cls.__init__
+            inner_setattr = cls.__setattr__
 
             @wraps(inner_init)
             def new_init(
@@ -490,7 +495,22 @@ class JacFeature:
                         insert_edge(async_client, cls.__name__, **kwargs)
                     )
 
+            @wraps(inner_setattr)
+            def new_setattr(self, __name: str, __value: Any) -> None:
+                """Intercept changes to node properties and update the db."""
+
+                if __name != "_edge_data" and __name != "_jac_":
+                    # only update if the attribute exists already
+                    if hasattr(self, __name) and hasattr(self, "_edge_data"):
+                        properties = json.loads(self._edge_data.properties)
+                        properties[__name] = __value
+                        properties = json.dumps(properties)
+                        update_edge(client, self._edge_data.id, properties)
+
+                return inner_setattr(self, __name, __value)
+
             cls.__init__ = new_init
+            cls.__setattr__ = new_setattr
 
             # track edge types
             JacFeature._edge_types[cls.__name__] = cls

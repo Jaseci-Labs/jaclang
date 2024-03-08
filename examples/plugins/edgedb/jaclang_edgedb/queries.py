@@ -52,7 +52,7 @@ def update_node(client: Client, uuid: str, properties=str) -> DBNode:
 
 def update_edge(client: Client, uuid: str, properties=str) -> DBNode:
     query = """
-        UPDATE Node
+        UPDATE Edge
         filter .id = <uuid>$uuid
         set {properties := <json>$properties};
     """

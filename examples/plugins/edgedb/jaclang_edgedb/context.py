@@ -60,6 +60,7 @@ class JacContext:
             for key, dval in val.items():
                 self.clean_response(key, dval, val)
         elif isinstance(val, Architype):
+            # print(val)
             obj[key] = {
                 "jid": val._edge_data.id,
                 "name": val.__class__.__name__,

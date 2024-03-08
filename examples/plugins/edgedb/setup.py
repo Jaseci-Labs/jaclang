@@ -17,6 +17,7 @@ setup(
         "fastapi==0.109.2",
         "uvicorn==0.27.0.post1",
         "gunicorn==21.2.0",
+        "orjson==3.1.95",
     ],
     package_data={
         "": ["*.ini"],
