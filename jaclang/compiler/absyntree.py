@@ -1671,6 +1671,20 @@ class CompareExpr(Expr):
         self.rights = rights
         self.ops = ops
         AstNode.__init__(self, kid=kid)
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize ast node."""
+        res = True
+        if deep:
+            res = self.left.normalize(deep)
+            res = res and self.rights.normalize(deep) 
+            res = res and self.ops.normalize(deep)
+        new_kid: list[AstNode] = [self.left]
+        for i in range(len(self.rights)):
+            new_kid.append(self.ops[i])
+            new_kid.append(self.rights[i])
+        AstNode.__init__(self, kid=new_kid)
+        return res
+
 
 
 class BoolExpr(Expr):
@@ -1686,6 +1700,18 @@ class BoolExpr(Expr):
         self.values = values
         self.op = op
         AstNode.__init__(self, kid=kid)
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize ast node."""
+        res = True
+        if deep:
+            res = self.op.normalize(deep)
+            res = res and self.values.normalize(deep)
+        new_kid: list[AstNode] = [self.values[0]]
+        for i in range(1, len(self.values)):
+            new_kid.append(self.op)
+            new_kid.append(self.values[i])
+        AstNode.__init__(self, kid=new_kid)
+        return res
 
 
 class LambdaExpr(Expr):
@@ -1743,6 +1769,16 @@ class IfElseExpr(Expr):
         self.value = value
         self.else_value = else_value
         AstNode.__init__(self, kid=kid)
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize ast node."""
+        res = True
+        if deep:
+            res = self.condition.normalize(deep)
+            res = res and self.value.normalize(deep) if self.value else res
+            res = res and self.else_value.normalize(deep) if self.else_value else res
+        new_kid: list[AstNode] = [self.value, self.gen_token(Tok.KW_IF), self.condition, self.gen_token(Tok.KW_ELSE), self.else_value]
+        AstNode.__init__(self, kid=new_kid)
+        return res
 
 
 class MultiString(AtomExpr):
@@ -1865,7 +1901,19 @@ class TupleVal(AtomExpr):
             sym_name_node=self,
             sym_type=SymbolType.SEQUENCE,
         )
-
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize ast node."""
+        res = True
+        if deep:
+            res = self.values.normalize(deep) if self.values else res
+        new_kid: list[AstNode] = [
+            self.gen_token(Tok.LPAREN),
+        ]
+        if self.values:
+            new_kid.append(self.values)
+        new_kid.append(self.gen_token(Tok.RPAREN))
+        AstNode.__init__(self, kid=new_kid)
+        return res
 
 class DictVal(AtomExpr):
     """ExprDict node type for Jac Ast."""
@@ -2099,6 +2147,24 @@ class IndexSlice(AtomExpr):
             sym_type=SymbolType.SEQUENCE,
             sym_name_node=self,
         )
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize ast node."""
+        res = True
+        if deep:
+            res = self.start.normalize(deep) if self.start else res
+            res = res and self.stop.normalize(deep) if self.stop else res
+            res = res and self.step.normalize(deep) if self.step else res
+        new_kid: list[AstNode] = [ self.gen_token(Tok.LSQUARE)] 
+        if self.start:
+            new_kid.append(self.start)
+        if self.stop:
+            new_kid.append(self.stop)
+        if self.step:
+            new_kid.append(self.gen_token(Tok.COLON, ":"))
+            new_kid.append(self.step)
+        new_kid.append(self.gen_token(Tok.RSQUARE)) #add ']'
+        AstNode.__init__(self, kid=new_kid)
+        return res
 
 
 class ArchRef(NameSpec):
