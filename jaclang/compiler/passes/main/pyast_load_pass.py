@@ -339,7 +339,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             )
         else:
             raise self.ice("Length mismatch in assignment targets")
-
         if isinstance(value, ast.Expr):
             return ast.Assignment(
                 target=valid_targets,
@@ -917,7 +916,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         continue_tok = ast.Token(
             file_path=self.mod_path,
             name=Tok.KW_CONTINUE,
-            value="KW_CONTINUE",
+            value="continue",
             line=0,
             col_start=0,
             col_end=0,
