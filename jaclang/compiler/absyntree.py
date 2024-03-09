@@ -1352,6 +1352,28 @@ class InForStmt(AstAsyncNode, AstElseBodyNode, CodeBlockStmt):
         AstNode.__init__(self, kid=kid)
         AstAsyncNode.__init__(self, is_async=is_async)
         AstElseBodyNode.__init__(self, else_body=else_body)
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize in for node."""
+        res = True
+        if deep:
+            res = self.target.normalize(deep)
+            res = res and self.collection.normalize(deep) if self.collection else res
+            res = res and self.body.normalize(deep) if self.body else res
+            res = res and self.else_body.normalize(deep) if self.else_body else res
+        new_kid: list[AstNode] = []
+        if self.is_async:
+            new_kid.append(self.gen_token(Tok.KW_ASYNC))
+        new_kid.append(self.gen_token(Tok.KW_FOR))
+        new_kid.append(self.target)
+        new_kid.append(self.gen_token(Tok.KW_IN))
+        new_kid.append(self.collection)
+        new_kid.append(self.gen_token(Tok.LBRACE))
+        new_kid.append(self.body)
+        new_kid.append(self.gen_token(Tok.RBRACE))
+        if self.else_body:
+            new_kid.append(self.else_body)
+        AstNode.__init__(self, kid=new_kid)
+        return res
 
 
 class WhileStmt(CodeBlockStmt):
