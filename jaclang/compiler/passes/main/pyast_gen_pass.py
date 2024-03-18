@@ -5,6 +5,7 @@ in each node. Module nodes contain the entire module code.
 """
 
 import ast as ast3
+import os
 import textwrap
 from typing import Optional, Sequence, TypeVar
 
@@ -17,6 +18,8 @@ T = TypeVar("T", bound=ast3.AST)
 
 class PyastGenPass(Pass):
     """Jac blue transpilation to python pass."""
+
+    registry: dict = {}
 
     @staticmethod
     def node_compilable_test(node: ast3.AST) -> None:
@@ -331,6 +334,14 @@ class PyastGenPass(Pass):
             )
         ]
         node.gen.py = ast3.unparse(node.gen.py_ast[0])
+        node.module_registry = self.registry
+        if os.environ.get("JAC_REGISTRY_DEBUG", False):
+            import json
+
+            with open(
+                node.source.file_path.replace(".jac", "_registry.json"), "w"
+            ) as f:
+                json.dump(self.registry, f, indent=2)
 
     def exit_global_vars(self, node: ast.GlobalVars) -> None:
         """Sub objects.
@@ -340,6 +351,7 @@ class PyastGenPass(Pass):
         is_frozen: bool,
         doc: Optional[String],
         """
+        self.needs_jac_feature()
         if node.doc:
             doc = self.sync(ast3.Expr(value=node.doc.gen.py_ast[0]), jac_node=node.doc)
             if isinstance(doc, ast3.AST) and isinstance(
@@ -584,6 +596,7 @@ class PyastGenPass(Pass):
         ]
 
     def exit_architype(self, node: ast.Architype) -> None:
+        # TODO: Get the Scope of the Architype
         """Sub objects.
 
         name: Name,
@@ -694,6 +707,39 @@ class PyastGenPass(Pass):
             )
         ]
 
+        self.set_register(
+            node.name.value,
+            self.get_scope(node),
+            node.arch_type.value,
+            node.semstr.lit_value if node.semstr else "",
+        )
+
+    def get_scope(self, node: ast.AstNode) -> str:
+        """Get scope."""
+        a = (
+            node.name
+            if isinstance(node, (ast.Module))
+            else (
+                node.name.value if isinstance(node, (ast.Enum, ast.Architype)) else ""
+            )
+        )
+        main_path = ""
+        while node:
+            if isinstance(node, (ast.Module)):
+                main_path = f"{node.name}({node.__class__.__name__}).{main_path}"
+            elif isinstance(node, (ast.Enum, ast.Architype)) and a != node.name.value:
+                node_type = (
+                    node.__class__.__name__
+                    if isinstance(node, ast.Enum)
+                    else node.arch_type.value
+                )
+                main_path = f"{node.name.value}({node_type}).{main_path}"
+            if node.parent:
+                node = node.parent
+            else:
+                break
+        return main_path[:-1]
+
     def collect_events(
         self, node: ast.Architype
     ) -> tuple[list[ast3.AST], list[ast3.AST]]:
@@ -747,6 +793,8 @@ class PyastGenPass(Pass):
         """
 
     def exit_enum(self, node: ast.Enum) -> None:
+        # TODO: Scope of the Enum
+        # TODO: Add Semstring for ENUM Items
         """Sub objects.
 
         name: Name,
@@ -757,8 +805,9 @@ class PyastGenPass(Pass):
         decorators: Optional[SubNodeList[ExprType]],
         """
         self.needs_enum()
+        enum_body = node.body.body if isinstance(node.body, ast.EnumDef) else node.body
         body = self.resolve_stmt_block(
-            node.body.body if isinstance(node.body, ast.EnumDef) else node.body,
+            enum_body,
             doc=node.doc,
         )
         decorators = (
@@ -785,6 +834,12 @@ class PyastGenPass(Pass):
                 )
             )
         ]
+        self.set_register(
+            node.name.value,
+            self.get_scope(node),
+            "enum",
+            node.semstr.lit_value if node.semstr else "",
+        )
 
     def exit_enum_def(self, node: ast.EnumDef) -> None:
         """Sub objects.
@@ -1237,6 +1292,7 @@ class PyastGenPass(Pass):
         ]
 
     def exit_arch_has(self, node: ast.ArchHas) -> None:
+        # TODO: Add the jac register set (Maybe)
         """Sub objects.
 
         is_static: bool,
@@ -1385,6 +1441,16 @@ class PyastGenPass(Pass):
                 )
             )
         ]
+        self.set_register(
+            node.name.value,
+            self.get_scope(node),
+            (
+                node.type_tag.tag.value
+                if node.type_tag and isinstance(node.type_tag.tag, ast.Name)
+                else None
+            ),
+            node.semstr.lit_value if node.semstr else "",
+        )
 
     def exit_typed_ctx_block(self, node: ast.TypedCtxBlock) -> None:
         """Sub objects.
@@ -1879,7 +1945,27 @@ class PyastGenPass(Pass):
         type_tag: Optional[SubTag[ExprType]],
         mutable: bool =True,
         """
+        value = (
+            node.value.gen.py_ast[0]
+            if node.value
+            else (
+                self.sync(
+                    ast3.Call(
+                        func=self.sync(ast3.Name(id="__jac_auto__", ctx=ast3.Load())),
+                        args=[],
+                        keywords=[],
+                    )
+                )
+                if node.is_enum_stmt
+                else self.ice()
+            )
+        )
         if node.type_tag:
+            assign_target = (
+                node.target.items[0].value
+                if isinstance(node.target.items[0], ast.Name)
+                else ""
+            )
             node.gen.py_ast = [
                 self.sync(
                     ast3.AnnAssign(
@@ -1890,26 +1976,53 @@ class PyastGenPass(Pass):
                     )
                 )
             ]
-        elif not node.value:
-            self.ice()
         elif node.aug_op:
             node.gen.py_ast = [
                 self.sync(
                     ast3.AugAssign(
                         target=node.target.items[0].gen.py_ast[0],
                         op=node.aug_op.gen.py_ast[0],
-                        value=node.value.gen.py_ast[0],
+                        value=value,
                     )
                 )
             ]
         else:
+            assign_target = (
+                node.target.items[0].value
+                if isinstance(node.target.items[0], ast.Name)
+                else ""
+            )
             node.gen.py_ast = [
-                self.sync(
-                    ast3.Assign(
-                        targets=node.target.gen.py_ast, value=node.value.gen.py_ast[0]
-                    )
-                )
+                self.sync(ast3.Assign(targets=node.target.gen.py_ast, value=value))
             ]
+
+        def bfs(node: ast.AstNode) -> list[str]:
+            """Collect type information in assignment using bfs."""
+            extracted_type = []
+            if isinstance(node, (ast.BuiltinType, ast.Token)):
+                extracted_type.append(node.value)
+            for child in node.kid:
+                extracted_type.extend(bfs(child))
+            return extracted_type
+
+        extracted_type = (
+            "".join(bfs(node.type_tag.kid[1:][0])) if node.type_tag else None
+        )
+
+        if not node.aug_op:
+            self.set_register(
+                assign_target,
+                self.get_scope(node),
+                extracted_type,
+                node.semstr.lit_value if node.semstr else "",
+            )
+
+    def set_register(self, key: str, scope: str, type: str | None, semstr: str) -> None:
+        """Set register."""
+        if scope in self.registry:
+            self.registry[scope][key] = (type, semstr)
+        else:
+            self.registry[scope] = {key: (type, semstr)}
 
     def exit_binary_expr(self, node: ast.BinaryExpr) -> None:
         """Sub objects.
@@ -3211,27 +3324,20 @@ class PyastGenPass(Pass):
         pos_start: int,
         pos_end: int,
         """
+        if (
+            node.parent
+            and node.parent.parent
+            and node.parent.parent.__class__.__name__ == "Enum"
+        ):
+            self.set_register(
+                node.value,
+                self.get_scope(node),
+                None,
+                "",  # TODO: semstr from enum items
+            )
         node.gen.py_ast = [
             self.sync(ast3.Name(id=node.sym_name, ctx=node.py_ctx_func()))
         ]
-        if node.is_enum_singleton and isinstance(node.gen.py_ast[0], ast3.Name):
-            node.gen.py_ast[0].ctx = ast3.Store()
-            node.gen.py_ast = [
-                self.sync(
-                    ast3.Assign(
-                        targets=node.gen.py_ast,
-                        value=self.sync(
-                            ast3.Call(
-                                func=self.sync(
-                                    ast3.Name(id="__jac_auto__", ctx=ast3.Load())
-                                ),
-                                args=[],
-                                keywords=[],
-                            )
-                        ),
-                    )
-                )
-            ]
 
     def exit_float(self, node: ast.Float) -> None:
         """Sub objects.
