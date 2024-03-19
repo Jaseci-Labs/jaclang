@@ -467,12 +467,9 @@ class PyastGenPass(Pass):
             py_nodes.append(
                 self.sync(ast3.Expr(value=node.doc.gen.py_ast[0]), jac_node=node.doc)
             )
-        py_compat_path_str = []
         for path in node.paths:
-            py_compat_path_str.append(path.path_str.lstrip("."))
-        if node.lang.tag.value == Con.JAC_LANG_IMP:
-            self.needs_jac_import()
-            for p in range(len(py_compat_path_str)):
+            if node.lang.tag.value == Con.JAC_LANG_IMP:
+                self.needs_jac_import()
                 py_nodes.append(
                     self.sync(
                         ast3.Expr(
@@ -487,10 +484,8 @@ class PyastGenPass(Pass):
                                             ast3.keyword(
                                                 arg="target",
                                                 value=self.sync(
-                                                    ast3.Constant(
-                                                        value=node.paths[p].path_str
-                                                    ),
-                                                    node.paths[p],
+                                                    ast3.Constant(value=path.path_str),
+                                                    path,
                                                 ),
                                             )
                                         ),
@@ -522,16 +517,17 @@ class PyastGenPass(Pass):
                     )
                 )
         if node.is_absorb:
-            py_nodes.append(
-                self.sync(
-                    py_node=ast3.ImportFrom(
-                        module=py_compat_path_str[0],
-                        names=[self.sync(ast3.alias(name="*"), node)],
-                        level=0,
-                    ),
-                    jac_node=node,
+            for path in node.paths:
+                py_nodes.append(
+                    self.sync(
+                        py_node=ast3.ImportFrom(
+                            module=path.path_str.lstrip("."),
+                            names=[self.sync(ast3.alias(name="*"), node)],
+                            level=path.level,
+                        ),
+                        jac_node=node,
+                    )
                 )
-            )
             if node.items:
                 self.warning(
                     "Includes import * in target module into current namespace."
@@ -541,15 +537,16 @@ class PyastGenPass(Pass):
                 self.sync(ast3.Import(names=[i.gen.py_ast[0] for i in node.paths]))
             )
         else:
-            py_nodes.append(
-                self.sync(
-                    ast3.ImportFrom(
-                        module=py_compat_path_str[0],
-                        names=node.items.gen.py_ast,
-                        level=0,
+            for path in node.paths:
+                py_nodes.append(
+                    self.sync(
+                        ast3.ImportFrom(
+                            module=path.path_str.lstrip("."),
+                            names=node.items.gen.py_ast,
+                            level=path.level,
+                        )
                     )
                 )
-            )
         node.gen.py_ast = py_nodes
 
     def exit_module_path(self, node: ast.ModulePath) -> None:
