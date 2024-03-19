@@ -27,7 +27,12 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.utils import traverse_graph
+from jaclang.core.utils import (
+    filter,
+    get_type_annotation,
+    registry_data,
+    traverse_graph,
+)
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -391,6 +396,7 @@ class JacFeatureDefaults:
     def with_llm(
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
+        scope: str,
         incl_info: tuple,
         excl_info: tuple,
         inputs: tuple,
@@ -401,10 +407,15 @@ class JacFeatureDefaults:
         reason = False
         if "reason" in model_params:
             reason = model_params.pop("reason")
-        input_types_n_information_str = ""  # TODO: We have to generate this
-        output_type_str = ""  # TODO: We have to generate this
-        output_type_info_str = ""  # TODO: We have to generate this
-        information_str = ""  # TODO: We have to generate this
+        information_str = ""
+        information_str = filter(scope, registry_data, information_str, incl_info)
+        input_types_n_information_str = ""
+        for i in inputs:
+            input_types_n_information_str += (
+                f"{i[2]} ({get_type_annotation(i[3])}) ({i[0]}) = {i[3]},\n"
+            )
+        output_type_str = outputs[0]
+        output_type_info_str = outputs[1]
         meaning_in = aott_raise(
             information_str,
             input_types_n_information_str,
