@@ -220,6 +220,16 @@ class JacLanguageTests(TestCase):
         stdout_value = captured_output.getvalue()
         self.assertEqual(stdout_value.split("\n")[0], "one level deeperslHello World!")
 
+    def test_from_deep_imports(self) -> None:
+        """Parse micro jac file."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("from_deep", base_path=self.fixture_abs_path("./deep/deeper/"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertEqual(stdout_value.split("\n")[0], "aaa!")
+
     def test_has_lambda_goodness(self) -> None:
         """Test has lambda_goodness."""
         construct.root._jac_.edges.clear()

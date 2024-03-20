@@ -536,7 +536,7 @@ class PyastGenPass(Pass):
             py_nodes.append(
                 self.sync(ast3.Import(names=[i.gen.py_ast[0] for i in node.paths]))
             )
-        else:
+        elif node.lang.tag.value != Con.JAC_LANG_IMP:
             for path in node.paths:
                 py_nodes.append(
                     self.sync(
