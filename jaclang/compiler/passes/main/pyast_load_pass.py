@@ -42,9 +42,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             ret = getattr(self, f"proc_{pascal_to_snake(type(node).__name__)}")(node)
         else:
             raise self.ice(f"Unknown node type {type(node).__name__}")
-        # print(f"finshed {type(node).__name__} ---------------------")
-        # print("normalizing", ret.__class__.__name__)
-        # print(ret.unparse())
+        print(f"finshed {type(node).__name__} ---------------------")
+        print("normalizing", ret.__class__.__name__)
+        print(ret.unparse())
         return ret
 
     def transform(self, ir: ast.PythonModuleAst) -> ast.Module:

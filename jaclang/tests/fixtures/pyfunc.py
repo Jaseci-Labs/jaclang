@@ -6,14 +6,15 @@ def my_print(x: object) -> None:
     print(x)
 
 
-# def my_some_func(a: int, b: int) -> int:
-#     for i in range(a):
-#         print(i)
-#         if i == 5:
-#             break
-#         print(b)
-#     else:
-#         print("Loop completed normally{}".format(i))
+def my_some_func(a: int, b: int) -> int:
+    pass
+    # for i in range(a):
+    #     print(i)
+    #     if i == 5:
+    #         break
+    #     print(b)
+    # else:
+    #     print("Loop completed normally{}".format(i))
 
 
 # numbers = [1, 2, 3, 4, 5]
