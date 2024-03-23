@@ -6,7 +6,7 @@ graph = create_family(passage);
 1st Iteration
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Example Family Graph (graph) example_family_graph = {john = person(name = 'John'), jane = person(name = 'Jane'), john -[relationship(relation = 'husband')]-> jane}
@@ -45,7 +45,7 @@ answer = query_family(graph, query);
 1st Iteration
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 None
@@ -71,6 +71,6 @@ Reason and return the output result(s) only, adhering to the provided Type in th
 
 Result
 ```yml
-[Reasoning] Looking at the family graph, there is no direct relationship between Rich and Anne. Rich is a father to Christine and Kim, and has a sister named Beth. Anne is only related to Kim as a sister. Since Anne is not stated to be related to any of Rich's children, we can't infer a relationship between Rich and Anne based on this graph. 
+[Reasoning] Looking at the family graph, there is no direct relationship between Rich and Anne. Rich is a father to Christine and Kim, and has a sister named Beth. Anne is only related to Kim as a sister. Since Anne is not stated to be related to any of Rich's children, we can't infer a relationship between Rich and Anne based on this graph.
 [Output] Not related
 ```

@@ -42,6 +42,6 @@ Person {
 
 with entry {
     info: "Person's Information" str = "Alice is a 21 years old and works as an engineer at LMQL Inc in Zurich, Switzerland.";
-    person = Person with llm(info=(info));
+    person = Person by llm(info=(info));
     print(f"Their name is {person.name} and she works in {person.employer.location}.")
 }

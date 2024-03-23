@@ -36,10 +36,10 @@ glob examples: 'Examples for Picking Odd Word out' list[dict] = [
 ];
 
 can 'Pick the Odd word out'
-pick_odd_word_out_v1(options: 'Options to pick from' list[str]) -> 'Result' str with llm(reason=True);
+pick_odd_word_out_v1(options: 'Options to pick from' list[str]) -> 'Result' str by llm(reason=True);
 
 can 'Pick the Odd word out'
-pick_odd_word_out_v2(options: 'Options to pick from' list[str]) -> 'OPTIONS, REASONING & RESULT' dict with llm;
+pick_odd_word_out_v2(options: 'Options to pick from' list[str]) -> 'OPTIONS, REASONING & RESULT' dict by llm;
 
 with entry {
     options = ["Bentley", "Ferrari", "Lamborghini", "Casio", "Toyota"];

@@ -19,7 +19,7 @@ model llm:openai {
 }
 
 can 'Provide the Answer for the Given Question (A-F)'
-get_answer(question: 'Question' str, choices: 'Answer Choices': dict) -> 'Answer (A-F)' str with llm(reason=True);
+get_answer(question: 'Question' str, choices: 'Answer Choices': dict) -> 'Answer (A-F)' str by llm(reason=True);
 
 with entry {
     question: str = "It was Sept. 1st, 2021 a week ago. What is the date 10 days ago in MM/DD/YYYY?";

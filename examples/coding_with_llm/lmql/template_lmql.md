@@ -1,10 +1,10 @@
 Jac
 ```python
-bruno_mars = Singer(name="Bruno Mars") with llm;
+bruno_mars = Singer(name="Bruno Mars") by llm;
 ```
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Name of the Singer (str) (name) = "Bruno Mars"

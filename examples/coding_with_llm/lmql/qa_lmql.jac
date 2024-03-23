@@ -59,7 +59,7 @@ QA {
     ];
 
     can 'Get next Thought and Action'
-    get_throught_and_actions(question: 'Question' str, prev_info: 'Previous Thoughts, Actions, and Observations' list[dict] = []) -> 'Next Thought and Action' dict with llm;
+    get_throught_and_actions(question: 'Question' str, prev_info: 'Previous Thoughts, Actions, and Observations' list[dict] = []) -> 'Next Thought and Action' dict by llm;
 
     can get_answer(question: 'Question' str) -> str {
         got_answer = False;

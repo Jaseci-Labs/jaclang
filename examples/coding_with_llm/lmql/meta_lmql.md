@@ -5,7 +5,7 @@ expert = get_expert(question);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are needed.
 
 [Information]
 None
@@ -37,7 +37,7 @@ answer = get_answer(question, expert);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 None

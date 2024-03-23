@@ -1,10 +1,10 @@
 ```python
-person = Person with llm use (info);
+person = Person by llm use (info);
 ```
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Person's Information (str) (info) = "Alice is a 21 years old and works as an engineer at LMQL Inc in Zurich, Switzerland."

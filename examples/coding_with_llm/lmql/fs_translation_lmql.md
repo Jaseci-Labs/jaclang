@@ -4,7 +4,7 @@ translate("cheese")
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Examples of English words translated to french (dict[str,str]) (examples) = {"sea otter":"loutre de mer","peppermint": "menthe poivrée","plush giraffe": "girafe en peluche"}

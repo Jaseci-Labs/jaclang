@@ -9,9 +9,9 @@
 # from
 #     "openai/text-davinci-003"
 # where
-#     len(JOKE) < 120 and 
-#     STOPS_AT(JOKE, "?") and 
-#     STOPS_AT(PUNCHLINE, "\n") and 
+#     len(JOKE) < 120 and
+#     STOPS_AT(JOKE, "?") and
+#     STOPS_AT(PUNCHLINE, "\n") and
 #     len(PUNCHLINE) > 1
 
 model llm:openai {
@@ -34,9 +34,9 @@ JokeList {
     ];
 
     can 'Generate only a new joke'
-    joke_generate -> 'Joke' str with llm(max_length=120);
+    joke_generate -> 'Joke' str by llm(max_length=120);
     can 'Generate the Punchline for the Joke'
-    punchline_generate (joke: 'Joke' str) -> 'Punchline' str with llm(end_at="\n");
+    punchline_generate (joke: 'Joke' str) -> 'Punchline' str by llm(end_at="\n");
 
     can generate {
         joke = joke_generate();
@@ -62,7 +62,7 @@ JokeList {
     ];
 
     can 'Generate a Joke with Punchline'
-    generate_joke_punchline -> 'Joke with Punchline' dict with llm;
+    generate_joke_punchline -> 'Joke with Punchline' dict by llm;
 
     can generate {
         joke_punchline = generate_joke_punchline();
