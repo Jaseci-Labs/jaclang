@@ -4,7 +4,7 @@ joke = joke_generate();
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Jokes with Punchlines (list[dict]) (jokes): [{"joke": "How does a penguin build its house?", "punchline": "Igloos it together."},{"joke": "Which knight invented King Arthur's Round Table?", "punchline": "Sir Cumference."}]
@@ -38,7 +38,7 @@ punchline = punchline_generate(joke);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Jokes with Punchlines (list) (jokes): ["Q: How does a penguin build its house?\nA: Igloos it together.", "Q: Which knight invented King Arthur's Round Table?\nA: Sir Cumference."]
@@ -72,7 +72,7 @@ joke_punchline = generate_joke_punchline();
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Jokes with Punchlines (list[dict]) (jokes): [{"joke": "How does a penguin build its house?", "punchline": "Igloos it together."},{"joke": "Which knight invented King Arthur's Round Table?", "punchline": "Sir Cumference."}]

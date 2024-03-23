@@ -7,10 +7,10 @@ model llm:openai {
 }
 
 can 'Summarize the Accomplishments'
-summarize (a: 'Accomplishments' list[str]) -> 'Summary of the Accomplishments' str with llm;
+summarize (a: 'Accomplishments' list[str]) -> 'Summary of the Accomplishments' str by llm;
 
 can 'Translate the given text to Spanish'
-translate (text: str) -> 'Translated Text' str with llm;
+translate (text: str) -> 'Translated Text' str by llm;
 
 with entry{
     summary = summarize(a=["Albert Einstein won a nobel prize", "Discovered the Theory of Relativity"]);

@@ -4,7 +4,7 @@ pick_odd_word_out_v1(options)
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Examples for Picking Odd Word out (list(dict)) (examples) = [{"OPTIONS": ["skirt", "dress", "pen", "jacket"], "REASONING": "skirt is clothing, dress is clothing, pen is an object, jacket is clothing.", "RESULT": "pen"}, {"OPTIONS": ["Spain", "France", "German", "England", "Singapore"], "REASONING": "Spain is a country, France is a country, German is a language, ...", "RESULT": "German"}];
@@ -39,7 +39,7 @@ pick_odd_word_out_v2(options)
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Examples for Picking Odd Word out (list(dict)) (examples) = [{"OPTIONS": ["skirt", "dress", "pen", "jacket"], "REASONING": "skirt is clothing, dress is clothing, pen is an object, jacket is clothing.", "RESULT": "pen"}, {"OPTIONS": ["Spain", "France", "German", "England", "Singapore"], "REASONING": "Spain is a country, France is a country, German is a language, ...", "RESULT": "German"}];

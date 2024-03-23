@@ -13,7 +13,7 @@ Person {
         age: 'Age' int = None;
 
     can 'Calculate the Age of a Person'
-    calculate (cur_year: 'Current Year' int) -> 'Calculated Age' int with llm;
+    calculate (cur_year: 'Current Year' int) -> 'Calculated Age' int by llm;
 }
 with entry{
     Einstein = Person(name="Einstein", dob="1879-03-14");

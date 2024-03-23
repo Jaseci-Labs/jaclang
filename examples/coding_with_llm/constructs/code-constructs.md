@@ -33,7 +33,7 @@ Person {
     Variable 'date of birth' dob : String
     Variable 'Accomplishments' accomplishments : List[String]
 }
-Einstein = Person(name="Einstein") with llm
+Einstein = Person(name="Einstein") by llm
 ```
 
 - Inputs to AOTT Raise

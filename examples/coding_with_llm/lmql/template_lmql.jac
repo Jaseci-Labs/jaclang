@@ -12,7 +12,7 @@
 #           INT(INT_VALUE) and len(TOKENS(INT_VALUE)) < 2
 
 include:plugin openai;
-             
+
 model llm:openai {
     has model_name: "openai/gpt-4",
         temperature: 0.7,
@@ -27,7 +27,7 @@ Singer {
 }
 
 with entry{
-    bruno_mars = Singer(name="Bruno Mars") with llm;
+    bruno_mars = Singer(name="Bruno Mars") by llm;
     print(f"{bruno_mars.name} is {bruno_mars.age} years old. His top 2 songs are {bruno_mars.top_songs}.");
 }
 

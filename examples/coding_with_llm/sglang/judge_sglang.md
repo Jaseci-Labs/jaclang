@@ -2,10 +2,10 @@
 essay = '''With a population of approximately 45 million Spaniards and 3.5 million immigrants,
                Spain is a country of contrasts where the richness of its culture blends it up with
                the variety of languages and dialects used. Being one of the largest economies worldwide,
-               and the second largest country in Europe, Spain is a very appealing destination for tourists 
-               as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at 
-               least two different languages, but protecting and preserving that right has not been 
-               easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, 
+               and the second largest country in Europe, Spain is a very appealing destination for tourists
+               as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at
+               least two different languages, but protecting and preserving that right has not been
+               easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments,
                in order to preserve and defend what identifies them, and deal with the consequences.''';
 essay = Essay(essay);
 
@@ -19,7 +19,7 @@ for criteria in criterias {
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Essay (str) (essay) =  'With a population of approximately 45 million Spaniards and 3.5 million immigrants, Spain is a country of contrasts where the richness of its culture blends it up with the variety of languages and dialects used. Being one of the largest economies worldwide, and the second largest country in Europe, Spain is a very appealing destination for tourists as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at least two different languages, but protecting and preserving that right has not been easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, in order to preserve and defend what identifies them, and deal with the consequences.'
@@ -58,10 +58,10 @@ Result for Evidence
 essay = '''With a population of approximately 45 million Spaniards and 3.5 million immigrants,
                Spain is a country of contrasts where the richness of its culture blends it up with
                the variety of languages and dialects used. Being one of the largest economies worldwide,
-               and the second largest country in Europe, Spain is a very appealing destination for tourists 
-               as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at 
-               least two different languages, but protecting and preserving that right has not been 
-               easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, 
+               and the second largest country in Europe, Spain is a very appealing destination for tourists
+               as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at
+               least two different languages, but protecting and preserving that right has not been
+               easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments,
                in order to preserve and defend what identifies them, and deal with the consequences.''';
 essay = Essay(essay);
 
@@ -71,7 +71,7 @@ judgements = essay.essay_judge_v2(criterias);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Essay (str) (essay) =  'With a population of approximately 45 million Spaniards and 3.5 million immigrants, Spain is a country of contrasts where the richness of its culture blends it up with the variety of languages and dialects used. Being one of the largest economies worldwide, and the second largest country in Europe, Spain is a very appealing destination for tourists as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at least two different languages, but protecting and preserving that right has not been easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, in order to preserve and defend what identifies them, and deal with the consequences.'
@@ -103,7 +103,7 @@ summary = essay.generate_summary(judgements);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 Essay (str) (essay) =  'With a population of approximately 45 million Spaniards and 3.5 million immigrants, Spain is a country of contrasts where the richness of its culture blends it up with the variety of languages and dialects used. Being one of the largest economies worldwide, and the second largest country in Europe, Spain is a very appealing destination for tourists as well as for immigrants from around the globe. Almost all Spaniards are used to speaking at least two different languages, but protecting and preserving that right has not been easy for them.Spaniards have had to struggle with war, ignorance, criticism and the governments, in order to preserve and defend what identifies them, and deal with the consequences.'
@@ -135,7 +135,7 @@ grade = essay.give_grade(summary);
 
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 None

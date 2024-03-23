@@ -14,6 +14,6 @@ Person {
 }
 
 with entry{
-    Einstein = Person(name="Einstein") with llm;
+    Einstein = Person(name="Einstein") by llm;
     print(f"{Einstein.name} was born on {Einstein.dob}. His accoomplishments includes {Einstein.accomplishments}.");
 }

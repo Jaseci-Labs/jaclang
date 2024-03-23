@@ -1,6 +1,6 @@
 ```yml
 [System Prompt]
-This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed. 
+This is an operation you must perform and return the output values. Neither, the methodology, extra sentences nor the code are not needed.
 
 [Information]
 None
