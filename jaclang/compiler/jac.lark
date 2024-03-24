@@ -44,6 +44,7 @@ arch_type: KW_WALKER
           | KW_EDGE
           | KW_NODE
           | KW_CLASS
+          | KW_MODEL
 
 // Architype bodies
 member_block: LBRACE member_stmt* RBRACE
@@ -103,11 +104,13 @@ arch_ref: class_ref
         | walker_ref
         | edge_ref
         | node_ref
+        | model_ref
 
 node_ref: NODE_OP named_ref
 edge_ref: EDGE_OP named_ref
 walker_ref: WALKER_OP named_ref
 class_ref: CLASS_OP named_ref
+model_ref: MODEL_OP named_ref
 object_ref: OBJECT_OP named_ref
 enum_ref: ENUM_OP named_ref
 ability_ref: ABILITY_OP named_ref
@@ -496,6 +499,7 @@ TYP_TYPE: "type"
 KW_LET: "let"
 KW_ABSTRACT: "abs"
 KW_CLASS: "class"
+KW_MODEL: "model"
 KW_OBJECT: "obj"
 KW_ENUM: "enum"
 KW_NODE: "node"
@@ -578,6 +582,7 @@ WALKER_OP: /:w:|:walker:/
 NODE_OP: /:n:|:node:/
 EDGE_OP: /:e:|:edge:/
 CLASS_OP: /:cls:|:class:/
+MODEL_OP: /:m:|:model:/
 OBJECT_OP: /:o:|:obj:/
 TYPE_OP: /`|:t:|:type:/
 ENUM_OP: /:enum:/
