@@ -277,6 +277,19 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(valid_dec)
             else None
         )
+        if (
+            base_classes
+            and isinstance(base_classes[0], ast.Name)
+            and base_classes[0].value == "Enum"
+        ):
+            if len(base_classes) > 1:
+                raise ValueError(
+                    "Python's Enum class cannot be used with multiple inheritance."
+                )
+            arch_type.name = Tok.KW_ENUM
+            arch_type.value = "enum"
+            valid_bases = None
+
         kid = [name, valid_bases, valid_body] if valid_bases else [name, valid_body]
         return ast.Architype(
             arch_type=arch_type,

@@ -1,5 +1,14 @@
 """Python function."""
 
+from enum import Enum, unique
+
+
+class ShapeType(Enum):
+    """Enum for shape types"""
+
+    CIRCLE = "Circle"
+    UNKNOWN = "Unknown"
+
 
 def my_print(x: object) -> None:
     """Print function."""
