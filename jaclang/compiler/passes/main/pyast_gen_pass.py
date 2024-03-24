@@ -616,6 +616,19 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
+        from icecream import ic
+
+        if a := node.body:
+            ic(a)
+            ic(type(a))
+            ic(a.items)
+            ic(type(a.items))
+            ic(a.items[0])
+            ic(type(a.items[0]))
+            for item in a.items:
+                for i in item.vars.items:
+                    ic(i.name.value, i.value.value)
+            exit()
         self.needs_jac_feature()
         self.needs_dataclass()
         body = self.resolve_stmt_block(
@@ -703,18 +716,47 @@ class PyastGenPass(Pass):
                     )
                 )
             )
-        node.gen.py_ast = [
-            self.sync(
-                ast3.ClassDef(
-                    name=node.name.sym_name,
-                    bases=base_classes,
-                    keywords=[],
-                    body=body,
-                    decorator_list=decorators,
-                    type_params=[],
+        if node.arch_type.name == Tok.KW_MODEL:
+            
+            node.gen.py_ast = [
+                self.sync(
+                    ast3.Assign(
+                        targets=[
+                            self.sync(
+                                ast3.Name(id=node.name.sym_name, ctx=ast3.Store())
+                            )
+                        ],
+                        value=self.sync(
+                            ast3.Call(
+                                func=self.sync(
+                                    ast3.Name(id=Con.MODEL.value, ctx=ast3.Load())
+                                ),
+                                args=[
+                                    self.sync(
+                                        ast3.Constant(
+                                            value="OpenAI(temperature=0.7)"
+                                        )  # TODO : need to pass baseclass and params
+                                    )
+                                ],
+                                keywords=[],
+                            )
+                        ),
+                    )
                 )
-            )
-        ]
+            ]
+        else:
+            node.gen.py_ast = [
+                self.sync(
+                    ast3.ClassDef(
+                        name=node.name.sym_name,
+                        bases=base_classes,
+                        keywords=[],
+                        body=body,
+                        decorator_list=decorators,
+                        type_params=[],
+                    )
+                )
+            ]
 
         self.set_register(
             node.name.value,
