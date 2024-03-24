@@ -628,7 +628,7 @@ class PyastGenPass(Pass):
             else []
         )
         ds_on_entry, ds_on_exit = self.collect_events(node)
-        if node.arch_type.name != Tok.KW_CLASS:
+        if node.arch_type.name not in [Tok.KW_CLASS, Tok.KW_MODEL]:
             decorators.append(
                 self.sync(
                     ast3.Call(

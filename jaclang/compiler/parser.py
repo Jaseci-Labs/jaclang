@@ -2962,6 +2962,7 @@ class JacParser(Pass):
                     | edge_ref
                     | node_ref
                     | type_ref
+                    | model_ref
             """
             if isinstance(kid[0], ast.ArchRef):
                 return self.nu(kid[0])
@@ -3036,6 +3037,22 @@ class JacParser(Pass):
             """Grammar rule.
 
             object_ref: OBJECT_OP name_ref
+            """
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+                return self.nu(
+                    ast.ArchRef(
+                        arch=kid[0],
+                        name_ref=kid[1],
+                        kid=kid,
+                    )
+                )
+            else:
+                raise self.ice()
+
+        def model_ref(self, kid: list[ast.AstNode]) -> ast.ArchRef:
+            """Grammar rule.
+
+            model_ref: MODEL_OP name_ref
             """
             if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
                 return self.nu(

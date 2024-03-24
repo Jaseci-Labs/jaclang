@@ -10,11 +10,11 @@ glob llm = model();
 glob emoji_examples: 'Examples of Text to Emoji': list[dict[str, str]] = [
     {
          "input": "I love tp drink pina coladas",
-         "output": "👤 ❤️ 🥤 🍍🥥"
+         "output": "fhff"
     },
     {
         "input": "Mime Person",
-        "output": "👤🤲🚷"
+        "output": "fgdfgdfgdf"
     }
 
 ];
