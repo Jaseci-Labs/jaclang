@@ -810,7 +810,26 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
             if isinstance(self.body, AstImplOnlyNode):
                 new_kid.append(self.body.body)
             else:
+                new_kid.append(self.gen_token(Tok.LBRACE))
+                for item in self.body.items:
+                    if (
+                        isinstance(item, Ability)
+                        and isinstance(item.name_ref, Name)
+                        and item.name_ref.value == "__init__"
+                    ):
+                        item.name_ref.value = "init"
+                        if (
+                            item.signature
+                            and isinstance(item.signature, FuncSignature)
+                            and item.signature.params
+                        ):
+                            item.signature.params.items = [
+                                j
+                                for j in item.signature.params.items
+                                if j.name.value != "self"
+                            ]
                 new_kid.append(self.body)
+                new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)

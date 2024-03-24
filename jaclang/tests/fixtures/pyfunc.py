@@ -6,6 +6,11 @@ def my_print(x: object) -> None:
     print(x)
 
 
+def fooo45() -> None:
+    """Test func  fooo45"""
+    pass
+
+
 def my_some_func(a: int, b: int) -> int:
     pass
     # for i in range(a):
@@ -59,13 +64,15 @@ def my_some_func(a: int, b: int) -> int:
 #         "city": "New York"
 #     }
 
-# class MyClass:
-#     '''My class'''
-#     def __init__(self, x):
-#         self.x = x
 
-#     def my_method(self):
-#         print("My method")
+class MyClass:
+    """My class"""
+
+    def __init__(self, x):
+        self.x = x
+
+    def my_method(self):
+        print("My method")
 
 
 # while x < 10:
@@ -100,12 +107,12 @@ def my_some_func(a: int, b: int) -> int:
 # greet("Bob", greeting="Hi")
 
 
-# class MyClass2:
-#     """This is a docstring for MyClass."""
+class MyClass2:
+    """This is a docstring for MyClass."""
 
-#     def __init__(self):
-#         """Constructor docstring."""
-#         pass
+    def __init__(self):
+        """Constructor docstring."""
+        pass
 
 
 # def average(*args):
