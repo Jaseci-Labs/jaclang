@@ -1,12 +1,12 @@
 import:py from model, OpenAIModel, ClaudeModel;
 
-model llm:ClaudeModel {
-    model_name="claude-3-sonnet-20240229";
-}
-
-# model llm:OpenAIModel {
-#     model_name="gpt-4";
+# model llm:ClaudeModel {
+#     model_name="claude-3-sonnet-20240229";
 # }
+
+model llm:OpenAIModel {
+    model_name="gpt-4";
+}
 
 obj "A list of good dad jokes. A indicates the punchline"
 JokeList {
@@ -22,7 +22,7 @@ JokeList {
     ];
 
     can 'Generate a Joke with a Punchline'
-    generate_joke_with_punchline -> 'Joke with Punchline':dict by llm(incl_info=(self.jokes), temperature=0.0);
+    generate_joke_with_punchline -> 'New Joke with Punchline':dict by llm(incl_info=(self.jokes), temperature=0.0);
 
     can generate {
         joke_punchline = self.generate_joke_with_punchline();

@@ -1,12 +1,12 @@
 import:py from model, OpenAIModel, ClaudeModel;
 
-model llm:ClaudeModel {
-    model_name="claude-3-sonnet-20240229";
-}
-
-# model llm:OpenAIModel {
-#     model_name="gpt-4";
+# model llm:ClaudeModel {
+#     model_name="claude-3-sonnet-20240229";
 # }
+
+model llm:OpenAIModel {
+    model_name="gpt-4";
+}
 
 enum 'Personality of the Person'
 Personality {
@@ -27,7 +27,7 @@ glob personality_examples: 'Personality Information of Famous People': dict[str,
 };
 
 can 'Get Person Information use common knowledge'
-get_person_info(name: 'Name of the Person': str) -> 'Person': Person by llm(reason= True, temperature=0.0);
+get_person_info(name: 'Name of the Person': str) -> 'Person': Person by llm(reason= True, temperature=0.0, incl_info=(personality_examples));
 
 with entry {
     person_obj = get_person_info('Martin Luther King Jr.');
