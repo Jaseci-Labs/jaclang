@@ -1,6 +1,8 @@
 """Python function."""
 
 from enum import Enum
+from abc import ABC, abstractmethod
+from enum import Enum
 
 
 class ShapeType(Enum):
@@ -9,27 +11,43 @@ class ShapeType(Enum):
     CIRCLE = "Circle"
     UNKNOWN = "Unknown"
 
-print('hello world')
+
+class Shape(ABC):
+    """Base class for a shape."""
+
+    def __init__(self, shape_type: ShapeType):
+        self.shape_type = shape_type
+
+    @abstractmethod
+    def area(self) -> float:
+        """Abstract method to calculate the area of a shape."""
+        pass
+
+
+print("hello world")
+
 
 def my_print(x: object) -> None:
     """Print function."""
     print(x)
 
 
-def fooo45() -> None:
-    """Test func  fooo45"""
-    pass
+if __name__ == "__main__":
+    my_print("Hello, World!")
+# def fooo45() -> None:
+#     """Test func  fooo45"""
+#     pass
 
 
-def my_some_func(a: int, b: int) -> int:
-    pass
-    # for i in range(a):
-    #     print(i)
-    #     if i == 5:
-    #         break
-    #     print(b)
-    # else:
-    #     print("Loop completed normally{}".format(i))
+# def my_some_func(a: int, b: int) -> int:
+#     pass
+# for i in range(a):
+#     print(i)
+#     if i == 5:
+#         break
+#     print(b)
+# else:
+#     print("Loop completed normally{}".format(i))
 
 # numbers = [1, 2, 3, 4, 5]
 # squares = [x**2 for x in numbers]
@@ -74,14 +92,14 @@ def my_some_func(a: int, b: int) -> int:
 #     }
 
 
-class MyClass:
-    """My class"""
+# class MyClass:
+#     """My class"""
 
-    def __init__(self, x):
-        self.x = x
+#     def __init__(self, x):
+#         self.x = x
 
-    def my_method(self):
-        print("My method")
+#     def my_method(self):
+#         print("My method")
 
 
 # while x < 10:
@@ -116,12 +134,12 @@ class MyClass:
 # greet("Bob", greeting="Hi")
 
 
-class MyClass2:
-    """This is a docstring for MyClass."""
+# class MyClass2:
+#     """This is a docstring for MyClass."""
 
-    def __init__(self):
-        """Constructor docstring."""
-        pass
+#     def __init__(self):
+#         """Constructor docstring."""
+#         pass
 
 
 # def average(*args):

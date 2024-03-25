@@ -247,12 +247,31 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         body = [self.convert(i) for i in node.body]
-        valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-            body, ast.ArchBlockStmt
-        )
-        valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-            items=valid, delim=Tok.WS, kid=body
-        )
+        # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+        #     body, ast.ArchBlockStmt
+        # )
+
+        doc = None
+        # we need to extract doscring from the first element of the body like we did in proc_function_def
+        if (
+            len(body)
+            and isinstance(body[0], ast.ExprStmt)
+            and isinstance(body[0].expr, ast.String)
+        ):
+            doc = body[0].expr
+            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+            #     body[1:], ast.ArchBlockStmt
+            # )
+            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+                items=body[1:], delim=Tok.WS, kid=body[1:]
+            )
+        else:
+            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+            #     body, ast.ArchBlockStmt
+            # )
+            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+                items=body, delim=Tok.WS, kid=body
+            )
 
         base_classes = [self.convert(base) for base in node.bases]
         valid2: list[ast.Expr] = [
@@ -265,7 +284,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(valid2)
             else None
         )
-        doc = None
+
         decorators = [self.convert(i) for i in node.decorator_list]
         valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
         if len(valid_dec) != len(decorators):

@@ -543,10 +543,11 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
             new_kid.append(self.doc)
         new_kid.append(self.gen_token(Tok.KW_WITH))
         new_kid.append(self.gen_token(Tok.KW_ENTRY))
+        new_kid.append(self.gen_token(Tok.LBRACE))
         if self.name:
             new_kid.append(self.name)
-
         new_kid.append(self.body)
+        new_kid.append(self.gen_token(Tok.RBRACE))
 
         AstNode.__init__(self, kid=new_kid)
         return res
