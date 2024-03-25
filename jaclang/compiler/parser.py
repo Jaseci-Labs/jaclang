@@ -174,6 +174,7 @@ class JacParser(Pass):
                 | free_code
                 | test
                 | global_var
+                | model
             """
             if isinstance(kid[0], ast.ElementStmt):
                 return self.nu(kid[0])
@@ -720,10 +721,10 @@ class JacParser(Pass):
 
             raise self.ice()
 
-        def model_llm(self, kid: list[ast.AstNode]) -> ast.Modelllm:
+        def model(self, kid: list[ast.AstNode]) -> ast.Model:
             """Grammer rule.
 
-            model_llm: KW_MODEL NAME COLON NAME model_block
+            model: KW_MODEL NAME COLON NAME model_block
             """
             name = kid[1]
             model = kid[3]
@@ -734,7 +735,7 @@ class JacParser(Pass):
                 and isinstance(body, ast.SubNodeList)
             ):
                 return self.nu(
-                    ast.Modelllm(
+                    ast.Model(
                         name=name,
                         base_class=model,
                         body=body,
@@ -744,23 +745,25 @@ class JacParser(Pass):
             else:
                 raise self.ice()
 
-        def model_block(self, kid: list[ast.AstNode]) -> ast.SubNodeList[ast.ModelStmt]:
+        def model_block(
+            self, kid: list[ast.AstNode]
+        ) -> ast.SubNodeList[ast.ModelParam]:
             """Grammer rule.
 
-            model_block: LBRACE (model_stmt COMMA)* model_stmt SEMI RBRACE
+            model_block: LBRACE (model_param COMMA)* model_param SEMI RBRACE
             """
-            ret = ast.SubNodeList[ast.ModelStmt](items=[], delim=Tok.COMMA, kid=kid)
-            ret.items = [i for i in kid if isinstance(i, ast.ModelStmt)]
+            ret = ast.SubNodeList[ast.ModelParam](items=[], delim=Tok.COMMA, kid=kid)
+            ret.items = [i for i in kid if isinstance(i, ast.ModelParam)]
             return self.nu(ret)
 
-        def model_stmt(self, kid: list[ast.AstNode]) -> ast.ModelStmt:
+        def model_param(self, kid: list[ast.AstNode]) -> ast.ModelParam:
             """Grammer rule.
 
-            model_stmt: NAME EQ expression
+            model_param: NAME EQ expression
             """
             if isinstance(kid[0], ast.Name) and isinstance(kid[2], ast.Expr):
                 return self.nu(
-                    ast.ModelStmt(
+                    ast.ModelParam(
                         target=kid[0],
                         right=kid[2],
                         kid=kid,

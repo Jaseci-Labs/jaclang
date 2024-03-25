@@ -932,14 +932,14 @@ class TypedCtxBlock(CodeBlockStmt):
         AstNode.__init__(self, kid=kid)
 
 
-class Modelllm(ElementStmt):
-    """Modelllm node type for Jac Ast."""
+class Model(ElementStmt):
+    """Model node type for Jac Ast."""
 
     def __init__(
         self,
         name: Name,
         base_class: Name,
-        body: Optional[SubNodeList[ModelStmt]],
+        body: Optional[SubNodeList[ModelParam]],
         kid: Sequence[AstNode],
     ) -> None:
         """Initialize modelllm node."""
@@ -950,8 +950,8 @@ class Modelllm(ElementStmt):
         print(self.pp())
 
 
-class ModelStmt(AstNode):
-    """ModelStmt node type for Jac Ast."""
+class ModelParam(AstNode):
+    """ModelParam node type for Jac Ast."""
 
     def __init__(
         self,
