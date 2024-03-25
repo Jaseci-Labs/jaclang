@@ -892,7 +892,16 @@ class PyastGenPass(Pass):
                     value=self.sync(
                         ast3.Call(
                             func=self.sync(
-                                ast3.Name(id=Con.MODEL.value, ctx=ast3.Load())
+                                ast3.Attribute(
+                                    value=self.sync(
+                                        ast3.Name(
+                                            id=Con.JAC_FEATURE.value,
+                                            ctx=ast3.Load(),
+                                        )
+                                    ),
+                                    attr="Model",
+                                    ctx=ast3.Load(),
+                                )
                             ),
                             args=[node.base_class.gen.py_ast[0]],
                             keywords=(

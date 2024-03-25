@@ -947,7 +947,6 @@ class Model(ElementStmt):
         self.base_class = base_class
         self.body = body
         AstNode.__init__(self, kid=kid)
-        print(self.pp())
 
 
 class ModelParam(AstNode):

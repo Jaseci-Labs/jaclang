@@ -220,6 +220,12 @@ class JacFeatureSpec:
         """Jac's with_llm stmt feature."""
         raise NotImplementedError
 
+    @staticmethod
+    @hookspec(firstresult=True)
+    def Model(model: Any, kwargs: dict):  # noqa: ANN401
+        """Jac's Model CC feature."""
+        raise NotImplementedError
+
 
 class JacBuiltin:
     """Jac Builtins."""

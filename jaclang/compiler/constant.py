@@ -25,7 +25,6 @@ class Constants(str, Enum):
     EDGE_DIR = "_jac_Edge_Dir"
     ON_ENTRY = "_jac_ds_.on_entry"
     ON_EXIT = "_jac_ds_.on_exit"
-    MODEL = "_Jac.model"
 
     PYNLINE = "::py::"
     JAC_GEN_DIR = "__jac_gen__"
