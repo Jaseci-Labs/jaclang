@@ -720,6 +720,55 @@ class JacParser(Pass):
 
             raise self.ice()
 
+        def model_llm(self, kid: list[ast.AstNode]) -> ast.Modelllm:
+            """Grammer rule.
+
+            model_llm: KW_MODEL NAME COLON NAME model_block
+            """
+            name = kid[1]
+            model = kid[3]
+            body = kid[4]
+            if (
+                isinstance(name, ast.Name)
+                and isinstance(model, ast.Name)
+                and isinstance(body, ast.SubNodeList)
+            ):
+                return self.nu(
+                    ast.Modelllm(
+                        name=name,
+                        base_class=model,
+                        body=body,
+                        kid=kid,
+                    )
+                )
+            else:
+                raise self.ice()
+
+        def model_block(self, kid: list[ast.AstNode]) -> ast.SubNodeList[ast.ModelStmt]:
+            """Grammer rule.
+
+            model_block: LBRACE (model_stmt COMMA)* model_stmt SEMI RBRACE
+            """
+            ret = ast.SubNodeList[ast.ModelStmt](items=[], delim=Tok.COMMA, kid=kid)
+            ret.items = [i for i in kid if isinstance(i, ast.ModelStmt)]
+            return self.nu(ret)
+
+        def model_stmt(self, kid: list[ast.AstNode]) -> ast.ModelStmt:
+            """Grammer rule.
+
+            model_stmt: NAME EQ expression
+            """
+            if isinstance(kid[0], ast.Name) and isinstance(kid[2], ast.Expr):
+                return self.nu(
+                    ast.ModelStmt(
+                        target=kid[0],
+                        right=kid[2],
+                        kid=kid,
+                    )
+                )
+            else:
+                raise self.ice()
+
         def ability(
             self, kid: list[ast.AstNode]
         ) -> ast.Ability | ast.AbilityDef | ast.FuncCall:
@@ -2962,7 +3011,7 @@ class JacParser(Pass):
                     | edge_ref
                     | node_ref
                     | type_ref
-                    | model_ref
+                    | class_ref
             """
             if isinstance(kid[0], ast.ArchRef):
                 return self.nu(kid[0])
@@ -3037,22 +3086,6 @@ class JacParser(Pass):
             """Grammar rule.
 
             object_ref: OBJECT_OP name_ref
-            """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
-                return self.nu(
-                    ast.ArchRef(
-                        arch=kid[0],
-                        name_ref=kid[1],
-                        kid=kid,
-                    )
-                )
-            else:
-                raise self.ice()
-
-        def model_ref(self, kid: list[ast.AstNode]) -> ast.ArchRef:
-            """Grammar rule.
-
-            model_ref: MODEL_OP name_ref
             """
             if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
                 return self.nu(

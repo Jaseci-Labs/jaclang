@@ -1,5 +1,5 @@
-model llm:{
-    has temperature: float=0.7,
-         pressure: float=0.7;
-    has humidity: float=0.7;
+model llm:openai{
+    temperature=0.7,
+    top_p=0.75,
+    frequency_penalty=0.89;
 }

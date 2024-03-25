@@ -15,6 +15,7 @@ element: import_stmt
        | free_code
        | py_code_block
        | test
+       | model_llm
 
 // Import/Include Statements
 import_stmt: KW_IMPORT sub_name KW_FROM from_path COMMA import_items SEMI
@@ -66,6 +67,11 @@ enum_stmt: NAME (COLON STRING)? EQ expression
          | NAME (COLON STRING)?
          | py_code_block
 
+// model_llm
+model_llm: KW_MODEL NAME COLON NAME model_block
+model_block: LBRACE (model_stmt COMMA)* model_stmt SEMI RBRACE
+model_stmt: NAME EQ expression
+
 // Abilities
 ability: decorators? ability_def
         | decorators? KW_ASYNC? ability_decl
@@ -104,13 +110,11 @@ arch_ref: class_ref
         | walker_ref
         | edge_ref
         | node_ref
-        | model_ref
 
 node_ref: NODE_OP named_ref
 edge_ref: EDGE_OP named_ref
 walker_ref: WALKER_OP named_ref
 class_ref: CLASS_OP named_ref
-model_ref: MODEL_OP named_ref
 object_ref: OBJECT_OP named_ref
 enum_ref: ENUM_OP named_ref
 ability_ref: ABILITY_OP named_ref
@@ -582,7 +586,6 @@ WALKER_OP: /:w:|:walker:/
 NODE_OP: /:n:|:node:/
 EDGE_OP: /:e:|:edge:/
 CLASS_OP: /:cls:|:class:/
-MODEL_OP: /:m:|:model:/
 OBJECT_OP: /:o:|:obj:/
 TYPE_OP: /`|:t:|:type:/
 ENUM_OP: /:enum:/
