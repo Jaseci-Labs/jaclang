@@ -124,7 +124,6 @@ print(result78)
 #     }
 
 
-
 # while x < 10:
 #     x += 1
 #     print("hello")
@@ -155,8 +154,6 @@ print(result78)
 
 # greet("Alice")
 # greet("Bob", greeting="Hi")
-
-
 
 
 # def average(*args):

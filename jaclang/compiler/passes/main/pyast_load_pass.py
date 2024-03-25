@@ -35,9 +35,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def convert(self, node: py_ast.AST) -> ast.AstNode:
         """Get python node type."""
-        # print(
-        #     f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
-        # )
+        print(
+            f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
+        )
         if hasattr(self, f"proc_{pascal_to_snake(type(node).__name__)}"):
             ret = getattr(self, f"proc_{pascal_to_snake(type(node).__name__)}")(node)
         else:
@@ -1046,6 +1046,20 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
         """
         type = self.convert(node.type) if node.type is not None else None
+        # Handle the case where type is None (bare except block in Python)
+        if not type:
+            # bare except block, which catches exceptions of any type
+            type = ast.Name(
+                file_path=self.mod_path,
+                name=Tok.NAME,
+                value="Any",
+                line=node.lineno,
+                col_start=node.col_offset,
+                col_end=node.col_offset + 3,
+                pos_start=0,
+                pos_end=0,
+            )
+
         name = (
             ast.Name(
                 file_path=self.mod_path,
@@ -1060,7 +1074,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if node.name is not None
             else None
         )
-
         body = [self.convert(i) for i in node.body]
         valid = [i for i in body if isinstance(i, (ast.CodeBlockStmt))]
         if len(valid) != len(body):
@@ -1074,6 +1087,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if name:
             kid.append(name)
         kid.append(valid_body)
+
         if isinstance(type, ast.Expr) and (isinstance(name, ast.Name) or not name):
             return ast.Except(
                 ex_type=type,
