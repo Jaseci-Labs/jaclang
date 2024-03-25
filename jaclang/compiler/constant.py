@@ -213,7 +213,6 @@ class Tokens(str, Enum):
     NODE_OP = "NODE_OP"
     EDGE_OP = "EDGE_OP"
     CLASS_OP = "CLASS_OP"
-    MODEL_OP = "MODEL_OP"
     OBJECT_OP = "OBJECT_OP"
     TYPE_OP = "TYPE_OP"
     ENUM_OP = "ENUM_OP"

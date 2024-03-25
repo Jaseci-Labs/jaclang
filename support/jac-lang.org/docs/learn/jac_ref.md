@@ -5,7 +5,7 @@
 ## Base Module structure
 **Grammar Snippet**
 ```yaml linenums="2"
---8<-- "jaclang/compiler/jac.lark:2:17"
+--8<-- "jaclang/compiler/jac.lark:2:18"
 ```
 **Code Example**
 === "Jac"
@@ -22,8 +22,8 @@
 
 ## Import/Include Statements
 **Grammar Snippet**
-```yaml linenums="20"
---8<-- "jaclang/compiler/jac.lark:20:27"
+```yaml linenums="21"
+--8<-- "jaclang/compiler/jac.lark:21:31"
 ```
 **Code Example**
 === "Jac"
@@ -40,8 +40,8 @@
 
 ## Architypes
 **Grammar Snippet**
-```yaml linenums="30"
---8<-- "jaclang/compiler/jac.lark:30:43"
+```yaml linenums="34"
+--8<-- "jaclang/compiler/jac.lark:34:48"
 ```
 **Code Example**
 === "Jac"
@@ -58,8 +58,8 @@
 
 ## Architype bodies
 **Grammar Snippet**
-```yaml linenums="46"
---8<-- "jaclang/compiler/jac.lark:46:51"
+```yaml linenums="51"
+--8<-- "jaclang/compiler/jac.lark:51:56"
 ```
 **Code Example**
 === "Jac"
@@ -76,8 +76,8 @@
 
 ## Enumerations
 **Grammar Snippet**
-```yaml linenums="54"
---8<-- "jaclang/compiler/jac.lark:54:63"
+```yaml linenums="59"
+--8<-- "jaclang/compiler/jac.lark:59:68"
 ```
 **Code Example**
 === "Jac"
@@ -92,10 +92,28 @@
 
 --8<-- "examples/reference/enumerations.md"
 
+## model_llm
+**Grammar Snippet**
+```yaml linenums="71"
+--8<-- "jaclang/compiler/jac.lark:71:73"
+```
+**Code Example**
+=== "Jac"
+    ```jac linenums="1"
+    --8<-- "examples/reference/model_llm.jac"
+    ```
+=== "Python"
+    ```python linenums="1"
+    --8<-- "examples/reference/model_llm.py"
+    ```
+**Description**
+
+--8<-- "examples/reference/model_llm.md"
+
 ## Abilities
 **Grammar Snippet**
-```yaml linenums="66"
---8<-- "jaclang/compiler/jac.lark:66:75"
+```yaml linenums="76"
+--8<-- "jaclang/compiler/jac.lark:76:87"
 ```
 **Code Example**
 === "Jac"
@@ -112,8 +130,8 @@
 
 ## Global variables
 **Grammar Snippet**
-```yaml linenums="78"
---8<-- "jaclang/compiler/jac.lark:78:79"
+```yaml linenums="90"
+--8<-- "jaclang/compiler/jac.lark:90:91"
 ```
 **Code Example**
 === "Jac"
@@ -130,8 +148,8 @@
 
 ## Free code
 **Grammar Snippet**
-```yaml linenums="82"
---8<-- "jaclang/compiler/jac.lark:82:82"
+```yaml linenums="94"
+--8<-- "jaclang/compiler/jac.lark:94:94"
 ```
 **Code Example**
 === "Jac"
@@ -148,8 +166,8 @@
 
 ## Inline python
 **Grammar Snippet**
-```yaml linenums="85"
---8<-- "jaclang/compiler/jac.lark:85:85"
+```yaml linenums="97"
+--8<-- "jaclang/compiler/jac.lark:97:97"
 ```
 **Code Example**
 === "Jac"
@@ -166,8 +184,8 @@
 
 ## Tests
 **Grammar Snippet**
-```yaml linenums="88"
---8<-- "jaclang/compiler/jac.lark:88:88"
+```yaml linenums="100"
+--8<-- "jaclang/compiler/jac.lark:100:100"
 ```
 **Code Example**
 === "Jac"
@@ -184,8 +202,8 @@
 
 ## Implementations
 **Grammar Snippet**
-```yaml linenums="91"
---8<-- "jaclang/compiler/jac.lark:91:108"
+```yaml linenums="103"
+--8<-- "jaclang/compiler/jac.lark:103:120"
 ```
 **Code Example**
 === "Jac"
@@ -202,8 +220,8 @@
 
 ## Codeblocks and Statements
 **Grammar Snippet**
-```yaml linenums="111"
---8<-- "jaclang/compiler/jac.lark:111:138"
+```yaml linenums="123"
+--8<-- "jaclang/compiler/jac.lark:123:149"
 ```
 **Code Example**
 === "Jac"
@@ -220,8 +238,8 @@
 
 ## If statements
 **Grammar Snippet**
-```yaml linenums="141"
---8<-- "jaclang/compiler/jac.lark:141:143"
+```yaml linenums="152"
+--8<-- "jaclang/compiler/jac.lark:152:154"
 ```
 **Code Example**
 === "Jac"
@@ -238,8 +256,8 @@
 
 ## While statements
 **Grammar Snippet**
-```yaml linenums="146"
---8<-- "jaclang/compiler/jac.lark:146:146"
+```yaml linenums="157"
+--8<-- "jaclang/compiler/jac.lark:157:157"
 ```
 **Code Example**
 === "Jac"
@@ -256,8 +274,8 @@
 
 ## For statements
 **Grammar Snippet**
-```yaml linenums="149"
---8<-- "jaclang/compiler/jac.lark:149:150"
+```yaml linenums="160"
+--8<-- "jaclang/compiler/jac.lark:160:161"
 ```
 **Code Example**
 === "Jac"
@@ -274,8 +292,8 @@
 
 ## Try statements
 **Grammar Snippet**
-```yaml linenums="153"
---8<-- "jaclang/compiler/jac.lark:153:156"
+```yaml linenums="164"
+--8<-- "jaclang/compiler/jac.lark:164:167"
 ```
 **Code Example**
 === "Jac"
@@ -292,8 +310,8 @@
 
 ## Match statements
 **Grammar Snippet**
-```yaml linenums="159"
---8<-- "jaclang/compiler/jac.lark:159:160"
+```yaml linenums="170"
+--8<-- "jaclang/compiler/jac.lark:170:171"
 ```
 **Code Example**
 === "Jac"
@@ -310,8 +328,8 @@
 
 ## Match patterns
 **Grammar Snippet**
-```yaml linenums="163"
---8<-- "jaclang/compiler/jac.lark:163:173"
+```yaml linenums="174"
+--8<-- "jaclang/compiler/jac.lark:174:184"
 ```
 **Code Example**
 === "Jac"
@@ -328,8 +346,8 @@
 
 ## Match litteral patterns
 **Grammar Snippet**
-```yaml linenums="176"
---8<-- "jaclang/compiler/jac.lark:176:176"
+```yaml linenums="187"
+--8<-- "jaclang/compiler/jac.lark:187:187"
 ```
 **Code Example**
 === "Jac"
@@ -346,8 +364,8 @@
 
 ## Match singleton patterns
 **Grammar Snippet**
-```yaml linenums="179"
---8<-- "jaclang/compiler/jac.lark:179:179"
+```yaml linenums="190"
+--8<-- "jaclang/compiler/jac.lark:190:190"
 ```
 **Code Example**
 === "Jac"
@@ -364,8 +382,8 @@
 
 ## Match capture patterns
 **Grammar Snippet**
-```yaml linenums="182"
---8<-- "jaclang/compiler/jac.lark:182:182"
+```yaml linenums="193"
+--8<-- "jaclang/compiler/jac.lark:193:193"
 ```
 **Code Example**
 === "Jac"
@@ -382,8 +400,8 @@
 
 ## Match sequence patterns
 **Grammar Snippet**
-```yaml linenums="185"
---8<-- "jaclang/compiler/jac.lark:185:186"
+```yaml linenums="196"
+--8<-- "jaclang/compiler/jac.lark:196:197"
 ```
 **Code Example**
 === "Jac"
@@ -400,8 +418,8 @@
 
 ## Match mapping patterns
 **Grammar Snippet**
-```yaml linenums="189"
---8<-- "jaclang/compiler/jac.lark:189:191"
+```yaml linenums="200"
+--8<-- "jaclang/compiler/jac.lark:200:202"
 ```
 **Code Example**
 === "Jac"
@@ -418,8 +436,8 @@
 
 ## Match class patterns
 **Grammar Snippet**
-```yaml linenums="194"
---8<-- "jaclang/compiler/jac.lark:194:198"
+```yaml linenums="205"
+--8<-- "jaclang/compiler/jac.lark:205:209"
 ```
 **Code Example**
 === "Jac"
@@ -436,8 +454,8 @@
 
 ## Context managers
 **Grammar Snippet**
-```yaml linenums="201"
---8<-- "jaclang/compiler/jac.lark:201:203"
+```yaml linenums="212"
+--8<-- "jaclang/compiler/jac.lark:212:214"
 ```
 **Code Example**
 === "Jac"
@@ -454,8 +472,8 @@
 
 ## Global and nonlocal statements
 **Grammar Snippet**
-```yaml linenums="206"
---8<-- "jaclang/compiler/jac.lark:206:208"
+```yaml linenums="217"
+--8<-- "jaclang/compiler/jac.lark:217:219"
 ```
 **Code Example**
 === "Jac"
@@ -472,8 +490,8 @@
 
 ## Data spatial typed context blocks
 **Grammar Snippet**
-```yaml linenums="211"
---8<-- "jaclang/compiler/jac.lark:211:211"
+```yaml linenums="222"
+--8<-- "jaclang/compiler/jac.lark:222:222"
 ```
 **Code Example**
 === "Jac"
@@ -490,8 +508,8 @@
 
 ## Return statements
 **Grammar Snippet**
-```yaml linenums="214"
---8<-- "jaclang/compiler/jac.lark:214:214"
+```yaml linenums="225"
+--8<-- "jaclang/compiler/jac.lark:225:225"
 ```
 **Code Example**
 === "Jac"
@@ -508,8 +526,8 @@
 
 ## Yield statements
 **Grammar Snippet**
-```yaml linenums="217"
---8<-- "jaclang/compiler/jac.lark:217:217"
+```yaml linenums="228"
+--8<-- "jaclang/compiler/jac.lark:228:228"
 ```
 **Code Example**
 === "Jac"
@@ -526,8 +544,8 @@
 
 ## Raise statements
 **Grammar Snippet**
-```yaml linenums="220"
---8<-- "jaclang/compiler/jac.lark:220:220"
+```yaml linenums="231"
+--8<-- "jaclang/compiler/jac.lark:231:231"
 ```
 **Code Example**
 === "Jac"
@@ -544,8 +562,8 @@
 
 ## Assert statements
 **Grammar Snippet**
-```yaml linenums="223"
---8<-- "jaclang/compiler/jac.lark:223:223"
+```yaml linenums="234"
+--8<-- "jaclang/compiler/jac.lark:234:234"
 ```
 **Code Example**
 === "Jac"
@@ -562,8 +580,8 @@
 
 ## Delete statements
 **Grammar Snippet**
-```yaml linenums="226"
---8<-- "jaclang/compiler/jac.lark:226:226"
+```yaml linenums="237"
+--8<-- "jaclang/compiler/jac.lark:237:237"
 ```
 **Code Example**
 === "Jac"
@@ -580,8 +598,8 @@
 
 ## Report statements
 **Grammar Snippet**
-```yaml linenums="229"
---8<-- "jaclang/compiler/jac.lark:229:229"
+```yaml linenums="240"
+--8<-- "jaclang/compiler/jac.lark:240:240"
 ```
 **Code Example**
 === "Jac"
@@ -598,8 +616,8 @@
 
 ## Control statements
 **Grammar Snippet**
-```yaml linenums="232"
---8<-- "jaclang/compiler/jac.lark:232:232"
+```yaml linenums="243"
+--8<-- "jaclang/compiler/jac.lark:243:243"
 ```
 **Code Example**
 === "Jac"
@@ -616,8 +634,8 @@
 
 ## Data spatial Walker statements
 **Grammar Snippet**
-```yaml linenums="235"
---8<-- "jaclang/compiler/jac.lark:235:238"
+```yaml linenums="246"
+--8<-- "jaclang/compiler/jac.lark:246:249"
 ```
 **Code Example**
 === "Jac"
@@ -634,8 +652,8 @@
 
 ## Visit statements
 **Grammar Snippet**
-```yaml linenums="241"
---8<-- "jaclang/compiler/jac.lark:241:241"
+```yaml linenums="252"
+--8<-- "jaclang/compiler/jac.lark:252:252"
 ```
 **Code Example**
 === "Jac"
@@ -652,8 +670,8 @@
 
 ## Revisit statements
 **Grammar Snippet**
-```yaml linenums="244"
---8<-- "jaclang/compiler/jac.lark:244:244"
+```yaml linenums="255"
+--8<-- "jaclang/compiler/jac.lark:255:255"
 ```
 **Code Example**
 === "Jac"
@@ -670,8 +688,8 @@
 
 ## Disengage statements
 **Grammar Snippet**
-```yaml linenums="247"
---8<-- "jaclang/compiler/jac.lark:247:247"
+```yaml linenums="258"
+--8<-- "jaclang/compiler/jac.lark:258:258"
 ```
 **Code Example**
 === "Jac"
@@ -688,8 +706,8 @@
 
 ## Ignore statements
 **Grammar Snippet**
-```yaml linenums="250"
---8<-- "jaclang/compiler/jac.lark:250:250"
+```yaml linenums="261"
+--8<-- "jaclang/compiler/jac.lark:261:261"
 ```
 **Code Example**
 === "Jac"
@@ -706,8 +724,8 @@
 
 ## Assignments
 **Grammar Snippet**
-```yaml linenums="253"
---8<-- "jaclang/compiler/jac.lark:253:270"
+```yaml linenums="264"
+--8<-- "jaclang/compiler/jac.lark:264:281"
 ```
 **Code Example**
 === "Jac"
@@ -724,8 +742,8 @@
 
 ## Expressions
 **Grammar Snippet**
-```yaml linenums="273"
---8<-- "jaclang/compiler/jac.lark:273:274"
+```yaml linenums="284"
+--8<-- "jaclang/compiler/jac.lark:284:285"
 ```
 **Code Example**
 === "Jac"
@@ -742,8 +760,8 @@
 
 ## Walrus assignments
 **Grammar Snippet**
-```yaml linenums="277"
---8<-- "jaclang/compiler/jac.lark:277:277"
+```yaml linenums="288"
+--8<-- "jaclang/compiler/jac.lark:288:288"
 ```
 **Code Example**
 === "Jac"
@@ -760,8 +778,8 @@
 
 ## Lambda expressions
 **Grammar Snippet**
-```yaml linenums="280"
---8<-- "jaclang/compiler/jac.lark:280:280"
+```yaml linenums="291"
+--8<-- "jaclang/compiler/jac.lark:291:291"
 ```
 **Code Example**
 === "Jac"
@@ -778,8 +796,8 @@
 
 ## Pipe expressions
 **Grammar Snippet**
-```yaml linenums="283"
---8<-- "jaclang/compiler/jac.lark:283:283"
+```yaml linenums="294"
+--8<-- "jaclang/compiler/jac.lark:294:294"
 ```
 **Code Example**
 === "Jac"
@@ -796,8 +814,8 @@
 
 ## Pipe back expressions
 **Grammar Snippet**
-```yaml linenums="286"
---8<-- "jaclang/compiler/jac.lark:286:286"
+```yaml linenums="297"
+--8<-- "jaclang/compiler/jac.lark:297:297"
 ```
 **Code Example**
 === "Jac"
@@ -814,8 +832,8 @@
 
 ## Elvis expressions
 **Grammar Snippet**
-```yaml linenums="289"
---8<-- "jaclang/compiler/jac.lark:289:289"
+```yaml linenums="300"
+--8<-- "jaclang/compiler/jac.lark:300:300"
 ```
 **Code Example**
 === "Jac"
@@ -832,8 +850,8 @@
 
 ## Bitwise expressions
 **Grammar Snippet**
-```yaml linenums="292"
---8<-- "jaclang/compiler/jac.lark:292:295"
+```yaml linenums="303"
+--8<-- "jaclang/compiler/jac.lark:303:306"
 ```
 **Code Example**
 === "Jac"
@@ -850,8 +868,8 @@
 
 ## Logical and compare expressions
 **Grammar Snippet**
-```yaml linenums="298"
---8<-- "jaclang/compiler/jac.lark:298:312"
+```yaml linenums="309"
+--8<-- "jaclang/compiler/jac.lark:309:323"
 ```
 **Code Example**
 === "Jac"
@@ -868,8 +886,8 @@
 
 ## Arithmetic expressions
 **Grammar Snippet**
-```yaml linenums="315"
---8<-- "jaclang/compiler/jac.lark:315:318"
+```yaml linenums="326"
+--8<-- "jaclang/compiler/jac.lark:326:329"
 ```
 **Code Example**
 === "Jac"
@@ -886,8 +904,8 @@
 
 ## Connect expressions
 **Grammar Snippet**
-```yaml linenums="321"
---8<-- "jaclang/compiler/jac.lark:321:321"
+```yaml linenums="332"
+--8<-- "jaclang/compiler/jac.lark:332:332"
 ```
 **Code Example**
 === "Jac"
@@ -904,8 +922,8 @@
 
 ## Atomic expressions
 **Grammar Snippet**
-```yaml linenums="324"
---8<-- "jaclang/compiler/jac.lark:324:324"
+```yaml linenums="335"
+--8<-- "jaclang/compiler/jac.lark:335:335"
 ```
 **Code Example**
 === "Jac"
@@ -922,8 +940,8 @@
 
 ## Atomic pipe back expressions
 **Grammar Snippet**
-```yaml linenums="327"
---8<-- "jaclang/compiler/jac.lark:327:327"
+```yaml linenums="338"
+--8<-- "jaclang/compiler/jac.lark:338:338"
 ```
 **Code Example**
 === "Jac"
@@ -940,8 +958,8 @@
 
 ## Data spatial spawn expressions
 **Grammar Snippet**
-```yaml linenums="330"
---8<-- "jaclang/compiler/jac.lark:330:330"
+```yaml linenums="341"
+--8<-- "jaclang/compiler/jac.lark:341:341"
 ```
 **Code Example**
 === "Jac"
@@ -958,8 +976,8 @@
 
 ## Unpack expressions
 **Grammar Snippet**
-```yaml linenums="333"
---8<-- "jaclang/compiler/jac.lark:333:333"
+```yaml linenums="344"
+--8<-- "jaclang/compiler/jac.lark:344:344"
 ```
 **Code Example**
 === "Jac"
@@ -976,8 +994,8 @@
 
 ## References (unused)
 **Grammar Snippet**
-```yaml linenums="336"
---8<-- "jaclang/compiler/jac.lark:336:336"
+```yaml linenums="347"
+--8<-- "jaclang/compiler/jac.lark:347:347"
 ```
 **Code Example**
 === "Jac"
@@ -994,8 +1012,8 @@
 
 ## Data spatial calls
 **Grammar Snippet**
-```yaml linenums="339"
---8<-- "jaclang/compiler/jac.lark:339:339"
+```yaml linenums="350"
+--8<-- "jaclang/compiler/jac.lark:350:350"
 ```
 **Code Example**
 === "Jac"
@@ -1012,8 +1030,8 @@
 
 ## Subscripted and dotted expressions
 **Grammar Snippet**
-```yaml linenums="342"
---8<-- "jaclang/compiler/jac.lark:342:347"
+```yaml linenums="353"
+--8<-- "jaclang/compiler/jac.lark:353:358"
 ```
 **Code Example**
 === "Jac"
@@ -1030,8 +1048,8 @@
 
 ## Function calls
 **Grammar Snippet**
-```yaml linenums="350"
---8<-- "jaclang/compiler/jac.lark:350:354"
+```yaml linenums="361"
+--8<-- "jaclang/compiler/jac.lark:361:365"
 ```
 **Code Example**
 === "Jac"
@@ -1048,8 +1066,8 @@
 
 ## Atom
 **Grammar Snippet**
-```yaml linenums="357"
---8<-- "jaclang/compiler/jac.lark:357:378"
+```yaml linenums="368"
+--8<-- "jaclang/compiler/jac.lark:368:390"
 ```
 **Code Example**
 === "Jac"
@@ -1066,8 +1084,8 @@
 
 ## Collection values
 **Grammar Snippet**
-```yaml linenums="381"
---8<-- "jaclang/compiler/jac.lark:381:402"
+```yaml linenums="393"
+--8<-- "jaclang/compiler/jac.lark:393:414"
 ```
 **Code Example**
 === "Jac"
@@ -1084,8 +1102,8 @@
 
 ## Tuples and Jac Tuples
 **Grammar Snippet**
-```yaml linenums="405"
---8<-- "jaclang/compiler/jac.lark:405:412"
+```yaml linenums="417"
+--8<-- "jaclang/compiler/jac.lark:417:424"
 ```
 **Code Example**
 === "Jac"
@@ -1102,8 +1120,8 @@
 
 ## Data Spatial References
 **Grammar Snippet**
-```yaml linenums="415"
---8<-- "jaclang/compiler/jac.lark:415:424"
+```yaml linenums="427"
+--8<-- "jaclang/compiler/jac.lark:427:436"
 ```
 **Code Example**
 === "Jac"
@@ -1120,8 +1138,8 @@
 
 ## Special Comprehensions
 **Grammar Snippet**
-```yaml linenums="427"
---8<-- "jaclang/compiler/jac.lark:427:430"
+```yaml linenums="439"
+--8<-- "jaclang/compiler/jac.lark:439:444"
 ```
 **Code Example**
 === "Jac"
@@ -1138,8 +1156,8 @@
 
 ## Names and references
 **Grammar Snippet**
-```yaml linenums="433"
---8<-- "jaclang/compiler/jac.lark:433:447"
+```yaml linenums="447"
+--8<-- "jaclang/compiler/jac.lark:447:461"
 ```
 **Code Example**
 === "Jac"
@@ -1156,8 +1174,8 @@
 
 ## Builtin types
 **Grammar Snippet**
-```yaml linenums="450"
---8<-- "jaclang/compiler/jac.lark:450:460"
+```yaml linenums="464"
+--8<-- "jaclang/compiler/jac.lark:464:474"
 ```
 **Code Example**
 === "Jac"
@@ -1174,8 +1192,8 @@
 
 ## Lexer Tokens
 **Grammar Snippet**
-```yaml linenums="463"
---8<-- "jaclang/compiler/jac.lark:463:635"
+```yaml linenums="477"
+--8<-- "jaclang/compiler/jac.lark:477:653"
 ```
 **Code Example**
 === "Jac"
@@ -1192,8 +1210,8 @@
 
 ## f-string tokens
 **Grammar Snippet**
-```yaml linenums="638"
---8<-- "jaclang/compiler/jac.lark:638:649"
+```yaml linenums="656"
+--8<-- "jaclang/compiler/jac.lark:656:667"
 ```
 **Code Example**
 === "Jac"

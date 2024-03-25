@@ -875,6 +875,21 @@ class PyastGenPass(Pass):
         decorators: Optional[SubNodeList[ExprType]],
         """
 
+    def exit_modelllm(self,node:ast.Modelllm) -> None:
+        """Sub objects.
+        
+        name: Name,
+        base_classes: Name,
+        body: Optional[SubNodeList[ModelStmt]],
+        """
+
+    def exit_model_stmt(self,node:ast.ModelStmt) -> None:
+        """Sub objects.
+        
+        target: Name,
+        right: Expr,
+        """
+
     def exit_ability(self, node: ast.Ability) -> None:
         """Sub objects.
 
