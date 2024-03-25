@@ -15,16 +15,20 @@ element: import_stmt
        | free_code
        | py_code_block
        | test
+       | model
 
 // Import/Include Statements
-import_stmt: KW_IMPORT sub_name KW_FROM import_path COMMA import_items SEMI
+import_stmt: KW_IMPORT sub_name KW_FROM from_path COMMA import_items SEMI
            | KW_IMPORT sub_name import_path (COMMA import_path)* SEMI
 
-include_stmt: KW_INCLUDE sub_name import_path SEMI
-import_path: DOT? DOT? named_ref (DOT named_ref)* (KW_AS NAME)?
+from_path: (DOT | ELLIPSIS)* import_path
+         | (DOT | ELLIPSIS)+
+
+import_path: named_ref (DOT named_ref)* (KW_AS NAME)?
 import_items: (import_item COMMA)* import_item
 import_item: named_ref (KW_AS NAME)?
 sub_name: COLON NAME
+include_stmt: KW_INCLUDE sub_name import_path SEMI
 
 // Architypes
 architype: decorators? (enum | architype_def | architype_decl)
@@ -41,13 +45,14 @@ arch_type: KW_WALKER
           | KW_EDGE
           | KW_NODE
           | KW_CLASS
+          | KW_MODEL
 
 // Architype bodies
 member_block: LBRACE member_stmt* RBRACE
 member_stmt: doc_tag? (py_code_block | abstract_ability | ability | architype | has_stmt | free_code)
 has_stmt: KW_STATIC? (KW_LET | KW_HAS) access_tag? has_assign_list SEMI
 has_assign_list: (has_assign_list COMMA)? typed_has_clause
-typed_has_clause: STRING? named_ref type_tag (EQ expression)?
+typed_has_clause: named_ref (COLON STRING)? type_tag (EQ expression | KW_BY KW_POST_INIT)?
 type_tag: COLON expression
 
 // Enumerations
@@ -58,21 +63,28 @@ enum_decl: KW_ENUM access_tag? STRING? NAME inherited_archs? (enum_block | SEMI)
 enum_def: arch_to_enum_chain enum_block
 enum_block: LBRACE ((enum_stmt COMMA)* enum_stmt)? RBRACE
 
-enum_stmt: NAME EQ expression
-         | NAME
+enum_stmt: NAME (COLON STRING)? EQ expression
+         | NAME (COLON STRING)?
          | py_code_block
+
+// Model
+model: KW_MODEL NAME COLON NAME model_block
+model_block: LBRACE (model_param COMMA)* model_param SEMI RBRACE
+model_param: NAME EQ expression
 
 // Abilities
 ability: decorators? ability_def
         | decorators? KW_ASYNC? ability_decl
+        | decorators? genai_ability
 
 ability_decl: KW_OVERRIDE? KW_STATIC? KW_CAN access_tag? STRING? any_ref (func_decl | event_clause) (code_block | SEMI)
 ability_def: arch_to_abil_chain (func_decl | event_clause) code_block
-abstract_ability: KW_OVERRIDE? KW_STATIC? KW_CAN access_tag? STRING?  any_ref (func_decl | event_clause) KW_ABSTRACT SEMI
+abstract_ability: KW_OVERRIDE? KW_STATIC? KW_CAN access_tag? STRING? any_ref (func_decl | event_clause) KW_ABSTRACT SEMI
+genai_ability: KW_OVERRIDE? KW_STATIC? KW_CAN access_tag? STRING? any_ref (func_decl) KW_BY atomic_call SEMI
 event_clause: KW_WITH expression? (KW_EXIT | KW_ENTRY) (STRING? RETURN_HINT expression)?
-func_decl: (LPAREN func_decl_params? RPAREN)? (STRING? RETURN_HINT expression)?
+func_decl: (LPAREN func_decl_params? RPAREN)? (RETURN_HINT (STRING COLON)? expression)?
 func_decl_params: (param_var COMMA)* param_var
-param_var: (STAR_POW | STAR_MUL)? STRING? NAME type_tag (EQ expression)?
+param_var: (STAR_POW | STAR_MUL)? NAME (COLON STRING)? type_tag (EQ expression)?
 
 // Global variables
 global_var: (KW_LET | KW_GLOBAL) access_tag? assignment_list SEMI
@@ -108,8 +120,7 @@ enum_ref: ENUM_OP named_ref
 ability_ref: ABILITY_OP named_ref
 
 // Codeblocks and Statements
-code_block: LBRACE statement_list? RBRACE
-statement_list: statement+
+code_block: LBRACE statement* RBRACE
 
 statement: import_stmt
        | ability
@@ -157,7 +168,7 @@ finally_stmt: KW_FINALLY code_block
 
 // Match statements
 match_stmt: KW_MATCH expression LBRACE match_case_block+ RBRACE
-match_case_block: KW_CASE pattern_seq (KW_IF expression)? COLON statement_list
+match_case_block: KW_CASE pattern_seq (KW_IF expression)? COLON statement+
 
 // Match patterns
 pattern_seq: (or_pattern | as_pattern)
@@ -251,7 +262,7 @@ ignore_stmt: KW_IGNORE expression SEMI
 
 // Assignments
 assignment: KW_LET? (atomic_chain EQ)+ (yield_expr | expression)
-          | atomic_chain type_tag (EQ (yield_expr | expression))?
+          | atomic_chain (COLON STRING)? type_tag (EQ (yield_expr | expression))?
           | atomic_chain aug_op (yield_expr | expression)
 
 aug_op: RSHIFT_EQ
@@ -295,8 +306,8 @@ bitwise_and: (bitwise_and BW_AND)? shift
 shift: (shift (RSHIFT | LSHIFT))? logical_or
 
 // Logical and compare expressions
-logical_or: (logical_or KW_OR)? logical_and
-logical_and: (logical_and KW_AND)? logical_not
+logical_or: logical_and (KW_OR logical_and)*
+logical_and: logical_not (KW_AND logical_not)*
 logical_not: NOT logical_not | compare
 compare: (arithmetic cmp_op)* arithmetic
 
@@ -363,6 +374,7 @@ atom_literal: builtin_type
             | NULL
             | BOOL
             | multistring
+            | ELLIPSIS
             | FLOAT
             | OCT
             | BIN
@@ -391,7 +403,7 @@ list_compr: LSQUARE expression inner_compr+ RSQUARE
 gen_compr: LPAREN expression inner_compr+ RPAREN
 set_compr: LBRACE expression inner_compr+ RBRACE
 dict_compr: LBRACE kv_pair inner_compr+ RBRACE
-inner_compr: KW_ASYNC? KW_FOR atomic_chain KW_IN pipe_call (KW_IF expression)?
+inner_compr: KW_ASYNC? KW_FOR atomic_chain KW_IN pipe_call (KW_IF walrus_assign)*
 
 dict_val: LBRACE ((kv_pair COMMA)* kv_pair)? RBRACE
 list_val: LSQUARE expr_list? RSQUARE
@@ -412,11 +424,11 @@ kw_expr_list: (kw_expr_list COMMA)? kw_expr
 kw_expr: any_ref EQ expression | STAR_POW expression
 
 // Data Spatial References
-edge_ref_chain: (EDGE_OP|NODE_OP)? LSQUARE expression? (edge_op_ref expression?)+ RSQUARE
+edge_ref_chain: (EDGE_OP|NODE_OP)? LSQUARE expression? (edge_op_ref (filter_compr | expression)?)+ RSQUARE
 edge_op_ref: edge_any | edge_from | edge_to
-edge_to: ARROW_R | ARROW_R_P1 expression (COLON filter_compare_list)? ARROW_R_P2
-edge_from: ARROW_L | ARROW_L_P1 expression (COLON filter_compare_list)? ARROW_L_P2
-edge_any: ARROW_BI | ARROW_L_P1 expression (COLON filter_compare_list)? ARROW_R_P2
+edge_to: ARROW_R | ARROW_R_P1 typed_filter_compare_list ARROW_R_P2
+edge_from: ARROW_L | ARROW_L_P1 typed_filter_compare_list ARROW_L_P2
+edge_any: ARROW_BI | ARROW_L_P1 typed_filter_compare_list ARROW_R_P2
 connect_op: connect_from | connect_to | connect_any
 disconnect_op: KW_DELETE edge_op_ref
 connect_to: CARROW_R | CARROW_R_P1 expression (COLON kw_expr_list)? CARROW_R_P2
@@ -424,9 +436,11 @@ connect_from: CARROW_L | CARROW_L_P1 expression (COLON kw_expr_list)? CARROW_L_P
 connect_any: CARROW_BI | CARROW_L_P1 expression (COLON kw_expr_list)? CARROW_R_P2
 
 // Special Comprehensions
-filter_compr: LPAREN EQ filter_compare_list RPAREN
-assign_compr: LPAREN STAR_MUL kw_expr_list RPAREN
+filter_compr: LPAREN NULL_OK filter_compare_list RPAREN
+            | LPAREN TYPE_OP NULL_OK typed_filter_compare_list RPAREN
+assign_compr: LPAREN EQ kw_expr_list RPAREN
 filter_compare_list: (filter_compare_list COMMA)? filter_compare_item
+typed_filter_compare_list: expression (COLON filter_compare_list)?
 filter_compare_item: named_ref cmp_op expression
 
 // Names and references
@@ -439,12 +453,12 @@ named_ref: special_ref
 
 type_ref: TYPE_OP (named_ref | builtin_type)
 
-special_ref: INIT_OP
-            | POST_INIT_OP
-            | ROOT_OP
-            | SUPER_OP
-            | SELF_OP
-            | HERE_OP
+special_ref: KW_INIT
+            | KW_POST_INIT
+            | KW_ROOT
+            | KW_SUPER
+            | KW_SELF
+            | KW_HERE
 
 // Builtin types
 builtin_type: TYP_TYPE
@@ -489,6 +503,7 @@ TYP_TYPE: "type"
 KW_LET: "let"
 KW_ABSTRACT: "abs"
 KW_CLASS: "class"
+KW_MODEL: "model"
 KW_OBJECT: "obj"
 KW_ENUM: "enum"
 KW_NODE: "node"
@@ -540,6 +555,13 @@ KW_STATIC: "static"
 KW_OVERRIDE: "override"
 KW_MATCH: "match"
 KW_CASE: "case"
+KW_HERE: "here"
+KW_SELF: "self"
+KW_INIT: "init"
+KW_POST_INIT: "postinit"
+KW_SUPER: "super"
+KW_ROOT: "root"
+
 
 ARROW_BI: /<-->/
 ARROW_L: /<--/
@@ -556,12 +578,7 @@ CARROW_R_P2: /:\+>/
 CARROW_L_P2: /:\+/
 CARROW_R_P1: /\+\:/
 
-HERE_OP: /<h>|<here>/
-SELF_OP: /<s>|<self>/
-INIT_OP: /<i>|<init>/
-POST_INIT_OP: /<pi>|<post_init>/
-SUPER_OP: /<sup>|<super>/
-ROOT_OP: /<r>|<root>/
+
 
 GLOBAL_OP: /:g:|:global:/
 NONLOCAL_OP: /:nl:|:nonlocal:/
@@ -605,7 +622,7 @@ RSHIFT: />>/
 LTE: /<=/
 GTE: />=/
 NE: /!=/
-NOT.1: /not/
+NOT: "not"
 WALRUS_EQ: /:=/
 COLON: /:/
 LBRACE: /{/
@@ -613,6 +630,7 @@ RBRACE: /}/
 SEMI: /;/
 EE: /==/
 EQ: /=/
+ELLIPSIS: /\.\.\./
 DOT: /\./
 LT: /</
 GT: />/

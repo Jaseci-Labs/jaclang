@@ -1,12 +1,13 @@
 """Test Jac language generally."""
 
 import io
+import json
+import os
 import sys
-
 
 from jaclang import jac_import
 from jaclang.cli import cli
-from jaclang.compiler.compile import jac_str_to_pass
+from jaclang.compiler.compile import jac_file_to_pass, jac_str_to_pass
 from jaclang.core import construct
 from jaclang.utils.test import TestCase
 
@@ -102,8 +103,79 @@ class JacLanguageTests(TestCase):
             stdout_value,
             "{'apple': None, 'pineapple': None}\n"
             "This is a long\n"
-            "        line of code.\n",
+            "        line of code.\n"
+            "{'a': 'apple', 'b': 'ball', 'c': 'cat', 'd': 'dog', 'e': 'elephant'}\n",
         )
+
+    def test_with_llm_function(self) -> None:
+        """Parse micro jac file."""
+        os.environ["JAC_REGISTRY_DEBUG"] = "1"
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("with_llm_function", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("{'temperature': 0.7}", stdout_value)
+        self.assertIn("Emoji Representation (str)", stdout_value)
+        self.assertIn('Text Input (input) (str) = "Lets move to paris"', stdout_value)
+        self.assertIn(
+            'Examples of Text to Emoji (emoji_examples) (list[dict[str,str]]) = [{"input": "I love tp drink pina coladas"',  # noqa E501
+            stdout_value,
+        )
+        del os.environ["JAC_REGISTRY_DEBUG"]
+
+    def test_with_llm_method(self) -> None:
+        """Parse micro jac file."""
+        os.environ["JAC_REGISTRY_DEBUG"] = "1"
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("with_llm_method", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("[Reasoning] <Reason>", stdout_value)
+        self.assertIn(
+            "Personality Index of a Person (PersonalityIndex) (class) = Personality Index (index) (int)",
+            stdout_value,
+        )
+        self.assertIn(
+            "Personality of the Person (dict[Personality,PersonalityIndex])",
+            stdout_value,
+        )
+        self.assertIn(
+            'Diary Entries (diary_entries) (None) = ["I won noble prize in Physics", "I am popular for my theory of relativity"]',  # noqa E501
+            stdout_value,
+        )
+        del os.environ["JAC_REGISTRY_DEBUG"]
+
+    def test_with_llm_lower(self) -> None:
+        """Parse micro jac file."""
+        os.environ["JAC_REGISTRY_DEBUG"] = "1"
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("with_llm_lower", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("[Reasoning] <Reason>", stdout_value)
+        self.assertIn(
+            'Name of the Person (name) (str) = "Oppenheimer"',
+            stdout_value,
+        )
+        self.assertIn(
+            "Person (Person) (obj) = Fullname of the Person (full_name) (str), Year of Death (yod) (int), Personality of the Person (personality) (Personality)",  # noqa E501
+            stdout_value,
+        )
+        self.assertIn(
+            "J. Robert Oppenheimer was a Introvert person who died in 1967",
+            stdout_value,
+        )
+        os.remove(
+            os.path.join(
+                self.fixture_abs_path("./"),
+                "__jac_gen__",
+                "with_llm_lower_registry.json",
+            )
+        )
+        del os.environ["JAC_REGISTRY_DEBUG"]
 
     def test_ignore(self) -> None:
         """Parse micro jac file."""
@@ -266,6 +338,7 @@ class JacLanguageTests(TestCase):
         jac_import("edges_walk", base_path=self.fixture_abs_path("./"))
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
+        self.assertIn("creator()\n", stdout_value)
         self.assertIn("[node_a(val=12)]\n", stdout_value)
         self.assertIn("node_a(val=1)", stdout_value)
         self.assertIn("node_a(val=2)", stdout_value)
@@ -293,3 +366,122 @@ class JacLanguageTests(TestCase):
             "a apple b banana a apple b banana a apple b banana a apple b banana",
             stdout_value,
         )
+
+    def test_deferred_field(self) -> None:
+        """Test walking through edges."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("deferred_field", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn(
+            "5 15",
+            stdout_value,
+        )
+
+    def test_gen_dot_builtin(self) -> None:
+        """Test the dot gen of nodes and edges as a builtin."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("builtin_dotgen", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertEqual(stdout_value.count("True"), 14)
+
+    def test_with_contexts(self) -> None:
+        """Test walking through edges."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("with_context", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("im in", stdout_value)
+        self.assertIn("in the middle", stdout_value)
+        self.assertIn("im out", stdout_value)
+        self.assertIn(
+            "{'apple': [1, 2, 3], 'banana': [1, 2, 3], 'cherry': [1, 2, 3]}",
+            stdout_value,
+        )
+
+    def test_typed_filter_compr(self) -> None:
+        """Parse micro jac file."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import(
+            "micro.typed_filter_compr",
+            base_path=self.fixture_abs_path("../../../examples/"),
+        )
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn(
+            "[MyObj(a=0), MyObj2(a=2), MyObj(a=1), "
+            "MyObj2(a=3), MyObj(a=2), MyObj(a=3)]\n",
+            stdout_value,
+        )
+        self.assertIn("[MyObj(a=0), MyObj(a=1), MyObj(a=2)]\n", stdout_value)
+
+    def test_edge_node_walk(self) -> None:
+        """Test walking through edges and nodes."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("edge_node_walk", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("creator()\n", stdout_value)
+        self.assertIn("[node_a(val=12)]\n", stdout_value)
+        self.assertIn("node_a(val=1)", stdout_value)
+        self.assertIn("node_a(val=2)", stdout_value)
+        self.assertIn("[node_b(val=42), node_b(val=42)]\n", stdout_value)
+
+    def test_annotation_tuple_issue(self) -> None:
+        """Test conn assign on edges."""
+        construct.root._jac_.edges.clear()
+        mypass = jac_file_to_pass(self.fixture_abs_path("./slice_vals.jac"))
+        self.assertIn("Annotated[Str, INT, BLAH]", mypass.ir.gen.py)
+        self.assertIn("tuple[int, Optional[type], Optional[tuple]]", mypass.ir.gen.py)
+
+    def test_impl_decl_resolution_fix(self) -> None:
+        """Test walking through edges and nodes."""
+        construct.root._jac_.edges.clear()
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("mtest", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("2.0\n", stdout_value)
+
+    def test_registry(self) -> None:
+        """Test Jac registry feature."""
+        os.environ["JAC_REGISTRY_DEBUG"] = "1"
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("registry", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertNotIn("Error", stdout_value)
+
+        with open(
+            os.path.join(
+                self.fixture_abs_path("./"), "__jac_gen__", "registry_registry.json"
+            ),
+            "r",
+        ) as f:
+            registry = json.load(f)
+        self.assertEqual(
+            registry["registry(Module)"]["personality_examples"],
+            ["dict[str,Personality|None]", "Personality Information of Famous People"],
+        )
+        self.assertEqual(
+            registry["registry(Module).Personality(Enum)"]["INTROVERT"],
+            [None, "Person who is shy and reticent"],
+        )
+        os.remove(
+            os.path.join(
+                self.fixture_abs_path("./"), "__jac_gen__", "registry_registry.json"
+            )
+        )
+        del os.environ["JAC_REGISTRY_DEBUG"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import types
 from dataclasses import field
@@ -9,7 +10,8 @@ from functools import wraps
 from typing import Any, Callable, Optional, Type
 
 from jaclang.compiler.absyntree import Module
-from jaclang.compiler.constant import EdgeDir
+from jaclang.compiler.constant import EdgeDir, colors
+from jaclang.core.aott import aott_raise, get_reasoning_output
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -26,7 +28,15 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.jacbuiltins import dotgen
+from jaclang.core.utils import (
+    extract_non_primary_type,
+    filter,
+    get_all_type_explanations,
+    get_object_string,
+    get_type_annotation,
+    traverse_graph,
+)
+from jaclang.core.model import create_model
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -214,15 +224,14 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def spawn_call(op1: Architype, op2: Architype) -> bool:
+    def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype:
         """Jac's spawn operator feature."""
         if isinstance(op1, WalkerArchitype):
-            op1._jac_.spawn_call(op2)
+            return op1._jac_.spawn_call(op2)
         elif isinstance(op2, WalkerArchitype):
-            op2._jac_.spawn_call(op1)
+            return op2._jac_.spawn_call(op1)
         else:
             raise TypeError("Invalid walker object")
-        return True
 
     @staticmethod
     @hookimpl
@@ -263,7 +272,6 @@ class JacFeatureDefaults:
         node_obj: NodeArchitype | list[NodeArchitype],
         target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
-        filter_type: Optional[type],
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,
     ) -> list[NodeArchitype] | list[EdgeArchitype]:
@@ -279,16 +287,14 @@ class JacFeatureDefaults:
             connected_edges: list[EdgeArchitype] = []
             for node in node_obj:
                 connected_edges += node._jac_.get_edges(
-                    dir, filter_type, filter_func, target_obj=targ_obj_set
+                    dir, filter_func, target_obj=targ_obj_set
                 )
             return list(set(connected_edges))
         else:
             connected_nodes: list[NodeArchitype] = []
             for node in node_obj:
                 connected_nodes.extend(
-                    node._jac_.edges_to_nodes(
-                        dir, filter_type, filter_func, target_obj=targ_obj_set
-                    )
+                    node._jac_.edges_to_nodes(dir, filter_func, target_obj=targ_obj_set)
                 )
             return list(set(connected_nodes))
 
@@ -320,7 +326,6 @@ class JacFeatureDefaults:
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
         dir: EdgeDir,
-        filter_type: Optional[type],
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
     ) -> bool:  # noqa: ANN401
         """Jac's disconnect operator feature."""
@@ -330,17 +335,11 @@ class JacFeatureDefaults:
         for i in left:
             for j in right:
                 edge_list: list[EdgeArchitype] = [*i._jac_.edges]
-                if filter_type:
-                    edge_list = [e for e in edge_list if isinstance(e, filter_type)]
                 edge_list = filter_func(edge_list) if filter_func else edge_list
                 for e in edge_list:
-                    if (
-                        e._jac_.target
-                        and e._jac_.source
-                        and (not filter_type or isinstance(e, filter_type))
-                    ):
+                    if e._jac_.target and e._jac_.source:
                         if (
-                            dir in ["OUT", "ANY"]
+                            dir in ["OUT", "ANY"]  # TODO: Not ideal
                             and i._jac_.obj == e._jac_.source
                             and e._jac_.target == j._jac_.obj
                         ):
@@ -396,12 +395,164 @@ class JacFeatureDefaults:
 
         return builder
 
+    @staticmethod
+    @hookimpl
+    def with_llm(
+        file_loc: str,
+        model: Any,  # noqa: ANN401
+        model_params: dict[str, Any],
+        scope: str,
+        incl_info: tuple[str, str],
+        excl_info: tuple,
+        inputs: tuple,
+        outputs: tuple,
+        action: str,
+    ) -> Any:  # noqa: ANN401
+        """Jac's with_llm feature."""
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+            ),
+            "r",
+        ) as f:
+            registry_data = json.load(f)
+
+        reason = False
+        if "reason" in model_params:
+            reason = model_params.pop("reason")
+
+        type_collector: list = []
+        information, collected_types = filter(scope, registry_data, incl_info)
+        type_collector.extend(collected_types)
+
+        inputs_information_list = []
+        for i in inputs:
+            typ_anno = get_type_annotation(i[3])
+            type_collector.extend(extract_non_primary_type(typ_anno))
+            inputs_information_list.append(
+                f"{i[0]} ({i[2]}) ({typ_anno}) = {get_object_string(i[3])}"
+            )
+        inputs_information = "\n".join(inputs_information_list)
+
+        output_information = f"{outputs[0]} ({outputs[2]})"
+        type_collector.extend(extract_non_primary_type(outputs[2]))
+
+        type_explanations_list = list(
+            get_all_type_explanations(type_collector, registry_data).values()
+        )
+        type_explanations = "\n".join(type_explanations_list)
+
+        meaning_in = aott_raise(
+            information,
+            inputs_information,
+            output_information,
+            type_explanations,
+            action,
+            reason,
+        )
+        meaning_out = model.__infer__(meaning_in, **model_params)
+        reasoning, output = get_reasoning_output(meaning_out)
+        return output
+
+    @staticmethod
+    @hookimpl
+    def Model(model: Any, kwargs: dict):  # noqa: ANN401
+        """Jac's Model feature."""
+        return create_model(model, **kwargs)
+
 
 class JacBuiltin:
     """Jac Builtins."""
 
     @staticmethod
     @hookimpl
-    def dotgen(node: NodeArchitype, radius: int = 0) -> str:
-        """Print the dot graph."""
-        return dotgen(node, radius)
+    def dotgen(
+        node: NodeArchitype,
+        depth: int,
+        traverse: bool,
+        edge_type: list[str],
+        bfs: bool,
+        edge_limit: int,
+        node_limit: int,
+        dot_file: Optional[str],
+    ) -> str:
+        """Generate Dot file for visualizing nodes and edges."""
+        edge_type = edge_type if edge_type else []
+        visited_nodes: list[NodeArchitype] = []
+        node_depths: dict[NodeArchitype, int] = {node: 0}
+        queue: list = [[node, 0]]
+        connections: list[tuple[NodeArchitype, NodeArchitype, EdgeArchitype]] = []
+
+        def dfs(node: NodeArchitype, cur_depth: int) -> None:
+            """Depth first search."""
+            if node not in visited_nodes:
+                visited_nodes.append(node)
+                traverse_graph(
+                    node,
+                    cur_depth,
+                    depth,
+                    edge_type,
+                    traverse,
+                    connections,
+                    node_depths,
+                    visited_nodes,
+                    queue,
+                    bfs,
+                    dfs,
+                    node_limit,
+                    edge_limit,
+                )
+
+        if bfs:
+            cur_depth = 0
+            while queue:
+                current_node, cur_depth = queue.pop(0)
+                if current_node not in visited_nodes:
+                    visited_nodes.append(current_node)
+                    traverse_graph(
+                        current_node,
+                        cur_depth,
+                        depth,
+                        edge_type,
+                        traverse,
+                        connections,
+                        node_depths,
+                        visited_nodes,
+                        queue,
+                        bfs,
+                        dfs,
+                        node_limit,
+                        edge_limit,
+                    )
+        else:
+            dfs(node, cur_depth=0)
+        dot_content = (
+            'digraph {\nnode [style="filled", shape="ellipse", '
+            'fillcolor="invis", fontcolor="black"];\n'
+        )
+        for source, target, edge in connections:
+            dot_content += (
+                f"{visited_nodes.index(source)} -> {visited_nodes.index(target)} "
+                f' [label="{edge._jac_.obj.__class__.__name__} "];\n'
+            )
+        for node_ in visited_nodes:
+            color = (
+                colors[node_depths[node_]] if node_depths[node_] < 25 else colors[24]
+            )
+            dot_content += f'{visited_nodes.index(node_)} [label="{node_._jac_.obj}" fillcolor="{color}"];\n'
+        if dot_file:
+            with open(dot_file, "w") as f:
+                f.write(dot_content + "}")
+        return dot_content + "}"
+
+
+class JacCmdDefaults:
+    """Jac CLI command."""
+
+    @staticmethod
+    @hookimpl
+    def create_cmd() -> None:
+        """Create Jac CLI cmds."""
+        pass

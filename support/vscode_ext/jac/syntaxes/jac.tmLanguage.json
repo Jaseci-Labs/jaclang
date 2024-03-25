@@ -105,7 +105,7 @@
 			"patterns": [
 				{
 					"name": "meta.class.jac",
-					"begin": "(?x)\\b(enum|obj|class|node|edge|walker|test)\\b(?=\\s+[[:alpha:]_]\\w*|\\s*({|;|\\n))",
+					"begin": "(?x)\\b(enum|obj|class|node|edge|walker|model|test)\\b(?=\\s+[[:alpha:]_]\\w*|\\s*({|;|\\n))",
 					"end": "(?={)|;",
 					"beginCaptures": {
 						"1": {
@@ -219,7 +219,7 @@
 				{
 					"name": "meta.property.jac",
 					"begin": "(?x)\\b(has)\\b(?=\\s*[[:alpha:]_]\\w*|\\s*({|;|\\(||\\n))",
-					"end": "(?=\\)|{)|;",
+					"end": "(?=\\)|{)|;|by",
 					"beginCaptures": {
 						"1": {
 							"name": "storage.type.function.jac"
@@ -576,7 +576,7 @@
 				},
 				{
 					"name": "keyword.control.flow.jac",
-					"match": "(?x)\n  \\b(?<!\\.)(\n    async | await | continue | entry | exit | del | assert | break | finally | for\n    | from | elif | else | if | except | pass | raise\n    | return | try | while | with | spawn | ignore | visit | disengage \n  )\\b\n"
+					"match": "(?x)\n  \\b(?<!\\.)(\n    async | await | continue | entry | exit | del | assert | break | finally | for\n    | from | elif | else | if | except | pass | raise\n    | return | try | while | with | to | by | spawn | ignore | visit | disengage \n  )\\b\n"
 				},
 				{
 					"name": "storage.modifier.declaration.jac",
@@ -584,7 +584,7 @@
 				},
 				{
 					"name": "storage.type.class.jac",
-					"match": "(?x)\n  \\b(?<!\\.)(\n    enum | obj | node | edge | walker | class | test\n  )\\b\n"
+					"match": "(?x)\n  \\b(?<!\\.)(\n    enum | obj | node | edge | walker | class | model | test\n  )\\b\n"
 				},
 				{
 					"name": "storage.type.has.jac",
@@ -603,9 +603,6 @@
 		"expression-bare": {
 			"comment": "valid Python expressions w/o comments and line continuation",
 			"patterns": [
-				{
-					"include": "#backticks"
-				},
 				{
 					"include": "#illegal-anno"
 				},
@@ -1266,7 +1263,7 @@
 			"patterns": [
 				{
 					"name": "meta.class.jac",
-					"begin": "(?x)\\s*(enum|obj|class|node|edge|walker|test)\\s*(?=\\s*[[:alpha:]_]\\w*|\\s*({|;|\\n))",
+					"begin": "(?x)\\s*(enum|obj|class|node|edge|model|walker|test)\\s*(?=\\s*[[:alpha:]_]\\w*|\\s*({|;|\\n))",
 					"end": "({|;)",
 					"beginCaptures": {
 						"1": {
@@ -1319,7 +1316,7 @@
 		"arch-var-reference": {
 			"patterns": [
 				{
-					"match": "(<h>|<here>|<s>|<self>|<i>|<init>|<sup>|<super>|<r>|<root>)\\s*",
+					"match": "(here|self|init|postinit|super|root)\\s*",
 					"captures": {
 						"1": {
 							"name": "storage.type.class.jac"
@@ -1494,9 +1491,6 @@
 						},
 						{
 							"include": "#comments"
-						},
-						{
-							"include": "#backticks"
 						},
 						{
 							"include": "#illegal-anno"
@@ -2072,7 +2066,7 @@
 			}
 		},
 		"special-variables": {
-			"match": "(?x)(<h>|<here>|<s>|<self>|<i>|<init>|<super>|<r>|<root>)",
+			"match": "(?x)(here|self|init|postinit|super|root)",
 			"captures": {
 				"1": {
 					"name": "variable.language.special.self.jac"
@@ -2085,16 +2079,6 @@
 		"ellipsis": {
 			"name": "constant.other.ellipsis.jac",
 			"match": "\\.\\.\\."
-		},
-		"backticks": {
-			"name": "invalid.deprecated.backtick.jac",
-			"begin": "\\`",
-			"end": "(?:\\`|(?<!\\\\)(\\n))",
-			"patterns": [
-				{
-					"include": "#expression"
-				}
-			]
 		},
 		"illegal-operator": {
 			"patterns": [

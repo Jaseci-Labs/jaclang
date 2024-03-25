@@ -3,9 +3,11 @@
 --8<-- "examples/reference/introduction.md"
 
 ## Base Module structure
+**Grammar Snippet**
 ```yaml linenums="2"
---8<-- "jaclang/compiler/jac.lark:2:17"
+--8<-- "jaclang/compiler/jac.lark:2:18"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/base_module_structure.jac"
@@ -14,12 +16,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/base_module_structure.py"
     ```
+**Description**
+
 --8<-- "examples/reference/base_module_structure.md"
 
 ## Import/Include Statements
-```yaml linenums="20"
---8<-- "jaclang/compiler/jac.lark:20:27"
+**Grammar Snippet**
+```yaml linenums="21"
+--8<-- "jaclang/compiler/jac.lark:21:31"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/import_include_statements.jac"
@@ -28,12 +34,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/import_include_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/import_include_statements.md"
 
 ## Architypes
-```yaml linenums="30"
---8<-- "jaclang/compiler/jac.lark:30:43"
+**Grammar Snippet**
+```yaml linenums="34"
+--8<-- "jaclang/compiler/jac.lark:34:48"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/architypes.jac"
@@ -42,12 +52,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/architypes.py"
     ```
+**Description**
+
 --8<-- "examples/reference/architypes.md"
 
 ## Architype bodies
-```yaml linenums="46"
---8<-- "jaclang/compiler/jac.lark:46:51"
+**Grammar Snippet**
+```yaml linenums="51"
+--8<-- "jaclang/compiler/jac.lark:51:56"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/architype_bodies.jac"
@@ -56,12 +70,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/architype_bodies.py"
     ```
+**Description**
+
 --8<-- "examples/reference/architype_bodies.md"
 
 ## Enumerations
-```yaml linenums="54"
---8<-- "jaclang/compiler/jac.lark:54:63"
+**Grammar Snippet**
+```yaml linenums="59"
+--8<-- "jaclang/compiler/jac.lark:59:68"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/enumerations.jac"
@@ -70,12 +88,34 @@
     ```python linenums="1"
     --8<-- "examples/reference/enumerations.py"
     ```
+**Description**
+
 --8<-- "examples/reference/enumerations.md"
 
-## Abilities
-```yaml linenums="66"
---8<-- "jaclang/compiler/jac.lark:66:75"
+## model_llm
+**Grammar Snippet**
+```yaml linenums="71"
+--8<-- "jaclang/compiler/jac.lark:71:73"
 ```
+**Code Example**
+=== "Jac"
+    ```jac linenums="1"
+    --8<-- "examples/reference/model_llm.jac"
+    ```
+=== "Python"
+    ```python linenums="1"
+    --8<-- "examples/reference/model_llm.py"
+    ```
+**Description**
+
+--8<-- "examples/reference/model_llm.md"
+
+## Abilities
+**Grammar Snippet**
+```yaml linenums="76"
+--8<-- "jaclang/compiler/jac.lark:76:87"
+```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/abilities.jac"
@@ -84,12 +124,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/abilities.py"
     ```
+**Description**
+
 --8<-- "examples/reference/abilities.md"
 
 ## Global variables
-```yaml linenums="78"
---8<-- "jaclang/compiler/jac.lark:78:79"
+**Grammar Snippet**
+```yaml linenums="90"
+--8<-- "jaclang/compiler/jac.lark:90:91"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/global_variables.jac"
@@ -98,12 +142,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/global_variables.py"
     ```
+**Description**
+
 --8<-- "examples/reference/global_variables.md"
 
 ## Free code
-```yaml linenums="82"
---8<-- "jaclang/compiler/jac.lark:82:82"
+**Grammar Snippet**
+```yaml linenums="94"
+--8<-- "jaclang/compiler/jac.lark:94:94"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/free_code.jac"
@@ -112,12 +160,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/free_code.py"
     ```
+**Description**
+
 --8<-- "examples/reference/free_code.md"
 
 ## Inline python
-```yaml linenums="85"
---8<-- "jaclang/compiler/jac.lark:85:85"
+**Grammar Snippet**
+```yaml linenums="97"
+--8<-- "jaclang/compiler/jac.lark:97:97"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/inline_python.jac"
@@ -126,12 +178,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/inline_python.py"
     ```
+**Description**
+
 --8<-- "examples/reference/inline_python.md"
 
 ## Tests
-```yaml linenums="88"
---8<-- "jaclang/compiler/jac.lark:88:88"
+**Grammar Snippet**
+```yaml linenums="100"
+--8<-- "jaclang/compiler/jac.lark:100:100"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/tests.jac"
@@ -140,12 +196,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/tests.py"
     ```
+**Description**
+
 --8<-- "examples/reference/tests.md"
 
 ## Implementations
-```yaml linenums="91"
---8<-- "jaclang/compiler/jac.lark:91:108"
+**Grammar Snippet**
+```yaml linenums="103"
+--8<-- "jaclang/compiler/jac.lark:103:120"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/implementations.jac"
@@ -154,12 +214,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/implementations.py"
     ```
+**Description**
+
 --8<-- "examples/reference/implementations.md"
 
 ## Codeblocks and Statements
-```yaml linenums="111"
---8<-- "jaclang/compiler/jac.lark:111:138"
+**Grammar Snippet**
+```yaml linenums="123"
+--8<-- "jaclang/compiler/jac.lark:123:149"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/codeblocks_and_statements.jac"
@@ -168,12 +232,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/codeblocks_and_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/codeblocks_and_statements.md"
 
 ## If statements
-```yaml linenums="141"
---8<-- "jaclang/compiler/jac.lark:141:143"
+**Grammar Snippet**
+```yaml linenums="152"
+--8<-- "jaclang/compiler/jac.lark:152:154"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/if_statements.jac"
@@ -182,12 +250,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/if_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/if_statements.md"
 
 ## While statements
-```yaml linenums="146"
---8<-- "jaclang/compiler/jac.lark:146:146"
+**Grammar Snippet**
+```yaml linenums="157"
+--8<-- "jaclang/compiler/jac.lark:157:157"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/while_statements.jac"
@@ -196,12 +268,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/while_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/while_statements.md"
 
 ## For statements
-```yaml linenums="149"
---8<-- "jaclang/compiler/jac.lark:149:150"
+**Grammar Snippet**
+```yaml linenums="160"
+--8<-- "jaclang/compiler/jac.lark:160:161"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/for_statements.jac"
@@ -210,12 +286,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/for_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/for_statements.md"
 
 ## Try statements
-```yaml linenums="153"
---8<-- "jaclang/compiler/jac.lark:153:156"
+**Grammar Snippet**
+```yaml linenums="164"
+--8<-- "jaclang/compiler/jac.lark:164:167"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/try_statements.jac"
@@ -224,12 +304,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/try_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/try_statements.md"
 
 ## Match statements
-```yaml linenums="159"
---8<-- "jaclang/compiler/jac.lark:159:160"
+**Grammar Snippet**
+```yaml linenums="170"
+--8<-- "jaclang/compiler/jac.lark:170:171"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_statements.jac"
@@ -238,12 +322,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_statements.md"
 
 ## Match patterns
-```yaml linenums="163"
---8<-- "jaclang/compiler/jac.lark:163:173"
+**Grammar Snippet**
+```yaml linenums="174"
+--8<-- "jaclang/compiler/jac.lark:174:184"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_patterns.jac"
@@ -252,12 +340,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_patterns.md"
 
 ## Match litteral patterns
-```yaml linenums="176"
---8<-- "jaclang/compiler/jac.lark:176:176"
+**Grammar Snippet**
+```yaml linenums="187"
+--8<-- "jaclang/compiler/jac.lark:187:187"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_litteral_patterns.jac"
@@ -266,12 +358,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_litteral_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_litteral_patterns.md"
 
 ## Match singleton patterns
-```yaml linenums="179"
---8<-- "jaclang/compiler/jac.lark:179:179"
+**Grammar Snippet**
+```yaml linenums="190"
+--8<-- "jaclang/compiler/jac.lark:190:190"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_singleton_patterns.jac"
@@ -280,12 +376,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_singleton_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_singleton_patterns.md"
 
 ## Match capture patterns
-```yaml linenums="182"
---8<-- "jaclang/compiler/jac.lark:182:182"
+**Grammar Snippet**
+```yaml linenums="193"
+--8<-- "jaclang/compiler/jac.lark:193:193"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_capture_patterns.jac"
@@ -294,12 +394,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_capture_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_capture_patterns.md"
 
 ## Match sequence patterns
-```yaml linenums="185"
---8<-- "jaclang/compiler/jac.lark:185:186"
+**Grammar Snippet**
+```yaml linenums="196"
+--8<-- "jaclang/compiler/jac.lark:196:197"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_sequence_patterns.jac"
@@ -308,12 +412,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_sequence_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_sequence_patterns.md"
 
 ## Match mapping patterns
-```yaml linenums="189"
---8<-- "jaclang/compiler/jac.lark:189:191"
+**Grammar Snippet**
+```yaml linenums="200"
+--8<-- "jaclang/compiler/jac.lark:200:202"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_mapping_patterns.jac"
@@ -322,12 +430,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_mapping_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_mapping_patterns.md"
 
 ## Match class patterns
-```yaml linenums="194"
---8<-- "jaclang/compiler/jac.lark:194:198"
+**Grammar Snippet**
+```yaml linenums="205"
+--8<-- "jaclang/compiler/jac.lark:205:209"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/match_class_patterns.jac"
@@ -336,12 +448,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/match_class_patterns.py"
     ```
+**Description**
+
 --8<-- "examples/reference/match_class_patterns.md"
 
 ## Context managers
-```yaml linenums="201"
---8<-- "jaclang/compiler/jac.lark:201:203"
+**Grammar Snippet**
+```yaml linenums="212"
+--8<-- "jaclang/compiler/jac.lark:212:214"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/context_managers.jac"
@@ -350,12 +466,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/context_managers.py"
     ```
+**Description**
+
 --8<-- "examples/reference/context_managers.md"
 
 ## Global and nonlocal statements
-```yaml linenums="206"
---8<-- "jaclang/compiler/jac.lark:206:208"
+**Grammar Snippet**
+```yaml linenums="217"
+--8<-- "jaclang/compiler/jac.lark:217:219"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/global_and_nonlocal_statements.jac"
@@ -364,12 +484,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/global_and_nonlocal_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/global_and_nonlocal_statements.md"
 
 ## Data spatial typed context blocks
-```yaml linenums="211"
---8<-- "jaclang/compiler/jac.lark:211:211"
+**Grammar Snippet**
+```yaml linenums="222"
+--8<-- "jaclang/compiler/jac.lark:222:222"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/data_spatial_typed_context_blocks.jac"
@@ -378,12 +502,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/data_spatial_typed_context_blocks.py"
     ```
+**Description**
+
 --8<-- "examples/reference/data_spatial_typed_context_blocks.md"
 
 ## Return statements
-```yaml linenums="214"
---8<-- "jaclang/compiler/jac.lark:214:214"
+**Grammar Snippet**
+```yaml linenums="225"
+--8<-- "jaclang/compiler/jac.lark:225:225"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/return_statements.jac"
@@ -392,12 +520,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/return_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/return_statements.md"
 
 ## Yield statements
-```yaml linenums="217"
---8<-- "jaclang/compiler/jac.lark:217:217"
+**Grammar Snippet**
+```yaml linenums="228"
+--8<-- "jaclang/compiler/jac.lark:228:228"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/yield_statements.jac"
@@ -406,12 +538,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/yield_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/yield_statements.md"
 
 ## Raise statements
-```yaml linenums="220"
---8<-- "jaclang/compiler/jac.lark:220:220"
+**Grammar Snippet**
+```yaml linenums="231"
+--8<-- "jaclang/compiler/jac.lark:231:231"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/raise_statements.jac"
@@ -420,12 +556,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/raise_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/raise_statements.md"
 
 ## Assert statements
-```yaml linenums="223"
---8<-- "jaclang/compiler/jac.lark:223:223"
+**Grammar Snippet**
+```yaml linenums="234"
+--8<-- "jaclang/compiler/jac.lark:234:234"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/assert_statements.jac"
@@ -434,12 +574,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/assert_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/assert_statements.md"
 
 ## Delete statements
-```yaml linenums="226"
---8<-- "jaclang/compiler/jac.lark:226:226"
+**Grammar Snippet**
+```yaml linenums="237"
+--8<-- "jaclang/compiler/jac.lark:237:237"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/delete_statements.jac"
@@ -448,12 +592,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/delete_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/delete_statements.md"
 
 ## Report statements
-```yaml linenums="229"
---8<-- "jaclang/compiler/jac.lark:229:229"
+**Grammar Snippet**
+```yaml linenums="240"
+--8<-- "jaclang/compiler/jac.lark:240:240"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/report_statements.jac"
@@ -462,12 +610,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/report_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/report_statements.md"
 
 ## Control statements
-```yaml linenums="232"
---8<-- "jaclang/compiler/jac.lark:232:232"
+**Grammar Snippet**
+```yaml linenums="243"
+--8<-- "jaclang/compiler/jac.lark:243:243"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/control_statements.jac"
@@ -476,12 +628,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/control_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/control_statements.md"
 
 ## Data spatial Walker statements
-```yaml linenums="235"
---8<-- "jaclang/compiler/jac.lark:235:238"
+**Grammar Snippet**
+```yaml linenums="246"
+--8<-- "jaclang/compiler/jac.lark:246:249"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/data_spatial_walker_statements.jac"
@@ -490,12 +646,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/data_spatial_walker_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/data_spatial_walker_statements.md"
 
 ## Visit statements
-```yaml linenums="241"
---8<-- "jaclang/compiler/jac.lark:241:241"
+**Grammar Snippet**
+```yaml linenums="252"
+--8<-- "jaclang/compiler/jac.lark:252:252"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/visit_statements.jac"
@@ -504,12 +664,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/visit_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/visit_statements.md"
 
 ## Revisit statements
-```yaml linenums="244"
---8<-- "jaclang/compiler/jac.lark:244:244"
+**Grammar Snippet**
+```yaml linenums="255"
+--8<-- "jaclang/compiler/jac.lark:255:255"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/revisit_statements.jac"
@@ -518,12 +682,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/revisit_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/revisit_statements.md"
 
 ## Disengage statements
-```yaml linenums="247"
---8<-- "jaclang/compiler/jac.lark:247:247"
+**Grammar Snippet**
+```yaml linenums="258"
+--8<-- "jaclang/compiler/jac.lark:258:258"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/disengage_statements.jac"
@@ -532,12 +700,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/disengage_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/disengage_statements.md"
 
 ## Ignore statements
-```yaml linenums="250"
---8<-- "jaclang/compiler/jac.lark:250:250"
+**Grammar Snippet**
+```yaml linenums="261"
+--8<-- "jaclang/compiler/jac.lark:261:261"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/ignore_statements.jac"
@@ -546,12 +718,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/ignore_statements.py"
     ```
+**Description**
+
 --8<-- "examples/reference/ignore_statements.md"
 
 ## Assignments
-```yaml linenums="253"
---8<-- "jaclang/compiler/jac.lark:253:270"
+**Grammar Snippet**
+```yaml linenums="264"
+--8<-- "jaclang/compiler/jac.lark:264:281"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/assignments.jac"
@@ -560,12 +736,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/assignments.py"
     ```
+**Description**
+
 --8<-- "examples/reference/assignments.md"
 
 ## Expressions
-```yaml linenums="273"
---8<-- "jaclang/compiler/jac.lark:273:274"
+**Grammar Snippet**
+```yaml linenums="284"
+--8<-- "jaclang/compiler/jac.lark:284:285"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/expressions.jac"
@@ -574,12 +754,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/expressions.md"
 
 ## Walrus assignments
-```yaml linenums="277"
---8<-- "jaclang/compiler/jac.lark:277:277"
+**Grammar Snippet**
+```yaml linenums="288"
+--8<-- "jaclang/compiler/jac.lark:288:288"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/walrus_assignments.jac"
@@ -588,12 +772,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/walrus_assignments.py"
     ```
+**Description**
+
 --8<-- "examples/reference/walrus_assignments.md"
 
 ## Lambda expressions
-```yaml linenums="280"
---8<-- "jaclang/compiler/jac.lark:280:280"
+**Grammar Snippet**
+```yaml linenums="291"
+--8<-- "jaclang/compiler/jac.lark:291:291"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/lambda_expressions.jac"
@@ -602,12 +790,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/lambda_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/lambda_expressions.md"
 
 ## Pipe expressions
-```yaml linenums="283"
---8<-- "jaclang/compiler/jac.lark:283:283"
+**Grammar Snippet**
+```yaml linenums="294"
+--8<-- "jaclang/compiler/jac.lark:294:294"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/pipe_expressions.jac"
@@ -616,12 +808,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/pipe_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/pipe_expressions.md"
 
 ## Pipe back expressions
-```yaml linenums="286"
---8<-- "jaclang/compiler/jac.lark:286:286"
+**Grammar Snippet**
+```yaml linenums="297"
+--8<-- "jaclang/compiler/jac.lark:297:297"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/pipe_back_expressions.jac"
@@ -630,12 +826,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/pipe_back_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/pipe_back_expressions.md"
 
 ## Elvis expressions
-```yaml linenums="289"
---8<-- "jaclang/compiler/jac.lark:289:289"
+**Grammar Snippet**
+```yaml linenums="300"
+--8<-- "jaclang/compiler/jac.lark:300:300"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/elvis_expressions.jac"
@@ -644,12 +844,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/elvis_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/elvis_expressions.md"
 
 ## Bitwise expressions
-```yaml linenums="292"
---8<-- "jaclang/compiler/jac.lark:292:295"
+**Grammar Snippet**
+```yaml linenums="303"
+--8<-- "jaclang/compiler/jac.lark:303:306"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/bitwise_expressions.jac"
@@ -658,12 +862,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/bitwise_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/bitwise_expressions.md"
 
 ## Logical and compare expressions
-```yaml linenums="298"
---8<-- "jaclang/compiler/jac.lark:298:312"
+**Grammar Snippet**
+```yaml linenums="309"
+--8<-- "jaclang/compiler/jac.lark:309:323"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/logical_and_compare_expressions.jac"
@@ -672,12 +880,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/logical_and_compare_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/logical_and_compare_expressions.md"
 
 ## Arithmetic expressions
-```yaml linenums="315"
---8<-- "jaclang/compiler/jac.lark:315:318"
+**Grammar Snippet**
+```yaml linenums="326"
+--8<-- "jaclang/compiler/jac.lark:326:329"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/arithmetic_expressions.jac"
@@ -686,12 +898,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/arithmetic_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/arithmetic_expressions.md"
 
 ## Connect expressions
-```yaml linenums="321"
---8<-- "jaclang/compiler/jac.lark:321:321"
+**Grammar Snippet**
+```yaml linenums="332"
+--8<-- "jaclang/compiler/jac.lark:332:332"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/connect_expressions.jac"
@@ -700,12 +916,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/connect_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/connect_expressions.md"
 
 ## Atomic expressions
-```yaml linenums="324"
---8<-- "jaclang/compiler/jac.lark:324:324"
+**Grammar Snippet**
+```yaml linenums="335"
+--8<-- "jaclang/compiler/jac.lark:335:335"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/atomic_expressions.jac"
@@ -714,12 +934,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/atomic_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/atomic_expressions.md"
 
 ## Atomic pipe back expressions
-```yaml linenums="327"
---8<-- "jaclang/compiler/jac.lark:327:327"
+**Grammar Snippet**
+```yaml linenums="338"
+--8<-- "jaclang/compiler/jac.lark:338:338"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/atomic_pipe_back_expressions.jac"
@@ -728,12 +952,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/atomic_pipe_back_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/atomic_pipe_back_expressions.md"
 
 ## Data spatial spawn expressions
-```yaml linenums="330"
---8<-- "jaclang/compiler/jac.lark:330:330"
+**Grammar Snippet**
+```yaml linenums="341"
+--8<-- "jaclang/compiler/jac.lark:341:341"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/data_spatial_spawn_expressions.jac"
@@ -742,12 +970,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/data_spatial_spawn_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/data_spatial_spawn_expressions.md"
 
 ## Unpack expressions
-```yaml linenums="333"
---8<-- "jaclang/compiler/jac.lark:333:333"
+**Grammar Snippet**
+```yaml linenums="344"
+--8<-- "jaclang/compiler/jac.lark:344:344"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/unpack_expressions.jac"
@@ -756,12 +988,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/unpack_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/unpack_expressions.md"
 
 ## References (unused)
-```yaml linenums="336"
---8<-- "jaclang/compiler/jac.lark:336:336"
+**Grammar Snippet**
+```yaml linenums="347"
+--8<-- "jaclang/compiler/jac.lark:347:347"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/references_(unused).jac"
@@ -770,12 +1006,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/references_(unused).py"
     ```
+**Description**
+
 --8<-- "examples/reference/references_(unused).md"
 
 ## Data spatial calls
-```yaml linenums="339"
---8<-- "jaclang/compiler/jac.lark:339:339"
+**Grammar Snippet**
+```yaml linenums="350"
+--8<-- "jaclang/compiler/jac.lark:350:350"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/data_spatial_calls.jac"
@@ -784,12 +1024,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/data_spatial_calls.py"
     ```
+**Description**
+
 --8<-- "examples/reference/data_spatial_calls.md"
 
 ## Subscripted and dotted expressions
-```yaml linenums="342"
---8<-- "jaclang/compiler/jac.lark:342:347"
+**Grammar Snippet**
+```yaml linenums="353"
+--8<-- "jaclang/compiler/jac.lark:353:358"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/subscripted_and_dotted_expressions.jac"
@@ -798,12 +1042,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/subscripted_and_dotted_expressions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/subscripted_and_dotted_expressions.md"
 
 ## Function calls
-```yaml linenums="350"
---8<-- "jaclang/compiler/jac.lark:350:354"
+**Grammar Snippet**
+```yaml linenums="361"
+--8<-- "jaclang/compiler/jac.lark:361:365"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/function_calls.jac"
@@ -812,12 +1060,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/function_calls.py"
     ```
+**Description**
+
 --8<-- "examples/reference/function_calls.md"
 
 ## Atom
-```yaml linenums="357"
---8<-- "jaclang/compiler/jac.lark:357:378"
+**Grammar Snippet**
+```yaml linenums="368"
+--8<-- "jaclang/compiler/jac.lark:368:390"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/atom.jac"
@@ -826,12 +1078,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/atom.py"
     ```
+**Description**
+
 --8<-- "examples/reference/atom.md"
 
 ## Collection values
-```yaml linenums="381"
---8<-- "jaclang/compiler/jac.lark:381:402"
+**Grammar Snippet**
+```yaml linenums="393"
+--8<-- "jaclang/compiler/jac.lark:393:414"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/collection_values.jac"
@@ -840,12 +1096,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/collection_values.py"
     ```
+**Description**
+
 --8<-- "examples/reference/collection_values.md"
 
 ## Tuples and Jac Tuples
-```yaml linenums="405"
---8<-- "jaclang/compiler/jac.lark:405:412"
+**Grammar Snippet**
+```yaml linenums="417"
+--8<-- "jaclang/compiler/jac.lark:417:424"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/tuples_and_jac_tuples.jac"
@@ -854,12 +1114,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/tuples_and_jac_tuples.py"
     ```
+**Description**
+
 --8<-- "examples/reference/tuples_and_jac_tuples.md"
 
 ## Data Spatial References
-```yaml linenums="415"
---8<-- "jaclang/compiler/jac.lark:415:424"
+**Grammar Snippet**
+```yaml linenums="427"
+--8<-- "jaclang/compiler/jac.lark:427:436"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/data_spatial_references.jac"
@@ -868,12 +1132,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/data_spatial_references.py"
     ```
+**Description**
+
 --8<-- "examples/reference/data_spatial_references.md"
 
 ## Special Comprehensions
-```yaml linenums="427"
---8<-- "jaclang/compiler/jac.lark:427:430"
+**Grammar Snippet**
+```yaml linenums="439"
+--8<-- "jaclang/compiler/jac.lark:439:444"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/special_comprehensions.jac"
@@ -882,12 +1150,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/special_comprehensions.py"
     ```
+**Description**
+
 --8<-- "examples/reference/special_comprehensions.md"
 
 ## Names and references
-```yaml linenums="433"
---8<-- "jaclang/compiler/jac.lark:433:447"
+**Grammar Snippet**
+```yaml linenums="447"
+--8<-- "jaclang/compiler/jac.lark:447:461"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/names_and_references.jac"
@@ -896,12 +1168,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/names_and_references.py"
     ```
+**Description**
+
 --8<-- "examples/reference/names_and_references.md"
 
 ## Builtin types
-```yaml linenums="450"
---8<-- "jaclang/compiler/jac.lark:450:460"
+**Grammar Snippet**
+```yaml linenums="464"
+--8<-- "jaclang/compiler/jac.lark:464:474"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/builtin_types.jac"
@@ -910,12 +1186,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/builtin_types.py"
     ```
+**Description**
+
 --8<-- "examples/reference/builtin_types.md"
 
 ## Lexer Tokens
-```yaml linenums="463"
---8<-- "jaclang/compiler/jac.lark:463:635"
+**Grammar Snippet**
+```yaml linenums="477"
+--8<-- "jaclang/compiler/jac.lark:477:653"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/lexer_tokens.jac"
@@ -924,12 +1204,16 @@
     ```python linenums="1"
     --8<-- "examples/reference/lexer_tokens.py"
     ```
+**Description**
+
 --8<-- "examples/reference/lexer_tokens.md"
 
 ## f-string tokens
-```yaml linenums="638"
---8<-- "jaclang/compiler/jac.lark:638:649"
+**Grammar Snippet**
+```yaml linenums="656"
+--8<-- "jaclang/compiler/jac.lark:656:667"
 ```
+**Code Example**
 === "Jac"
     ```jac linenums="1"
     --8<-- "examples/reference/f_string_tokens.jac"
@@ -938,5 +1222,7 @@
     ```python linenums="1"
     --8<-- "examples/reference/f_string_tokens.py"
     ```
+**Description**
+
 --8<-- "examples/reference/f_string_tokens.md"
 
