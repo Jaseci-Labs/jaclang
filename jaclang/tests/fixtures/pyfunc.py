@@ -1,6 +1,6 @@
 """Python function."""
 
-from enum import Enum, unique
+from enum import Enum
 
 
 class ShapeType(Enum):
@@ -9,6 +9,7 @@ class ShapeType(Enum):
     CIRCLE = "Circle"
     UNKNOWN = "Unknown"
 
+print('hello world')
 
 def my_print(x: object) -> None:
     """Print function."""
@@ -29,7 +30,6 @@ def my_some_func(a: int, b: int) -> int:
     #     print(b)
     # else:
     #     print("Loop completed normally{}".format(i))
-
 
 # numbers = [1, 2, 3, 4, 5]
 # squares = [x**2 for x in numbers]
