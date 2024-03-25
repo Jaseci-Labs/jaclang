@@ -2768,6 +2768,7 @@ class InnerCompr(AstAsyncNode):
         new_kid.append(self.gen_token(Tok.KW_IN))
         new_kid.append(self.collection)
         for cond in self.conditional if self.conditional else []:
+            new_kid.append(self.gen_token(Tok.KW_IF))
             new_kid.append(cond)
         AstNode.__init__(self, kid=new_kid)
         return res
@@ -2843,11 +2844,12 @@ class SetCompr(ListCompr):
             for comp in self.compr:
                 res = res and comp.normalize(deep)
         new_kid: list[AstNode] = [
+            self.gen_token(Tok.LBRACE),
             self.out_expr,
         ]
         for comp in self.compr:
             new_kid.append(comp)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -2879,11 +2881,12 @@ class DictCompr(AtomExpr):
         for comp in self.compr:
             res = res and comp.normalize(deep)
         new_kid: list[AstNode] = [
+            self.gen_token(Tok.LBRACE),
             self.kv_pair,
         ]
         for comp in self.compr:
             new_kid.append(comp)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
