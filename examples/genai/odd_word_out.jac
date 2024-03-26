@@ -1,4 +1,4 @@
-import:py from model, OpenAIModel, ClaudeModel;
+import:py from model, OpenAIModel, ClaudeModel, OpenSourceModel;
 
 model llm:ClaudeModel {
     model_name="claude-3-sonnet-20240229";
