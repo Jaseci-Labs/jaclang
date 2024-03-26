@@ -1585,13 +1585,20 @@ class ExprStmt(CodeBlockStmt):
         """Normalize ast node."""
         if deep:
             res = self.expr.normalize(deep)
+        new_kid: list[AstNode] = []
+        if self.in_fstring:
+            new_kid.append(self.gen_token(Tok.FSTRING))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
+            new_kid.append(self.gen_token(Tok.LBRACE))
+            new_kid.append(self.expr)
+            new_kid.append(self.gen_token(Tok.RBRACE))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
+        else:
+            new_kid.append(self.expr)
+            new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(
             self,
-            kid=(
-                [self.expr, self.gen_token(Tok.SEMI)]
-                if not self.in_fstring
-                else [self.expr]
-            ),
+            kid=new_kid,
         )
         return res and self.expr is not None
 

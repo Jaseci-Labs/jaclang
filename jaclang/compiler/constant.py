@@ -230,6 +230,8 @@ class Tokens(str, Enum):
     FSTR_BESC = "FSTR_BESC"
     COMMENT = "COMMENT"
     WS = "WS"
+    FSTRING = "FSTRING"
+    SQUOTE = "SQUOTE"
 
     def __str__(self) -> str:
         """Return the string representation of the token."""
@@ -251,6 +253,8 @@ DELIM_MAP = {
     Tokens.RPAREN: ")",
     Tokens.RETURN_HINT: "->",
     Tokens.DOT: ".",
+    Tokens.FSTRING: "f",
+    Tokens.SQUOTE: "'",
 }
 
 colors = [
