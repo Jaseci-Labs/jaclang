@@ -534,6 +534,7 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module code node."""
         res = True
+        print(self.pp())
         if deep:
             res = self.name.normalize(deep) if self.name else res
             res = res and self.body.normalize(deep)
@@ -543,12 +544,17 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
             new_kid.append(self.doc)
         new_kid.append(self.gen_token(Tok.KW_WITH))
         new_kid.append(self.gen_token(Tok.KW_ENTRY))
-        new_kid.append(self.gen_token(Tok.LBRACE))
         if self.name:
             new_kid.append(self.name)
+        new_kid.append(self.gen_token(Tok.LBRACE))
+        # for i in self.body.items:
+        #     new_kid.append(i)
         new_kid.append(self.body)
         new_kid.append(self.gen_token(Tok.RBRACE))
-
+        from icecream import ic
+        ic('modulecode',new_kid)
+        ic('mc ',self.body)
+        ic('lets go',self.body.pp())
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -813,12 +819,9 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
             else:
                 new_kid.append(self.gen_token(Tok.LBRACE))
                 for item in self.body.items:
-                    if (
-                        isinstance(item, Ability)
-                        and isinstance(item.name_ref, Name)
-                        and item.name_ref.value == "__init__"
-                    ):
-                        item.name_ref.value = "init"
+                    if isinstance(item, Ability) and isinstance(item.name_ref, Name):
+                        if item.name_ref.value == "__init__":
+                            item.name_ref.value = "init"
                         if (
                             item.signature
                             and isinstance(item.signature, FuncSignature)
@@ -829,6 +832,7 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
                                 for j in item.signature.params.items
                                 if j.name.value != "self"
                             ]
+
                 new_kid.append(self.body)
                 new_kid.append(self.gen_token(Tok.RBRACE))
         else:
@@ -2602,10 +2606,12 @@ class SetVal(AtomExpr):
         res = True
         if deep:
             res = self.values.normalize(deep) if self.values else res
-        new_kid: list[AstNode] = []
+        new_kid: list[AstNode] = [
+            self.gen_token(Tok.LBRACE),
+        ]
         if self.values:
             new_kid.append(self.values)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -3939,6 +3945,8 @@ class String(Literal):
     @property
     def lit_value(self) -> str:
         """Return literal value in its python type."""
+        if isinstance(self.value, bytes):
+            return self.value
         prefix_len = 3 if self.value.startswith(("'''", '"""')) else 1
         if any(
             self.value.startswith(prefix)
@@ -3956,6 +3964,15 @@ class String(Literal):
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize string."""
+        # new_kid: list[AstNode] = []
+        # print( 'klkll \n lolo\n',self.value)
+        # if not self.value.startswith(("'", '"')):
+        #     self.value = eval(self.value)
+        try:
+            print(type(eval(self.value)))
+            self.value = eval(self.value)
+        except:
+            pass
         return True
 
     def unparse(self) -> str:

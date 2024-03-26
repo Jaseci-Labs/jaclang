@@ -1,41 +1,46 @@
 """Python function."""
 
-# from enum import Enum
+from enum import Enum
 
 
-# class ShapeType(Enum):
-#     """Enum for shape types"""
+class ShapeType(Enum):
+    """Enum for shape types"""
 
-#     CIRCLE = "Circle"
-#     UNKNOWN = "Unknown"
-
-
-name ,age,city= "Alice",30,"Wonderland"
-
-message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
-
-result = f"The result of 5 times 7 is {5 * 7}."
+    CIRCLE = "Circle"
+    UNKNOWN = "Unknown"
 
 
-# print("hello world")
+def my_print(x: object) -> None:
+    """Print function."""
+    print(x)
 
 
-# def my_print(x: object) -> None:
-#     """Print function."""
-#     print(x)
+print("Hello world!")
 
 
-# def fooo45() -> None:
-#     """Test func  fooo45"""
-#     pass
+class MyClass2:
+    """This is a docstring for MyClass."""
+
+    def __init__(self):
+        """Constructor docstring."""
+        pass
+
+    def my_method(self) -> None:
+        """Method docstring."""
+        print("My method")
 
 
-# class MyClass2:
-#     """This is a docstring for MyClass."""
+ff = 34
 
-#     def __init__(self):
-#         """Constructor docstring."""
-#         pass
+# qq = {}
+# e = "hello"
+# ff = b"hello"
+
+# name ,age,city= "Alice",30,"Wonderland"
+
+# message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+
+# result = f"The result of 5 times 7 is {5 * 7}."
 
 
 # def my_some_func(a: int, b: int) -> int:
@@ -51,13 +56,18 @@ result = f"The result of 5 times 7 is {5 * 7}."
 #     def my_method(self):
 #         print("My method")
 
-    # for i in range(a):
-    #     print(i)
-    #     if i == 5:
-    #         break
-    #     print(b)
-    # else:
-    #     print("Loop completed normally{}".format(i))
+# for i in range(a):
+#     print(i)
+#     if i == 5:
+#         break
+#     print(b)
+# else:
+#     print("Loop completed normally{}".format(i))
+
+
+# def fooo45() -> None:
+#     """Test func  fooo45"""
+#     pass
 
 
 # numbers = [1, 2, 3, 4, 5]
@@ -114,9 +124,6 @@ result = f"The result of 5 times 7 is {5 * 7}."
 # x=()
 # c={1,2,3,4,5}
 # d={1:"one",2:"two",3:"three",4:"four",5:"five"}
-# qq={}
-# e="hello"
-# f=b"hello"
 
 
 # @my_decorator
@@ -149,9 +156,9 @@ result = f"The result of 5 times 7 is {5 * 7}."
 #     return 9 + 4
 
 
-a, b, c = 1, 2, 3
-x = y = z = 0
-first, *rest = [1, 2, 3, 4, 5]
+# a, b, c = 1, 2, 3
+# x = y = z = 0
+# first, *rest = [1, 2, 3, 4, 5]
 
 
 # def greet(name, greeting="Hello")-> None:

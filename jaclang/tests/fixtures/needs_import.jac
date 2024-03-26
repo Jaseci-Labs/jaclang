@@ -2,10 +2,14 @@
 import:py os;
 import:py pyfunc;
 # import:py random;
-import:py from pyfunc, my_print;
+# import:py from pyfunc, my_print;
 
 with entry {
-    my_print(pyfunc);
+    print(pyfunc.ff);
+    print(type(pyfunc.ff));
+    print(pyfunc.ShapeType.CIRCLE);
+    print(pyfunc.MyClass2().my_method());
+    # my_print(pyfunc);
     # print(random.random());
 }
 

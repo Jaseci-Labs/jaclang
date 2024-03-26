@@ -10,6 +10,7 @@ import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Tokens as Tok
 from jaclang.compiler.passes.ir_pass import Pass
 from jaclang.utils.helpers import pascal_to_snake
+from icecream import ic
 
 T = TypeVar("T", bound=ast.AstNode)
 
@@ -82,6 +83,31 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             extracted.append(gen_mod_code(with_entry_body))
         return extracted
 
+    def separator(self, lst):
+        result = []
+        temp = []
+        prev_item = None
+        for item in lst:
+            if (
+                not isinstance(item, (ast.Ability, ast.Architype,ast.Import))
+                and prev_item is not None
+                and isinstance(prev_item, (ast.Ability, ast.Architype,ast.Import))
+            ):
+                if temp:
+                    result.append(temp)
+                temp = [item]
+            elif isinstance(item, (ast.Ability, ast.Architype,ast.Import)):
+                if temp:
+                    result.append(temp)
+                temp = []
+                result.append(item)
+            else:
+                temp.append(item)
+            prev_item = item
+        if temp:
+            result.append(temp)
+        return result
+
     def proc_module(self, node: py_ast.Module) -> ast.Module:
         """Process python node.
 
@@ -90,16 +116,53 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
             type_ignores: list[TypeIgnore]
         """
+        pass
+        ic(node.body)
+        # ic(lsst)
+        # for i in node.body:
+        #     if isinstance(i,(py_ast.FunctionDef,py_ast.ClassDef)):
+
         elements: list[ast.AstNode] = [self.convert(i) for i in node.body]
+        ic(elements)
         elements[0] = (
             elements[0].expr
             if isinstance(elements[0], ast.ExprStmt)
             and isinstance(elements[0].expr, ast.String)
             else elements[0]
         )
-        valid = (
-            [elements[0]] if isinstance(elements[0], ast.String) else []
-        ) + self.extract_with_entry(elements[1:], (ast.ElementStmt, ast.EmptyToken))
+        lsst = self.separator(elements)
+        # valid = (
+        #     [elements[0]] if isinstance(elements[0], ast.String) else []
+        # ) + self.extract_with_entry(elements[1:], (ast.ElementStmt, ast.EmptyToken))
+        # valid = [elem for elem in lsst if not isinstance(elem, list)]
+        # ic(valid)
+        valid=[]
+        for i in lsst:
+            if isinstance(i, list):
+                #nee to make modulecode 
+                with_entry_body = i
+                with_entry_subnodelist = ast.SubNodeList[ast.AstNode](
+                items=with_entry_body, delim=Tok.WS, kid=with_entry_body
+            )
+                ic(90)
+                modulecode=ast.ModuleCode(
+                                name=None,
+                                body=with_entry_subnodelist,
+                                kid=with_entry_body,
+                                doc=None,
+                            )
+                ic(9)
+                # modulecode_c=modulecode.unparse()
+                modulecode_c=modulecode
+                valid.append(modulecode_c)
+                ic(modulecode.pp())
+                pass
+            else:
+                valid.append(i)
+        # exit()
+        for i in valid:
+           ic('--',i.unparse())
+        ic('light for god :',valid)
         ret = ast.Module(
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
@@ -109,6 +172,8 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             kid=valid,
         )
         ret.gen.py_ast = [node]
+        print("module1")
+        # print(ret.unparse())
         return self.nu(ret)
 
     def proc_function_def(
@@ -125,6 +190,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if sys.version_info >= (3, 12):
             type_params: list[type_param]
         """
+        ic("func_def")
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
@@ -246,56 +312,37 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_start=0,
             pos_end=0,
         )
+        ic(":", node.body)
         body = [self.convert(i) for i in node.body]
         # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
         #     body, ast.ArchBlockStmt
         # )
-
-        doc = None
-        # we need to extract doscring from the first element of the body like we did in proc_function_def
-        if (
-            len(body)
-            and isinstance(body[0], ast.ExprStmt)
-            and isinstance(body[0].expr, ast.String)
-        ):
-            doc = body[0].expr
-            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-            #     body[1:], ast.ArchBlockStmt
-            # )
-            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-                items=body[1:], delim=Tok.WS, kid=body[1:]
-            )
-        else:
-            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-            #     body, ast.ArchBlockStmt
-            # )
-            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-                items=body, delim=Tok.WS, kid=body
-            )
+        ic(67, body)
+        valid_body = ast.SubNodeList[ast.AstNode](items=body, delim=Tok.WS, kid=body)
 
         base_classes = [self.convert(base) for base in node.bases]
         valid2: list[ast.Expr] = [
             base for base in base_classes if isinstance(base, ast.Expr)
         ]
-        if len(valid2) != len(base_classes):
-            raise self.ice("Length mismatch in base classes")
+        # if len(valid2) != len(base_classes):
+        #     raise self.ice("Length mismatch in base classes")
         valid_bases = (
             ast.SubNodeList[ast.Expr](items=valid2, delim=Tok.COMMA, kid=base_classes)
             if len(valid2)
             else None
         )
-
-        decorators = [self.convert(i) for i in node.decorator_list]
-        valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
-        if len(valid_dec) != len(decorators):
-            raise self.ice("Length mismatch in decorators in class")
-        valid_decorators = (
-            ast.SubNodeList[ast.Expr](
-                items=valid_dec, delim=Tok.DECOR_OP, kid=decorators
-            )
-            if len(valid_dec)
-            else None
-        )
+        doc = None
+        # decorators = [self.convert(i) for i in node.decorator_list]
+        # valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
+        # if len(valid_dec) != len(decorators):
+        #     raise self.ice("Length mismatch in decorators in class")
+        # valid_decorators = (
+        #     ast.SubNodeList[ast.Expr](
+        #         items=valid_dec, delim=Tok.DECOR_OP, kid=decorators
+        #     )
+        #     if len(valid_dec)
+        #     else None
+        # )
         if (
             base_classes
             and isinstance(base_classes[0], ast.Name)
@@ -318,7 +365,8 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body=valid_body,
             kid=kid,
             doc=doc,
-            decorators=valid_decorators,
+            # decorators=valid_decorators,
+            decorators=[],
         )
 
     def proc_return(self, node: py_ast.Return) -> ast.ReturnStmt | None:
