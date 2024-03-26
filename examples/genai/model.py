@@ -27,8 +27,11 @@ class OpenAIModel(ModelClass):
         ).choices[0]
         return x.message.content
 
+
 class ClaudeModel(ModelClass):
-    def __init__(self, model_name: str = "claude-3-sonnet-20240229", api_key: str = None) -> None:
+    def __init__(
+        self, model_name: str = "claude-3-sonnet-20240229", api_key: str = None
+    ) -> None:
         self.model_name = model_name
         self.api_key = api_key if api_key else os.getenv("ANTHROPIC_API_KEY")
         self.model = anthropic.Anthropic(api_key=self.api_key)
@@ -49,8 +52,13 @@ class ClaudeModel(ModelClass):
         )
         return x.content[0].text
 
+
 class OpenSourceModel(ModelClass):
-    def __init__(self, model_name: str = "codellama/CodeLlama-7b-Instruct-hf", api_key: str = None) -> None:
+    def __init__(
+        self,
+        model_name: str = "codellama/CodeLlama-7b-Instruct-hf",
+        api_key: str = None,
+    ) -> None:
         self.model_name = model_name
         self.api_key = api_key if api_key else os.getenv("TOGETHERAI_API_KEY")
 
@@ -62,21 +70,22 @@ class OpenSourceModel(ModelClass):
         max_tokens: int = 1024,
     ) -> None:
         model = model if model else self.model_name
-        endpoint = 'https://api.together.xyz/v1/chat/completions'
-        res = requests.post(endpoint, json={
-            "model": model,
-            "max_tokens": max_tokens,
-            "prompt": f"[INST] {input} [/INST]",
-            "temperature": temperature,
-            "top_p": 0.7,
-            "top_k": 50,
-            "repetition_penalty": 1,
-            "stop": [
-                "</s>",
-                "[INST]"
-            ]
-        }, headers={
-            "Authorization": f"Bearer {self.api_key}",
-        })
+        endpoint = "https://api.together.xyz/v1/chat/completions"
+        res = requests.post(
+            endpoint,
+            json={
+                "model": model,
+                "max_tokens": max_tokens,
+                "prompt": f"[INST] {input} [/INST]",
+                "temperature": temperature,
+                "top_p": 0.7,
+                "top_k": 50,
+                "repetition_penalty": 1,
+                "stop": ["</s>", "[INST]"],
+            },
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+            },
+        )
         print(res.json())
-        return res.json()['choices'][0]['message']['content'].strip()
+        return res.json()["choices"][0]["message"]["content"].strip()
