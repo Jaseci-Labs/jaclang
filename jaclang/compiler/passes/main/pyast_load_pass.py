@@ -35,16 +35,16 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def convert(self, node: py_ast.AST) -> ast.AstNode:
         """Get python node type."""
-        # print(
-        #     f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
-        # )
+        print(
+            f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
+        )
         if hasattr(self, f"proc_{pascal_to_snake(type(node).__name__)}"):
             ret = getattr(self, f"proc_{pascal_to_snake(type(node).__name__)}")(node)
         else:
             raise self.ice(f"Unknown node type {type(node).__name__}")
-        # print(f"finshed {type(node).__name__} ---------------------")
-        # print("normalizing", ret.__class__.__name__)
-        # print(ret.unparse())
+        print(f"finshed {type(node).__name__} ---------------------")
+        print("normalizing", ret.__class__.__name__)
+        print(ret.unparse())
         return ret
 
     def transform(self, ir: ast.PythonModuleAst) -> ast.Module:
@@ -239,7 +239,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         arch_type = ast.Token(
             file_path=self.mod_path,
             name=Tok.KW_OBJECT,
-            value="object",
+            value="obj",
             line=node.lineno,
             col_start=0,
             col_end=0,
@@ -247,12 +247,31 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         body = [self.convert(i) for i in node.body]
-        valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-            body, ast.ArchBlockStmt
-        )
-        valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-            items=valid, delim=Tok.WS, kid=body
-        )
+        # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+        #     body, ast.ArchBlockStmt
+        # )
+
+        doc = None
+        # we need to extract doscring from the first element of the body like we did in proc_function_def
+        if (
+            len(body)
+            and isinstance(body[0], ast.ExprStmt)
+            and isinstance(body[0].expr, ast.String)
+        ):
+            doc = body[0].expr
+            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+            #     body[1:], ast.ArchBlockStmt
+            # )
+            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+                items=body[1:], delim=Tok.WS, kid=body[1:]
+            )
+        else:
+            # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
+            #     body, ast.ArchBlockStmt
+            # )
+            valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+                items=body, delim=Tok.WS, kid=body
+            )
 
         base_classes = [self.convert(base) for base in node.bases]
         valid2: list[ast.Expr] = [
@@ -265,7 +284,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(valid2)
             else None
         )
-        doc = None
+
         decorators = [self.convert(i) for i in node.decorator_list]
         valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
         if len(valid_dec) != len(decorators):
@@ -277,6 +296,19 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(valid_dec)
             else None
         )
+        if (
+            base_classes
+            and isinstance(base_classes[0], ast.Name)
+            and base_classes[0].value == "Enum"
+        ):
+            if len(base_classes) > 1:
+                raise ValueError(
+                    "Python's Enum class cannot be used with multiple inheritance."
+                )
+            arch_type.name = Tok.KW_ENUM
+            arch_type.value = "enum"
+            valid_bases = None
+
         kid = [name, valid_bases, valid_body] if valid_bases else [name, valid_body]
         return ast.Architype(
             arch_type=arch_type,
@@ -1014,6 +1046,20 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
         """
         type = self.convert(node.type) if node.type is not None else None
+        # Handle the case where type is None (bare except block in Python)
+        if not type:
+            # bare except block, which catches exceptions of any type
+            type = ast.Name(
+                file_path=self.mod_path,
+                name=Tok.NAME,
+                value="Any",
+                line=node.lineno,
+                col_start=node.col_offset,
+                col_end=node.col_offset + 3,
+                pos_start=0,
+                pos_end=0,
+            )
+
         name = (
             ast.Name(
                 file_path=self.mod_path,
@@ -1028,7 +1074,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if node.name is not None
             else None
         )
-
         body = [self.convert(i) for i in node.body]
         valid = [i for i in body if isinstance(i, (ast.CodeBlockStmt))]
         if len(valid) != len(body):
@@ -1042,6 +1087,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if name:
             kid.append(name)
         kid.append(valid_body)
+
         if isinstance(type, ast.Expr) and (isinstance(name, ast.Name) or not name):
             return ast.Except(
                 ex_type=type,

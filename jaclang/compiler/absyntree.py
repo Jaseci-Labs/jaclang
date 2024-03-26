@@ -543,10 +543,11 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
             new_kid.append(self.doc)
         new_kid.append(self.gen_token(Tok.KW_WITH))
         new_kid.append(self.gen_token(Tok.KW_ENTRY))
+        new_kid.append(self.gen_token(Tok.LBRACE))
         if self.name:
             new_kid.append(self.name)
-
         new_kid.append(self.body)
+        new_kid.append(self.gen_token(Tok.RBRACE))
 
         AstNode.__init__(self, kid=new_kid)
         return res
@@ -810,7 +811,26 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
             if isinstance(self.body, AstImplOnlyNode):
                 new_kid.append(self.body.body)
             else:
+                new_kid.append(self.gen_token(Tok.LBRACE))
+                for item in self.body.items:
+                    if (
+                        isinstance(item, Ability)
+                        and isinstance(item.name_ref, Name)
+                        and item.name_ref.value == "__init__"
+                    ):
+                        item.name_ref.value = "init"
+                        if (
+                            item.signature
+                            and isinstance(item.signature, FuncSignature)
+                            and item.signature.params
+                        ):
+                            item.signature.params.items = [
+                                j
+                                for j in item.signature.params.items
+                                if j.name.value != "self"
+                            ]
                 new_kid.append(self.body)
+                new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -1565,13 +1585,20 @@ class ExprStmt(CodeBlockStmt):
         """Normalize ast node."""
         if deep:
             res = self.expr.normalize(deep)
+        new_kid: list[AstNode] = []
+        if self.in_fstring:
+            new_kid.append(self.gen_token(Tok.FSTRING))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
+            new_kid.append(self.gen_token(Tok.LBRACE))
+            new_kid.append(self.expr)
+            new_kid.append(self.gen_token(Tok.RBRACE))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
+        else:
+            new_kid.append(self.expr)
+            new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(
             self,
-            kid=(
-                [self.expr, self.gen_token(Tok.SEMI)]
-                if not self.in_fstring
-                else [self.expr]
-            ),
+            kid=new_kid,
         )
         return res and self.expr is not None
 
@@ -2748,6 +2775,7 @@ class InnerCompr(AstAsyncNode):
         new_kid.append(self.gen_token(Tok.KW_IN))
         new_kid.append(self.collection)
         for cond in self.conditional if self.conditional else []:
+            new_kid.append(self.gen_token(Tok.KW_IF))
             new_kid.append(cond)
         AstNode.__init__(self, kid=new_kid)
         return res
@@ -2823,11 +2851,12 @@ class SetCompr(ListCompr):
             for comp in self.compr:
                 res = res and comp.normalize(deep)
         new_kid: list[AstNode] = [
+            self.gen_token(Tok.LBRACE),
             self.out_expr,
         ]
         for comp in self.compr:
             new_kid.append(comp)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -2859,11 +2888,12 @@ class DictCompr(AtomExpr):
         for comp in self.compr:
             res = res and comp.normalize(deep)
         new_kid: list[AstNode] = [
+            self.gen_token(Tok.LBRACE),
             self.kv_pair,
         ]
         for comp in self.compr:
             new_kid.append(comp)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 

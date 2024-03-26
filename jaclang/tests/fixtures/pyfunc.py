@@ -1,20 +1,92 @@
 """Python function."""
 
+# from enum import Enum
 
-def my_print(x: object) -> None:
-    """Print function."""
-    print(x)
+
+# class ShapeType(Enum):
+#     """Enum for shape types"""
+
+#     CIRCLE = "Circle"
+#     UNKNOWN = "Unknown"
+
+
+name ,age,city= "Alice",30,"Wonderland"
+
+message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+
+result = f"The result of 5 times 7 is {5 * 7}."
+
+
+# print("hello world")
+
+
+# def my_print(x: object) -> None:
+#     """Print function."""
+#     print(x)
+
+
+# def fooo45() -> None:
+#     """Test func  fooo45"""
+#     pass
+
+
+# class MyClass2:
+#     """This is a docstring for MyClass."""
+
+#     def __init__(self):
+#         """Constructor docstring."""
+#         pass
 
 
 # def my_some_func(a: int, b: int) -> int:
-#     for i in range(a):
-#         print(i)
-#         if i == 5:
-#             break
-#         print(b)
-#     else:
-#         print("Loop completed normally{}".format(i))
+#     pass
 
+
+# class MyClass:
+#     """My class"""
+
+#     def __init__(self, x):
+#         self.x = x
+
+#     def my_method(self):
+#         print("My method")
+
+    # for i in range(a):
+    #     print(i)
+    #     if i == 5:
+    #         break
+    #     print(b)
+    # else:
+    #     print("Loop completed normally{}".format(i))
+
+
+# numbers = [1, 2, 3, 4, 5]
+# squares = [x**2 for x in numbers]
+# squares_dict = {x: x**2 for x in numbers}
+# squares_generator = (x**2 for x in numbers)
+# add = lambda x, y: x + y # noqa
+# numbers2 = [1, 2, 3, 3, 4, 5, 5]
+# unique_numbers2 = {x for x in numbers2}
+# even_numbers = {x for x in range(10) if x % 2 == 0}
+# coordinates = {(x, y) for x in range(3) for y in range(3)}
+# even_numbers4 = [num for num in range(11) if num % 2 == 0]
+# sentence = "the quick brown fox jumps over the lazy dog"
+# capitalized_words = [word.upper() for word in sentence.split() if len(word) > 3]
+# result78 = [
+#     (x, y) for x in range(1, 4) if x % 2 == 0 for y in range(1, 4) if y % 2 == 0
+# ]
+# print(result78)
+
+
+# def my_some_func(a: int, b: int) -> int:
+#     pass
+# for i in range(a):
+#     print(i)
+#     if i == 5:
+#         break
+#     print(b)
+# else:
+#     print("Loop completed normally{}".format(i))
 
 # numbers = [1, 2, 3, 4, 5]
 # squares = [x**2 for x in numbers]
@@ -58,14 +130,6 @@ def my_print(x: object) -> None:
 #         "city": "New York"
 #     }
 
-# class MyClass:
-#     '''My class'''
-#     def __init__(self, x):
-#         self.x = x
-
-#     def my_method(self):
-#         print("My method")
-
 
 # while x < 10:
 #     x += 1
@@ -85,9 +149,9 @@ def my_print(x: object) -> None:
 #     return 9 + 4
 
 
-# a, b, c = 1, 2, 3
-# x = y = z = 0
-# first, *rest = [1, 2, 3, 4, 5]
+a, b, c = 1, 2, 3
+x = y = z = 0
+first, *rest = [1, 2, 3, 4, 5]
 
 
 # def greet(name, greeting="Hello")-> None:
@@ -97,14 +161,6 @@ def my_print(x: object) -> None:
 
 # greet("Alice")
 # greet("Bob", greeting="Hi")
-
-
-# class MyClass2:
-#     """This is a docstring for MyClass."""
-
-#     def __init__(self):
-#         """Constructor docstring."""
-#         pass
 
 
 # def average(*args):
