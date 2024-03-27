@@ -1,6 +1,6 @@
 obj 'outter'
 Outer{
-    has a: 'A': int = 1;
+    has a: 'A': int  = 1;
 
     obj 'Person'
     Person {
@@ -11,11 +11,9 @@ Outer{
 }
 
 with entry{
-
-    person_obj:'Person object ':Person = Outer().Person(name='Einstein') by llm;
-    # person_obj=_Jac.with_llm_type(file_loc=__file__, model='', scope='',  inputs=[]) 
-
-    Outer.a:'Person object ':Person = Outer().Person(name='Einstein') by llm;
+    llm='llm';
+    person_obj:'Person object ':Person = Outer().Person(name='Einstein') by llm(x='khjkh');
+    # Outer.a:'Person object ':Person = Outer().Person(name='Einstein') by llm(y=8);
     # person_obj:Person = Outer.Person(name='Einstein') by llm;
     # print(person_obj.dob);
 }

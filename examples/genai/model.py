@@ -26,8 +26,11 @@ class OpenAIModel(ModelClass):
         ).choices[0]
         return x.message.content
 
+
 class ClaudeModel(ModelClass):
-    def __init__(self, model_name: str = "claude-3-sonnet-20240229", api_key: str = None) -> None:
+    def __init__(
+        self, model_name: str = "claude-3-sonnet-20240229", api_key: str = None
+    ) -> None:
         self.model_name = model_name
         self.api_key = api_key if api_key else os.getenv("ANTHROPIC_API_KEY")
         self.model = anthropic.Anthropic(api_key=self.api_key)

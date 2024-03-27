@@ -1716,7 +1716,7 @@ class JacParser(Pass):
         def llm_type_stmt(self, kid: list[ast.AstNode]) -> ast.LlmTypeStmt:
             """Grammar rule.
 
-            llm_type_stmt: atomic_chain (COLON STRING)? type_tag  EQ  expression KW_BY NAME
+            llm_type_stmt: atomic_chain (COLON STRING)? type_tag  EQ  expression KW_BY expression
             """
             chomp = [*kid]
             target = chomp[0]
@@ -1730,19 +1730,19 @@ class JacParser(Pass):
             chomp = chomp[3:] if semstr else chomp[1:]
             type_tag = chomp[0]
             value = chomp[2]
-            name = chomp[-1]
+            func = chomp[-1]
             if (
                 isinstance(target, (ast.Name, ast.AtomTrailer))
                 and isinstance(value, ast.FuncCall)
                 and isinstance(type_tag, ast.SubTag)
-                and isinstance(name, ast.Name)
+                and isinstance(func, ast.FuncCall)
             ):
                 return ast.LlmTypeStmt(
                     target=target,
                     semstr=semstr,
                     type_tag=type_tag,
                     value=value,
-                    name=name,
+                    func=func,
                     kid=kid,
                 )
             else:

@@ -1039,69 +1039,67 @@ class PyastGenPass(Pass):
             extracted_type.extend(self.bfs_collect_type(child))
         return extracted_type
 
+    def func_collector(self, body: ast.FuncCall):
+        model_params: dict = {}
+        include_info: list = []
+        exclude_info: list = []
+        if body.params:
+            for param in body.params.items:
+                if isinstance(param, ast.KWPair) and isinstance(param.key, ast.Name):
+                    key = param.key.value
+                    value = param.value
+                    if key not in ["incl_info", "excl_info"]:
+                        model_params[key] = value
+                    elif key == "incl_info":
+                        if isinstance(value, ast.AtomUnit):
+                            var_name = (
+                                value.value.right.value
+                                if isinstance(value.value, ast.AtomTrailer)
+                                and isinstance(value.value.right, ast.Name)
+                                else (
+                                    value.value.value
+                                    if isinstance(value.value, ast.Name)
+                                    else ""
+                                )
+                            )
+                            include_info.append((var_name, value.gen.py_ast[0]))
+                        elif isinstance(value, ast.TupleVal) and value.values:
+                            for i in value.values.items:
+                                var_name = (
+                                    i.right.value
+                                    if isinstance(i, ast.AtomTrailer)
+                                    and isinstance(i.right, ast.Name)
+                                    else (i.value if isinstance(i, ast.Name) else "")
+                                )
+                                include_info.append((var_name, i.gen.py_ast[0]))
+                    elif key == "excl_info":
+                        if isinstance(value, ast.AtomUnit):
+                            var_name = (
+                                value.value.right.value
+                                if isinstance(value.value, ast.AtomTrailer)
+                                and isinstance(value.value.right, ast.Name)
+                                else (
+                                    value.value.value
+                                    if isinstance(value.value, ast.Name)
+                                    else ""
+                                )
+                            )
+                            exclude_info.append((var_name, value.gen.py_ast[0]))
+                        elif isinstance(value, ast.TupleVal) and value.values:
+                            for i in value.values.items:
+                                var_name = (
+                                    i.right.value
+                                    if isinstance(i, ast.AtomTrailer)
+                                    and isinstance(i.right, ast.Name)
+                                    else (i.value if isinstance(i, ast.Name) else "")
+                                )
+                                exclude_info.append((var_name, i.gen.py_ast[0]))
+        return model_params, include_info, exclude_info
+
     def gen_llm_body(self, node: ast.Ability) -> list[ast3.AST]:
         """Generate llm body."""
         if isinstance(node.body, ast.FuncCall):
-            model_params = {}
-            include_info = []
-            exclude_info = []
-            if node.body.params:
-                for param in node.body.params.items:
-                    if isinstance(param, ast.KWPair) and isinstance(
-                        param.key, ast.Name
-                    ):
-                        key = param.key.value
-                        value = param.value
-                        if key not in ["incl_info", "excl_info"]:
-                            model_params[key] = value
-                        elif key == "incl_info":
-                            if isinstance(value, ast.AtomUnit):
-                                var_name = (
-                                    value.value.right.value
-                                    if isinstance(value.value, ast.AtomTrailer)
-                                    and isinstance(value.value.right, ast.Name)
-                                    else (
-                                        value.value.value
-                                        if isinstance(value.value, ast.Name)
-                                        else ""
-                                    )
-                                )
-                                include_info.append((var_name, value.gen.py_ast[0]))
-                            elif isinstance(value, ast.TupleVal) and value.values:
-                                for i in value.values.items:
-                                    var_name = (
-                                        i.right.value
-                                        if isinstance(i, ast.AtomTrailer)
-                                        and isinstance(i.right, ast.Name)
-                                        else (
-                                            i.value if isinstance(i, ast.Name) else ""
-                                        )
-                                    )
-                                    include_info.append((var_name, i.gen.py_ast[0]))
-                        elif key == "excl_info":
-                            if isinstance(value, ast.AtomUnit):
-                                var_name = (
-                                    value.value.right.value
-                                    if isinstance(value.value, ast.AtomTrailer)
-                                    and isinstance(value.value.right, ast.Name)
-                                    else (
-                                        value.value.value
-                                        if isinstance(value.value, ast.Name)
-                                        else ""
-                                    )
-                                )
-                                exclude_info.append((var_name, value.gen.py_ast[0]))
-                            elif isinstance(value, ast.TupleVal) and value.values:
-                                for i in value.values.items:
-                                    var_name = (
-                                        i.right.value
-                                        if isinstance(i, ast.AtomTrailer)
-                                        and isinstance(i.right, ast.Name)
-                                        else (
-                                            i.value if isinstance(i, ast.Name) else ""
-                                        )
-                                    )
-                                    exclude_info.append((var_name, i.gen.py_ast[0]))
+            model_params, include_info, exclude_info = self.func_collector(node.body)
             extracted = (
                 "".join(self.bfs_collect_type(node.signature.return_type))
                 if isinstance(node.signature, ast.FuncSignature)
@@ -2042,22 +2040,170 @@ class PyastGenPass(Pass):
         value: FuncCall,
         name: Name,
         """
+        from icecream import ic
+
+        ic(node.value)
+        ic(node.value.params)
+        ic(node.value.params.items)
+        for i in node.value.params.items:
+            ic(i.key.value)
         _target = "".join(self.bfs_collect_type(node.target))
+        _body = node.func
+        _model_params, _include_info, _exclude_info = self.func_collector(node.func)
+        _scope = "scope"  # TODO : need a generalize way
+        _input = node.value
+        ic(_model_params, _include_info, _exclude_info)
         node.gen.py_ast = [
             (
                 self.sync(
-                    ast3.AnnAssign(
-                        target=self.sync(ast3.Name(id=_target, ctx=ast3.Store())),
-                        annotation=node.type_tag.gen.py_ast[0],
+                    ast3.Assign(
+                        targets=[self.sync(ast3.Name(id=_target, ctx=ast3.Store()))],
                         value=self.sync(
-                            ast3.Constant(value="jacfeature need to be implement")
-                        ),  # TODO :need to implement this
-                        simple=int(isinstance(node.name, ast.Name)),
+                            ast3.Call(
+                                func=self.sync(
+                                    ast3.Attribute(
+                                        value=self.sync(
+                                            ast3.Name(
+                                                id=Con.JAC_FEATURE.value,
+                                                ctx=ast3.Load(),
+                                            )
+                                        ),
+                                        attr="with_llm",
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                                args=[],
+                                keywords=[
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="file_loc",
+                                            value=self.sync(
+                                                ast3.Name(
+                                                    id="__file__", ctx=ast3.Load()
+                                                )
+                                            ),
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="model",
+                                            value=_body.target.gen.py_ast[0],
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="model_params",
+                                            value=self.sync(
+                                                ast3.Dict(
+                                                    keys=[
+                                                        self.sync(
+                                                            ast3.Constant(value=key)
+                                                        )
+                                                        for key in _model_params.keys()
+                                                    ],
+                                                    values=[
+                                                        value.gen.py_ast[0]
+                                                        for value in _model_params.values()
+                                                    ],
+                                                )
+                                            ),
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="scope",
+                                            value=(
+                                                self.sync(ast3.Constant(value=_scope))
+                                            ),
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="incl_info",
+                                            value=self.sync(
+                                                ast3.List(
+                                                    elts=[
+                                                        self.sync(
+                                                            ast3.Tuple(
+                                                                elts=[
+                                                                    self.sync(
+                                                                        ast3.Constant(
+                                                                            value=key
+                                                                        )
+                                                                    ),
+                                                                    value,
+                                                                ],
+                                                                ctx=ast3.Load(),
+                                                            )
+                                                        )
+                                                        for key, value in _include_info
+                                                    ],
+                                                    ctx=ast3.Load(),
+                                                )
+                                            ),
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="excl_info",
+                                            value=self.sync(
+                                                ast3.List(
+                                                    elts=[
+                                                        self.sync(
+                                                            ast3.Tuple(
+                                                                elts=[
+                                                                    self.sync(
+                                                                        ast3.Constant(
+                                                                            value=key
+                                                                        )
+                                                                    ),
+                                                                    value,
+                                                                ],
+                                                                ctx=ast3.Load(),
+                                                            )
+                                                        )
+                                                        for key, value in _exclude_info
+                                                    ],
+                                                    ctx=ast3.Load(),
+                                                )
+                                            ),
+                                        ),
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="action",
+                                            value=(
+                                                self.sync(
+                                                    ast3.Constant(
+                                                        value="Create an Object in Given Output Type"
+                                                        " using the given information or use common"
+                                                        " knowledge to fill in the missing information"
+                                                    )
+                                                )
+                                            ),
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
                     )
                 )
             )
         ]
 
+    #  person_obj=_Jac.with_llm(
+    #                 file_loc=__file__,
+    #                 model=llm,
+    #                 model_params={},
+    #                 scope=llm_type(Module).Outer(Obj).Person(Obj),
+    #                 incl_info,
+    #                 excl_info,
+    #                 inputs=(name),
+    #                     output=(),
+    #                     action=“Create an Object in Given Output
+    #                     Type using the given information or use common
+    #                     knowledge to fill in the missing information”
+    #           )
     def exit_yield_expr(self, node: ast.YieldExpr) -> None:
         """Sub objects.
 

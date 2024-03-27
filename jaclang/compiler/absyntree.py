@@ -1291,7 +1291,7 @@ class LlmTypeStmt(CodeBlockStmt, AstSemStrNode):
         target: Name | AtomTrailer,
         type_tag: SubTag[Expr],
         value: FuncCall,
-        name: Name,
+        func: FuncCall,
         kid: Sequence[AstNode],
         semstr: Optional[String] = None,
     ) -> None:
@@ -1299,7 +1299,7 @@ class LlmTypeStmt(CodeBlockStmt, AstSemStrNode):
         self.type_tag = type_tag
         self.value = value
         self.target = target
-        self.name = name
+        self.func = func
         AstNode.__init__(self, kid=kid)
         AstSemStrNode.__init__(self, semstr=semstr)
 
