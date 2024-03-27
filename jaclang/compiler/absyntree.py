@@ -552,9 +552,10 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
         new_kid.append(self.body)
         new_kid.append(self.gen_token(Tok.RBRACE))
         from icecream import ic
-        ic('modulecode',new_kid)
-        ic('mc ',self.body)
-        ic('lets go',self.body.pp())
+
+        ic("modulecode", new_kid)
+        ic("mc ", self.body)
+        ic("lets go", self.body.pp())
         AstNode.__init__(self, kid=new_kid)
         return res
 

@@ -53,50 +53,50 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         self.ir: ast.Module = self.proc_module(ir.ast)
         return self.ir
 
-    def extract_with_entry(
-        self, body: list[ast.AstNode], exclude_types: TypeAlias = T
-    ) -> list[T | ast.ModuleCode]:
-        """Extract with entry from a body."""
+    # def extract_with_entry(
+    #     self, body: list[ast.AstNode], exclude_types: TypeAlias = T
+    # ) -> list[T | ast.ModuleCode]:
+    #     """Extract with entry from a body."""
 
-        def gen_mod_code(with_entry_body: list[ast.CodeBlockStmt]) -> ast.ModuleCode:
-            with_entry_subnodelist = ast.SubNodeList[ast.CodeBlockStmt](
-                items=with_entry_body, delim=Tok.WS, kid=with_entry_body
-            )
-            return ast.ModuleCode(
-                name=None,
-                body=with_entry_subnodelist,
-                kid=with_entry_body,
-                doc=None,
-            )
+    #     def gen_mod_code(with_entry_body: list[ast.CodeBlockStmt]) -> ast.ModuleCode:
+    #         with_entry_subnodelist = ast.SubNodeList[ast.CodeBlockStmt](
+    #             items=with_entry_body, delim=Tok.WS, kid=with_entry_body
+    #         )
+    #         return ast.ModuleCode(
+    #             name=None,
+    #             body=with_entry_subnodelist,
+    #             kid=with_entry_body,
+    #             doc=None,
+    #         )
 
-        extracted: list[T | ast.ModuleCode] = []
-        with_entry_body: list[ast.CodeBlockStmt] = []
-        for i in body:
-            if isinstance(i, exclude_types):
-                extracted.append(i)
-            elif isinstance(i, ast.CodeBlockStmt):
-                with_entry_body.append(i)
-            else:
-                self.ice("Invalid type for with entry body")
+    #     extracted: list[T | ast.ModuleCode] = []
+    #     with_entry_body: list[ast.CodeBlockStmt] = []
+    #     for i in body:
+    #         if isinstance(i, exclude_types):
+    #             extracted.append(i)
+    #         elif isinstance(i, ast.CodeBlockStmt):
+    #             with_entry_body.append(i)
+    #         else:
+    #             self.ice("Invalid type for with entry body")
 
-        if len(with_entry_body):
-            extracted.append(gen_mod_code(with_entry_body))
-        return extracted
+    #     if len(with_entry_body):
+    #         extracted.append(gen_mod_code(with_entry_body))
+    #     return extracted
 
-    def separator(self, lst):
+    def extract_with_entry(self, lst):
         result = []
         temp = []
         prev_item = None
         for item in lst:
             if (
-                not isinstance(item, (ast.Ability, ast.Architype,ast.Import))
+                not isinstance(item, (ast.Ability, ast.Architype, ast.Import))
                 and prev_item is not None
-                and isinstance(prev_item, (ast.Ability, ast.Architype,ast.Import))
+                and isinstance(prev_item, (ast.Ability, ast.Architype, ast.Import))
             ):
                 if temp:
                     result.append(temp)
                 temp = [item]
-            elif isinstance(item, (ast.Ability, ast.Architype,ast.Import)):
+            elif isinstance(item, (ast.Ability, ast.Architype, ast.Import)):
                 if temp:
                     result.append(temp)
                 temp = []
@@ -116,53 +116,32 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
             type_ignores: list[TypeIgnore]
         """
-        pass
-        ic(node.body)
-        # ic(lsst)
-        # for i in node.body:
-        #     if isinstance(i,(py_ast.FunctionDef,py_ast.ClassDef)):
-
         elements: list[ast.AstNode] = [self.convert(i) for i in node.body]
-        ic(elements)
-        elements[0] = (
-            elements[0].expr
+        doc = (
+            elements[0]
             if isinstance(elements[0], ast.ExprStmt)
             and isinstance(elements[0].expr, ast.String)
-            else elements[0]
+            else None
         )
-        lsst = self.separator(elements)
-        # valid = (
-        #     [elements[0]] if isinstance(elements[0], ast.String) else []
-        # ) + self.extract_with_entry(elements[1:], (ast.ElementStmt, ast.EmptyToken))
-        # valid = [elem for elem in lsst if not isinstance(elem, list)]
-        # ic(valid)
-        valid=[]
-        for i in lsst:
-            if isinstance(i, list):
-                #nee to make modulecode 
-                with_entry_body = i
-                with_entry_subnodelist = ast.SubNodeList[ast.AstNode](
-                items=with_entry_body, delim=Tok.WS, kid=with_entry_body
-            )
-                ic(90)
-                modulecode=ast.ModuleCode(
-                                name=None,
-                                body=with_entry_subnodelist,
-                                kid=with_entry_body,
-                                doc=None,
-                            )
-                ic(9)
-                # modulecode_c=modulecode.unparse()
-                modulecode_c=modulecode
-                valid.append(modulecode_c)
-                ic(modulecode.pp())
-                pass
+        elements = elements[1:] if doc else elements
+        extracted = self.extract_with_entry(elements)
+        valid = []
+        for element in extracted:
+            if isinstance(element, list):
+                with_entry_body = element
+                with_entry_subnodelist = ast.SubNodeList[ast.CodeBlockStmt](
+                    items=with_entry_body, delim=Tok.WS, kid=with_entry_body
+                )
+                modulecode = ast.ModuleCode(
+                    name=None,
+                    body=with_entry_subnodelist,
+                    kid=with_entry_body,
+                    doc=None,
+                )
+                valid.append(modulecode)
             else:
-                valid.append(i)
-        # exit()
-        for i in valid:
-           ic('--',i.unparse())
-        ic('light for god :',valid)
+                valid.append(element)
+
         ret = ast.Module(
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
@@ -172,8 +151,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             kid=valid,
         )
         ret.gen.py_ast = [node]
-        print("module1")
-        # print(ret.unparse())
         return self.nu(ret)
 
     def proc_function_def(
@@ -312,12 +289,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_start=0,
             pos_end=0,
         )
-        ic(":", node.body)
         body = [self.convert(i) for i in node.body]
-        # valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-        #     body, ast.ArchBlockStmt
-        # )
-        ic(67, body)
         valid_body = ast.SubNodeList[ast.AstNode](items=body, delim=Tok.WS, kid=body)
 
         base_classes = [self.convert(base) for base in node.bases]
@@ -332,17 +304,17 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             else None
         )
         doc = None
-        # decorators = [self.convert(i) for i in node.decorator_list]
-        # valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
-        # if len(valid_dec) != len(decorators):
-        #     raise self.ice("Length mismatch in decorators in class")
-        # valid_decorators = (
-        #     ast.SubNodeList[ast.Expr](
-        #         items=valid_dec, delim=Tok.DECOR_OP, kid=decorators
-        #     )
-        #     if len(valid_dec)
-        #     else None
-        # )
+        decorators = [self.convert(i) for i in node.decorator_list]
+        valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
+        if len(valid_dec) != len(decorators):
+            raise self.ice("Length mismatch in decorators in class")
+        valid_decorators = (
+            ast.SubNodeList[ast.Expr](
+                items=valid_dec, delim=Tok.DECOR_OP, kid=decorators
+            )
+            if len(valid_dec)
+            else None
+        )
         if (
             base_classes
             and isinstance(base_classes[0], ast.Name)

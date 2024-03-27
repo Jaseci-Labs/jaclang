@@ -30,15 +30,16 @@ class MyClass2:
         print("My method")
 
 
-ff = 34
+f: int = 34
+a = f > 3
 
 # qq = {}
 # e = "hello"
 # ff = b"hello"
 
-# name ,age,city= "Alice",30,"Wonderland"
+name, age, city = "Alice", 30, "Wonderland"
 
-# message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
 
 # result = f"The result of 5 times 7 is {5 * 7}."
 
