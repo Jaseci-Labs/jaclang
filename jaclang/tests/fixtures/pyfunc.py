@@ -28,6 +28,7 @@ class MyClass2:
     def my_method(self) -> None:
         """Method docstring."""
         print("My method")
+        return 'done'
 
 
 f: int = 34
@@ -37,9 +38,9 @@ a = f > 3
 # e = "hello"
 # ff = b"hello"
 
-name, age, city = "Alice", 30, "Wonderland"
+# name, age, city = "Alice", 30, "Wonderland"
 
-message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+# message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
 
 # result = f"The result of 5 times 7 is {5 * 7}."
 
@@ -48,27 +49,28 @@ message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}
 #     pass
 
 
-# class MyClass:
-#     """My class"""
+class MyClass:
+    """My class"""
 
-#     def __init__(self, x):
-#         self.x = x
+    def __init__(self, x):
+        self.x = x
 
-#     def my_method(self):
-#         print("My method")
+    def my_method(self):
+        print("My method")
 
-# for i in range(a):
-#     print(i)
-#     if i == 5:
-#         break
-#     print(b)
-# else:
-#     print("Loop completed normally{}".format(i))
+for i in range(a):
+    print(i)
+    b=i
+    if i == 5:
+        break
+    print(b)
+else:
+    print("Loop completed normally{}".format(i))
 
 
-# def fooo45() -> None:
-#     """Test func  fooo45"""
-#     pass
+def fooo45() -> None:
+    """Test func  fooo45"""
+    pass
 
 
 # numbers = [1, 2, 3, 4, 5]

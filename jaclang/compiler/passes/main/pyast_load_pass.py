@@ -83,30 +83,30 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
     #         extracted.append(gen_mod_code(with_entry_body))
     #     return extracted
 
-    def extract_with_entry(self, lst):
-        result = []
-        temp = []
+    def extract_with_entry(self, input_list):
+        grouped_list = []
+        current_group = []
         prev_item = None
-        for item in lst:
+        for current_item in input_list:
             if (
-                not isinstance(item, (ast.Ability, ast.Architype, ast.Import))
+                not isinstance(current_item, (ast.Ability, ast.Architype, ast.Import))
                 and prev_item is not None
                 and isinstance(prev_item, (ast.Ability, ast.Architype, ast.Import))
             ):
-                if temp:
-                    result.append(temp)
-                temp = [item]
-            elif isinstance(item, (ast.Ability, ast.Architype, ast.Import)):
-                if temp:
-                    result.append(temp)
-                temp = []
-                result.append(item)
+                if current_group:
+                    grouped_list.append(current_group)
+                current_group = [current_item]
+            elif isinstance(current_item, (ast.Ability, ast.Architype, ast.Import)):
+                if current_group:
+                    grouped_list.append(current_group)
+                current_group = []
+                grouped_list.append(current_item)
             else:
-                temp.append(item)
-            prev_item = item
-        if temp:
-            result.append(temp)
-        return result
+                current_group.append(current_item)
+            prev_item = current_item
+        if current_group:
+            grouped_list.append(current_group)
+        return grouped_list
 
     def proc_module(self, node: py_ast.Module) -> ast.Module:
         """Process python node.
@@ -145,12 +145,13 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         ret = ast.Module(
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
-            doc=(elements[0] if isinstance(elements[0], ast.String) else None),
+            doc=doc.expr if doc else None,
             body=valid[1:] if isinstance(valid[0], ast.String) else valid,
             is_imported=False,
             kid=valid,
         )
         ret.gen.py_ast = [node]
+        ret.unparse()
         return self.nu(ret)
 
     def proc_function_def(
@@ -167,7 +168,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if sys.version_info >= (3, 12):
             type_params: list[type_param]
         """
-        ic("func_def")
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
@@ -290,7 +290,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         body = [self.convert(i) for i in node.body]
-        valid_body = ast.SubNodeList[ast.AstNode](items=body, delim=Tok.WS, kid=body)
+        doc=body[0].expr if isinstance(body[0],ast.ExprStmt) and isinstance(body[0].expr,ast.String) else None
+        body=body[1:] if doc else body
+        valid_body = ast.SubNodeList[ast.ArchBlockStmt](items=body, delim=Tok.WS, kid=body)
 
         base_classes = [self.convert(base) for base in node.bases]
         valid2: list[ast.Expr] = [
@@ -303,7 +305,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(valid2)
             else None
         )
-        doc = None
         decorators = [self.convert(i) for i in node.decorator_list]
         valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
         if len(valid_dec) != len(decorators):

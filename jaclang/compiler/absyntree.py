@@ -410,7 +410,9 @@ class Module(AstDocNode):
 
     def unparse(self) -> str:
         """Unparse module node."""
-        super().unparse()
+        unparsed=super().unparse()
+        from icecream import ic
+        ic(unparsed)
         return self.format()
 
 
