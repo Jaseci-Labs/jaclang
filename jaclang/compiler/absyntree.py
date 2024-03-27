@@ -412,7 +412,9 @@ class Module(AstDocNode):
         """Unparse module node."""
         unparsed = super().unparse()
         from icecream import ic
+
         ic(unparsed)
+        print(unparsed)
         return self.format()
 
 
@@ -3953,10 +3955,9 @@ class String(Literal):
 
         elif self.value.startswith(("'", '"')):
             ret_str = self.value[prefix_len:-prefix_len]
+            return ret_str.encode().decode("unicode_escape", errors="backslashreplace")
         else:
-            ret_str = self.value
-        ret_str = ret_str.encode().decode("unicode_escape")
-        return ret_str
+            return self.value
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize string."""

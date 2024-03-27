@@ -146,7 +146,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
             doc=doc.expr if doc and isinstance(doc.expr, ast.String) else None,
-            body=valid[1:] if isinstance(valid[0], ast.String) else valid,
+            body=valid[1:] if valid and isinstance(valid[0], ast.String) else valid,
             is_imported=False,
             kid=valid,
         )
@@ -964,9 +964,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             s: Any
             n: int | float | complex
         """
-        print(node.value)
-        from icecream import ic
-        ic(node.value)
         type_mapping = {
             int: ast.Int,
             float: ast.Float,

@@ -6,7 +6,10 @@ import:py pyfunc;
 
 with entry {
     print(pyfunc.f);
-    print(type(pyfunc.f));
+    # print(pyfunc.hello_world_bytes);
+    # print(pyfunc.path);
+    # print(type(pyfunc.path));
+    # print(type(pyfunc.hello_world_bytes));
     # print(pyfunc.ShapeType.CIRCLE);
     # print(pyfunc.MyClass2().my_method());
     # my_print(pyfunc);

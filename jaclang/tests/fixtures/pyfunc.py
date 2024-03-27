@@ -10,21 +10,12 @@
 #     UNKNOWN = "Unknown"
 
 
-# path = r'C:\Users\Alice\Documents'
-hello_world_bytes = b"\x48\x65\x6C\x6C\x6F\x20\x57\x6F\x72\x6C\x64"
-print(hello_world_bytes)
-print(type(hello_world_bytes))
+f: int = 34
+# a = f > 3
 
-# ret_str = r"Hello\\nWorld"
-# print(ret_str)
-
-# br = br"Hello\\nWorld"
-# print(br)
-# print(type(br))
-
-# rb = rb"Hello\\nWorld"
-# print(rb)
-# print(type(rb))
+# qq = {}
+# e = "hello"
+# ff = b"hello"
 
 
 # def my_print(x: object) -> None:
@@ -47,13 +38,6 @@ print(type(hello_world_bytes))
 #         print("My method")
 #         return "done"
 
-
-f: int = 34
-# a = f > 3
-
-# qq = {}
-# e = "hello"
-# ff = b"hello"
 
 # name, age, city = "Alice", 30, "Wonderland"
 
@@ -108,6 +92,24 @@ f: int = 34
 # ]
 # print(result78)
 
+# path = r'C:\Users\Alice\Documents'
+# print(path)   #output : C:\Users\Alice\Documents
+# print(type(path))   #output : <class 'str'>
+
+# hello_world_bytes = b"\x48\x65\x6C\x6C\x6F\x20\x57\x6F\x72\x6C\x64"
+# print(hello_world_bytes) #output : b'Hello World'
+# print(type(hello_world_bytes))  #output : <class 'bytes'>
+
+# ret_str = r"Hello\\nWorld"
+# print(ret_str)  #output : Hello\\nWorld
+
+# br = br"Hello\\nWorld"
+# print(br)  #output : b'Hello\\\\nWorld'
+# print(type(br)) #output : <class 'bytes'>
+
+# rb = rb"Hello\\nWorld"
+# print(rb) #output : b'Hello\\\\nWorld'
+# print(type(rb)) #output : <class 'bytes'>
 
 # def my_some_func(a: int, b: int) -> int:
 #     pass
@@ -848,7 +850,7 @@ f: int = 34
 # import sysconfig
 
 
-# # Taken from _osx_support _read_output function
+# Taken from _osx_support _read_output function
 # def _read_cmd_output(commandstring, capture_stderr=False):
 #     """Output from successful command execution or None"""
 #     import os
