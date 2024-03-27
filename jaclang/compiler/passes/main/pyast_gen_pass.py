@@ -2034,6 +2034,30 @@ class PyastGenPass(Pass):
             self.sync(ast3.Return(value=node.expr.gen.py_ast[0] if node.expr else None))
         ]
 
+    def exit_llm_type_stmt(self, node: ast.LlmTypeStmt) -> None:
+        """Sub objects.
+
+        target: ExprType,
+        type_tag: SubTag[ExprType],
+        value: FuncCall,
+        name: Name,
+        """
+        _target = "".join(self.bfs_collect_type(node.target))
+        node.gen.py_ast = [
+            (
+                self.sync(
+                    ast3.AnnAssign(
+                        target=self.sync(ast3.Name(id=_target, ctx=ast3.Store())),
+                        annotation=node.type_tag.gen.py_ast[0],
+                        value=self.sync(
+                            ast3.Constant(value="jacfeature need to be implement")
+                        ),  # TODO :need to implement this
+                        simple=int(isinstance(node.name, ast.Name)),
+                    )
+                )
+            )
+        ]
+
     def exit_yield_expr(self, node: ast.YieldExpr) -> None:
         """Sub objects.
 

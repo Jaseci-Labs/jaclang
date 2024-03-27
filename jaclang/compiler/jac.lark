@@ -143,6 +143,7 @@ statement: import_stmt
        | report_stmt SEMI
        | expression SEMI
        | ctrl_stmt SEMI
+       | llm_type_stmt SEMI
        | py_code_block
        | walker_stmt
        | SEMI
@@ -241,6 +242,9 @@ report_stmt: KW_REPORT expression
 
 // Control statements
 ctrl_stmt: KW_SKIP | KW_BREAK | KW_CONTINUE
+
+// Llm type statements
+llm_type_stmt: atomic_chain (COLON STRING)? type_tag  EQ  expression KW_BY NAME
 
 // Data spatial Walker statements
 walker_stmt: visit_stmt

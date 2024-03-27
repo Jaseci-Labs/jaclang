@@ -1283,6 +1283,27 @@ class RevisitStmt(WalkerStmtOnlyNode, AstElseBodyNode, CodeBlockStmt):
         AstElseBodyNode.__init__(self, else_body=else_body)
 
 
+class LlmTypeStmt(CodeBlockStmt, AstSemStrNode):
+    """LlmTypeStmt node type for Jac Ast."""
+
+    def __init__(
+        self,
+        target: Name | AtomTrailer,
+        type_tag: SubTag[Expr],
+        value: FuncCall,
+        name: Name,
+        kid: Sequence[AstNode],
+        semstr: Optional[String] = None,
+    ) -> None:
+        """Initialize llm type statement node."""
+        self.type_tag = type_tag
+        self.value = value
+        self.target = target
+        self.name = name
+        AstNode.__init__(self, kid=kid)
+        AstSemStrNode.__init__(self, semstr=semstr)
+
+
 class DisengageStmt(WalkerStmtOnlyNode, CodeBlockStmt):
     """DisengageStmt node type for Jac Ast."""
 

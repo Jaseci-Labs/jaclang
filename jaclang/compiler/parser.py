@@ -1280,6 +1280,7 @@ class JacParser(Pass):
                     | report_stmt SEMI
                     | delete_stmt SEMI
                     | ctrl_stmt SEMI
+                    | llm_type_stmt SEMI
                     | assert_stmt SEMI
                     | raise_stmt SEMI
                     | with_stmt
@@ -1711,6 +1712,41 @@ class JacParser(Pass):
                         kid=kid,
                     )
                 )
+
+        def llm_type_stmt(self, kid: list[ast.AstNode]) -> ast.LlmTypeStmt:
+            """Grammar rule.
+
+            llm_type_stmt: atomic_chain (COLON STRING)? type_tag  EQ  expression KW_BY NAME
+            """
+            chomp = [*kid]
+            target = chomp[0]
+            semstr = (
+                chomp[2]
+                if len(chomp) > 6
+                and isinstance(chomp[2], ast.String)
+                and not isinstance(chomp[2], ast.SubTag)
+                else None
+            )
+            chomp = chomp[3:] if semstr else chomp[1:]
+            type_tag = chomp[0]
+            value = chomp[2]
+            name = chomp[-1]
+            if (
+                isinstance(target, (ast.Name, ast.AtomTrailer))
+                and isinstance(value, ast.FuncCall)
+                and isinstance(type_tag, ast.SubTag)
+                and isinstance(name, ast.Name)
+            ):
+                return ast.LlmTypeStmt(
+                    target=target,
+                    semstr=semstr,
+                    type_tag=type_tag,
+                    value=value,
+                    name=name,
+                    kid=kid,
+                )
+            else:
+                raise self.ice()
 
         def walker_stmt(self, kid: list[ast.AstNode]) -> ast.CodeBlockStmt:
             """Grammar rule.
