@@ -410,7 +410,7 @@ class Module(AstDocNode):
 
     def unparse(self) -> str:
         """Unparse module node."""
-        unparsed=super().unparse()
+        unparsed = super().unparse()
         from icecream import ic
         ic(unparsed)
         return self.format()
@@ -549,15 +549,8 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
         if self.name:
             new_kid.append(self.name)
         new_kid.append(self.gen_token(Tok.LBRACE))
-        # for i in self.body.items:
-        #     new_kid.append(i)
         new_kid.append(self.body)
         new_kid.append(self.gen_token(Tok.RBRACE))
-        from icecream import ic
-
-        ic("modulecode", new_kid)
-        ic("mc ", self.body)
-        ic("lets go", self.body.pp())
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -3967,15 +3960,7 @@ class String(Literal):
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize string."""
-        # new_kid: list[AstNode] = []
-        # print( 'klkll \n lolo\n',self.value)
-        # if not self.value.startswith(("'", '"')):
-        #     self.value = eval(self.value)
-        try:
-            print(type(eval(self.value)))
-            self.value = eval(self.value)
-        except:
-            pass
+        self.value = r"%s" % self.value
         return True
 
     def unparse(self) -> str:

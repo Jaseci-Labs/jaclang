@@ -1,38 +1,55 @@
 """Python function."""
 
-from enum import Enum
+# from enum import Enum
 
 
-class ShapeType(Enum):
-    """Enum for shape types"""
+# class ShapeType(Enum):
+#     """Enum for shape types"""
 
-    CIRCLE = "Circle"
-    UNKNOWN = "Unknown"
-
-
-def my_print(x: object) -> None:
-    """Print function."""
-    print(x)
+#     CIRCLE = "Circle"
+#     UNKNOWN = "Unknown"
 
 
-print("Hello world!")
+# path = r'C:\Users\Alice\Documents'
+hello_world_bytes = b"\x48\x65\x6C\x6C\x6F\x20\x57\x6F\x72\x6C\x64"
+print(hello_world_bytes)
+print(type(hello_world_bytes))
+
+# ret_str = r"Hello\\nWorld"
+# print(ret_str)
+
+# br = br"Hello\\nWorld"
+# print(br)
+# print(type(br))
+
+# rb = rb"Hello\\nWorld"
+# print(rb)
+# print(type(rb))
 
 
-class MyClass2:
-    """This is a docstring for MyClass."""
+# def my_print(x: object) -> None:
+#     """Print function."""
+#     print(x)
 
-    def __init__(self):
-        """Constructor docstring."""
-        pass
 
-    def my_method(self) -> None:
-        """Method docstring."""
-        print("My method")
-        return 'done'
+# print("Hello world!")
+
+
+# class MyClass2:
+#     """This is a docstring for MyClass."""
+
+#     def __init__(self):
+#         """Constructor docstring."""
+#         pass
+
+#     def my_method(self) -> None:
+#         """Method docstring."""
+#         print("My method")
+#         return "done"
 
 
 f: int = 34
-a = f > 3
+# a = f > 3
 
 # qq = {}
 # e = "hello"
@@ -49,28 +66,29 @@ a = f > 3
 #     pass
 
 
-class MyClass:
-    """My class"""
+# class MyClass:
+#     """My class"""
 
-    def __init__(self, x):
-        self.x = x
+#     def __init__(self, x):
+#         self.x = x
 
-    def my_method(self):
-        print("My method")
-
-for i in range(a):
-    print(i)
-    b=i
-    if i == 5:
-        break
-    print(b)
-else:
-    print("Loop completed normally{}".format(i))
+#     def my_method(self):
+#         print("My method")
 
 
-def fooo45() -> None:
-    """Test func  fooo45"""
-    pass
+# for i in range(a):
+#     print(i)
+#     b = i
+#     if i == 5:
+#         break
+#     print(b)
+# else:
+#     print("Loop completed normally{}".format(i))
+
+
+# def fooo45() -> None:
+#     """Test func  fooo45"""
+#     pass
 
 
 # numbers = [1, 2, 3, 4, 5]
@@ -192,21 +210,6 @@ def fooo45() -> None:
 # age = 30
 # # print("Name: {}, Age: {}".format(name, age))
 
-# # path = r'C:\Users\Alice\Documents'
-# # hello_world_bytes = b"\x48\x65\x6C\x6C\x6F\x20\x57\x6F\x72\x6C\x64"
-# # print(hello_world_bytes)
-# # print(type(hello_world_bytes))
-
-# # ret_str = r"Hello\\nWorld"
-# # print(ret_str)
-
-# # br = br"Hello\\nWorld"
-# # print(br)
-# # print(type(br))
-
-# # rb = rb"Hello\\nWorld"
-# # print(rb)
-# # print(type(rb))
 
 # x = True
 # y = False

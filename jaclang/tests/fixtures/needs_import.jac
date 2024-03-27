@@ -7,8 +7,8 @@ import:py pyfunc;
 with entry {
     print(pyfunc.f);
     print(type(pyfunc.f));
-    print(pyfunc.ShapeType.CIRCLE);
-    print(pyfunc.MyClass2().my_method());
+    # print(pyfunc.ShapeType.CIRCLE);
+    # print(pyfunc.MyClass2().my_method());
     # my_print(pyfunc);
     # print(random.random());
 }

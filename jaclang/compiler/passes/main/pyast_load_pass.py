@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import ast as py_ast
 import os
-from typing import Optional, TypeAlias, TypeVar
+from typing import Optional, TypeVar
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Tokens as Tok
 from jaclang.compiler.passes.ir_pass import Pass
 from jaclang.utils.helpers import pascal_to_snake
-from icecream import ic
 
 T = TypeVar("T", bound=ast.AstNode)
 
@@ -83,9 +82,10 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
     #         extracted.append(gen_mod_code(with_entry_body))
     #     return extracted
 
-    def extract_with_entry(self, input_list):
-        grouped_list = []
-        current_group = []
+    def extract_with_entry(self, input_list: list[ast.AstNode]) -> list:
+        """Extract with entry from a body."""
+        grouped_list: list = []
+        current_group: list = []
         prev_item = None
         for current_item in input_list:
             if (
@@ -145,7 +145,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         ret = ast.Module(
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
-            doc=doc.expr if doc and isinstance(doc.expr,ast.String) else None,
+            doc=doc.expr if doc and isinstance(doc.expr, ast.String) else None,
             body=valid[1:] if isinstance(valid[0], ast.String) else valid,
             is_imported=False,
             kid=valid,
@@ -290,9 +290,16 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         body = [self.convert(i) for i in node.body]
-        doc=body[0].expr if isinstance(body[0],ast.ExprStmt) and isinstance(body[0].expr,ast.String) else None
-        body=body[1:] if doc else body
-        valid_body = ast.SubNodeList[ast.ArchBlockStmt](items=body, delim=Tok.WS, kid=body)
+        doc = (
+            body[0].expr
+            if isinstance(body[0], ast.ExprStmt)
+            and isinstance(body[0].expr, ast.String)
+            else None
+        )
+        body = body[1:] if doc else body
+        valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+            items=body, delim=Tok.WS, kid=body
+        )
 
         base_classes = [self.convert(base) for base in node.bases]
         valid2: list[ast.Expr] = [
@@ -957,6 +964,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             s: Any
             n: int | float | complex
         """
+        print(node.value)
+        from icecream import ic
+        ic(node.value)
         type_mapping = {
             int: ast.Int,
             float: ast.Float,
