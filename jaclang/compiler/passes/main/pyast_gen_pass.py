@@ -2041,21 +2041,37 @@ class PyastGenPass(Pass):
         name: Name,
         """
         from icecream import ic
-
         _right=node.value.target
-        while isinstance(_right,ast.AtomTrailer) and _right.right  :
+        while isinstance(_right,ast.AtomTrailer) and _right.right:
             _right=_right.right
-        _output=_right.value if isinstance(_right,ast.Name) else ''
-        # ic(node.value.params)
-        # ic(node.value.params.items)
-        # for i in node.value.params.items:
-        #     ic(i.key.value)
+        _output_=_right.value if isinstance(_right,ast.Name) else ''
+        _output = (_output_,node.semstr.lit_value if node.semstr else _output_ )        
+        _input={}
+        for i in node.value.params.items:
+            if isinstance(i.value,ast.MultiString):
+                val=''
+                for j in i.value.strings:
+                  val+=j.value
+            elif isinstance(i.value,ast.Name) or isinstance(i.value,ast.Literal):
+                val=i.value.value
+            else:
+                print('need to implement it ')
+                exit()
+            _input[i.key.value]=[None,None,i.key.value,val]
         _target = "".join(self.bfs_collect_type(node.target))
         _body = node.func
         _model_params, _include_info, _exclude_info = self.func_collector(node.func)
-        _scope = self.get_scope(node) # TODO : need a generalize way
-        _input = node.value
-        ic(_model_params, _include_info, _exclude_info)
+        txt = []
+        def foo(val:ast.AtomTrailer |ast.Name|ast.FuncCall)->list:
+            if isinstance(val,ast.Name):
+                txt.append(val.value)
+            elif isinstance(val,ast.AtomTrailer) and isinstance(val.right,(ast.AtomTrailer ,ast.Name,ast.FuncCall)) and isinstance(val.target,(ast.AtomTrailer ,ast.Name,ast.FuncCall)):
+                foo(val.target)
+                foo(val.right)
+            elif isinstance(val,ast.FuncCall) and isinstance(val.target,(ast.AtomTrailer ,ast.Name,ast.FuncCall)):
+                foo(val.target)
+            return txt
+        _scope = self.get_scope(node) +'.'+'(obj).'.join(foo(node.value.target))+'(obj)' # TODO : need a generalize way
         node.gen.py_ast = [
             (
                 self.sync(
@@ -2185,42 +2201,33 @@ class PyastGenPass(Pass):
                                                                         (
                                                                             self.sync(
                                                                                 ast3.Constant(
-                                                                                    value=('semstr of input')
+                                                                                    value=param[0]
                                                                                 )
                                                                             )
                                                                         ),
                                                                         (
                                                                           self.sync(
                                                                                 ast3.Constant(
-                                                                                    value=('typetag  of input')
+                                                                                    value=param[1]
                                                                                 )
                                                                             )
                                                                         ),
                                                                         self.sync(
                                                                             ast3.Constant(
-                                                                                value='param.name.value'
+                                                                                value=param[2]
                                                                             )
                                                                         ),
                                                                         self.sync(
-                                                                            ast3.Name(
-                                                                                id='Name param.name.value',
-                                                                                ctx=ast3.Load(),
+                                                                            ast3.Constant(
+                                                                                value=param[3],
                                                                             )
                                                                         ),
                                                                     ],
                                                                     ctx=ast3.Load(),
                                                                 )
                                                             )
-                                                            # for param in node.signature.params.items
-                                                            for param in range(1)
+                                                            for param in _input.values()
                                                         ]
-                                                        # if isinstance(
-                                                        #     node.signature,
-                                                        #     ast.FuncSignature,
-                                                        # )
-                                                        # and node.signature.params
-                                                        if 2
-                                                        else []
                                                     ),
                                                     ctx=ast3.Load(),
                                                 )
@@ -2237,21 +2244,21 @@ class PyastGenPass(Pass):
                                                             (
                                                                 self.sync(
                                                                     ast3.Constant(
-                                                                        value=_output +' object'
+                                                                        value=_output[1]
                                                                     )
                                                                 )
                                                             ),
                                                             (
                                                                 self.sync(
                                                                     ast3.Name(
-                                                                        id=_output,ctx=ast3.Load()
+                                                                        id=_output[0],ctx=ast3.Load()
                                                                     )
                                                                 )
                                                             ),
                                                             (
                                                                 self.sync(
                                                                     ast3.Constant(
-                                                                        value=_output
+                                                                        value=_output[0]
                                                                     )
                                                                 )
                                                             ),
@@ -2284,19 +2291,6 @@ class PyastGenPass(Pass):
             )
         ]
 
-    #  person_obj=_Jac.with_llm(
-    #                 file_loc=__file__,
-    #                 model=llm,
-    #                 model_params={},
-    #                 scope=llm_type(Module).Outer(Obj).Person(Obj),
-    #                 incl_info,
-    #                 excl_info,
-    #                 inputs=(name),
-    #                     output=(),
-    #                     action=“Create an Object in Given Output
-    #                     Type using the given information or use common
-    #                     knowledge to fill in the missing information”
-    #           )
     def exit_yield_expr(self, node: ast.YieldExpr) -> None:
         """Sub objects.
 
