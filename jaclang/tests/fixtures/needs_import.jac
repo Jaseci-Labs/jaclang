@@ -1,11 +1,11 @@
 """Test of jac importing python."""
-import:py os;
+import:py openai;
 import:py pyfunc;
 # import:py random;
 # import:py from pyfunc, my_print;
 
 with entry {
-    print(pyfunc.f);
+    print("pyfunc.f");
     # print(pyfunc.hello_world_bytes);
     # print(pyfunc.path);
     # print(type(pyfunc.path));

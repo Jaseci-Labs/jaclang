@@ -1304,6 +1304,26 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                         pos_end=0,
                     )
                 )
+        else:
+            value = ""
+            for _ in range(node.level):
+                value += "."
+            path_parts = self.mod_path.split(os.path.sep)
+            cropped_path = path_parts[: -node.level]
+            file_path = os.path.sep.join(cropped_path)
+            modpaths.append(
+                ast.Name(
+                    file_path=file_path,
+                    name=Tok.NAME,
+                    value=value,
+                    line=node.lineno,
+                    col_start=0,
+                    col_end=0,
+                    pos_start=0,
+                    pos_end=0,
+                )
+            )
+
         path = ast.ModulePath(
             path=modpaths,
             level=node.level,
