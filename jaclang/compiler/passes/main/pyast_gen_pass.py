@@ -2169,6 +2169,102 @@ class PyastGenPass(Pass):
                                             ),
                                         ),
                                     ),
+                                     self.sync(
+                                        ast3.keyword(
+                                            arg="inputs",
+                                            value=self.sync(
+                                                ast3.List(
+                                                    elts=(
+                                                        [
+                                                            self.sync(
+                                                                ast3.Tuple(
+                                                                    elts=[
+                                                                        (
+                                                                            self.sync(
+                                                                                ast3.Constant(
+                                                                                    value=('semstr of input')
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                        (
+                                                                          self.sync(
+                                                                                ast3.Constant(
+                                                                                    value=('typetag  of input')
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                        self.sync(
+                                                                            ast3.Constant(
+                                                                                value='param.name.value'
+                                                                            )
+                                                                        ),
+                                                                        self.sync(
+                                                                            ast3.Name(
+                                                                                id='Name param.name.value',
+                                                                                ctx=ast3.Load(),
+                                                                            )
+                                                                        ),
+                                                                    ],
+                                                                    ctx=ast3.Load(),
+                                                                )
+                                                            )
+                                                            # for param in node.signature.params.items
+                                                            for param in range(1)
+                                                        ]
+                                                        # if isinstance(
+                                                        #     node.signature,
+                                                        #     ast.FuncSignature,
+                                                        # )
+                                                        # and node.signature.params
+                                                        if 2
+                                                        else []
+                                                    ),
+                                                    ctx=ast3.Load(),
+                                                )
+                                            ),
+                                        )
+                                    ),
+                                    self.sync(
+                                        ast3.keyword(
+                                            arg="outputs",
+                                            value=self.sync(
+                                                ast3.Tuple(
+                                                    elts=(
+                                                        [
+                                                            (
+                                                                self.sync(
+                                                                    ast3.Constant(
+                                                                        value=('semstr of output')
+                                                                    )
+                                                                )
+                                                            ),
+                                                            (
+                                                                self.sync(
+                                                                    ast3.Constant(
+                                                                        value=('output type ')
+                                                                    )
+                                                                )
+                                                            ),
+                                                            (
+                                                                self.sync(
+                                                                    ast3.Constant(
+                                                                        value=('output format')
+                                                                    )
+                                                                )
+                                                            ),
+                                                        ]
+                                                        # if isinstance(
+                                                        #     node.signature,
+                                                        #     ast.FuncSignature,
+                                                        # )
+                                                        if 2
+                                                        else []
+                                                    ),
+                                                    ctx=ast3.Load(),
+                                                )
+                                            ),
+                                        )
+                                    ),
                                     self.sync(
                                         ast3.keyword(
                                             arg="action",
