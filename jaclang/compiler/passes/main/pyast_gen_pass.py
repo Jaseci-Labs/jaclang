@@ -2042,15 +2042,18 @@ class PyastGenPass(Pass):
         """
         from icecream import ic
 
-        ic(node.value)
-        ic(node.value.params)
-        ic(node.value.params.items)
-        for i in node.value.params.items:
-            ic(i.key.value)
+        _right=node.value.target
+        while isinstance(_right,ast.AtomTrailer) and _right.right  :
+            _right=_right.right
+        _output=_right.value if isinstance(_right,ast.Name) else ''
+        # ic(node.value.params)
+        # ic(node.value.params.items)
+        # for i in node.value.params.items:
+        #     ic(i.key.value)
         _target = "".join(self.bfs_collect_type(node.target))
         _body = node.func
         _model_params, _include_info, _exclude_info = self.func_collector(node.func)
-        _scope = "scope"  # TODO : need a generalize way
+        _scope = self.get_scope(node) # TODO : need a generalize way
         _input = node.value
         ic(_model_params, _include_info, _exclude_info)
         node.gen.py_ast = [
@@ -2234,31 +2237,25 @@ class PyastGenPass(Pass):
                                                             (
                                                                 self.sync(
                                                                     ast3.Constant(
-                                                                        value=('semstr of output')
+                                                                        value=_output +' object'
+                                                                    )
+                                                                )
+                                                            ),
+                                                            (
+                                                                self.sync(
+                                                                    ast3.Name(
+                                                                        id=_output,ctx=ast3.Load()
                                                                     )
                                                                 )
                                                             ),
                                                             (
                                                                 self.sync(
                                                                     ast3.Constant(
-                                                                        value=('output type ')
-                                                                    )
-                                                                )
-                                                            ),
-                                                            (
-                                                                self.sync(
-                                                                    ast3.Constant(
-                                                                        value=('output format')
+                                                                        value=_output
                                                                     )
                                                                 )
                                                             ),
                                                         ]
-                                                        # if isinstance(
-                                                        #     node.signature,
-                                                        #     ast.FuncSignature,
-                                                        # )
-                                                        if 2
-                                                        else []
                                                     ),
                                                     ctx=ast3.Load(),
                                                 )
