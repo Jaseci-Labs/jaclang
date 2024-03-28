@@ -27,8 +27,8 @@ obj Player :pygame.sprite.Sprite: {
         x: int,
         y: int;
     has _layer: int = PLAYER_LAYER,
-        width: int = TILESIZE,
-        height: int = TILESIZE,
+        width: int = TILESIZE-2,
+        height: int = TILESIZE-2,
         x_change: int = 0,
         y_change: int = 0,
         facing: str = 'down',
