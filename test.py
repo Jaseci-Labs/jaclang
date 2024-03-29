@@ -196,3 +196,11 @@
 
 
 # print(get_emoji("Lets move to paris"))
+
+val = 10
+try:
+    val = int("apple")
+except ValueError as e:
+    pass
+
+print(val)

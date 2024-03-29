@@ -2033,12 +2033,11 @@ class PyastGenPass(Pass):
         value: FuncCall,
         name: Name,
         """
-        from icecream import ic
-
-        _right = node.value.target
-        while isinstance(_right, ast.AtomTrailer) and _right.right:
-            _right = _right.right
-        _output_ = _right.value if isinstance(_right, ast.Name) else ""
+        _output_ = (
+            "".join(self.bfs_collect_type(node.type_tag.kid[1:][0]))
+            if node.type_tag
+            else None
+        )
         _output = (_output_, node.semstr.lit_value if node.semstr else _output_)
         _input = {}
         for i in node.value.params.items:
@@ -2059,27 +2058,8 @@ class PyastGenPass(Pass):
         _target = "".join(self.bfs_collect_type(node.target))
         _body = node.func
         _model_params, _include_info, _exclude_info = self.func_collector(node.func)
-        txt = []
-
-        def foo(val: ast.AtomTrailer | ast.Name | ast.FuncCall) -> list:
-            if isinstance(val, ast.Name):
-                txt.append(val.value)
-            elif (
-                isinstance(val, ast.AtomTrailer)
-                and isinstance(val.right, (ast.AtomTrailer, ast.Name, ast.FuncCall))
-                and isinstance(val.target, (ast.AtomTrailer, ast.Name, ast.FuncCall))
-            ):
-                foo(val.target)
-                foo(val.right)
-            elif isinstance(val, ast.FuncCall) and isinstance(
-                val.target, (ast.AtomTrailer, ast.Name, ast.FuncCall)
-            ):
-                foo(val.target)
-            return txt
-
-        _scope = (
-            self.get_scope(node) + "." + "(obj).".join(foo(node.value.target)) + "(obj)"
-        )  # TODO : need a generalize way
+        _scope = f"{self.get_scope(node)}.{"(obj).".join(_output_.split('.'))}(obj)"
+        # TODO:This hardcoded for now need to be able to work with Nodes, Class, as well
         node.gen.py_ast = [
             (
                 self.sync(
@@ -2368,7 +2348,44 @@ class PyastGenPass(Pass):
                         ),
                     )
                 )
-            )
+            ),
+            self.sync(
+                ast3.Try(
+                    body=[
+                        self.sync(
+                            ast3.Assign(
+                                targets=[
+                                    self.sync(ast3.Name(id=_target, ctx=ast3.Store()))
+                                ],
+                                value=self.sync(
+                                    ast3.Call(
+                                        func=self.sync(
+                                            ast3.Name(id="eval", ctx=ast3.Load())
+                                        ),
+                                        args=[
+                                            self.sync(
+                                                ast3.Name(id=_target, ctx=ast3.Load())
+                                            )
+                                        ],
+                                        keywords=[],
+                                    )
+                                ),
+                            )
+                        )
+                    ],
+                    handlers=[
+                        self.sync(
+                            ast3.ExceptHandler(
+                                type=None,
+                                name=None,
+                                body=[self.sync(ast3.Pass())],
+                            )
+                        )
+                    ],
+                    orelse=[],
+                    finalbody=[],
+                )
+            ),
         ]
 
     def exit_yield_expr(self, node: ast.YieldExpr) -> None:
