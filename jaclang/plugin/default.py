@@ -436,8 +436,8 @@ class JacFeatureDefaults:
             )
         inputs_information = "\n".join(inputs_information_list)
 
-        output_information = f"{outputs[0]} ({outputs[2]})"
-        type_collector.extend(extract_non_primary_type(outputs[2]))
+        output_information = f"{outputs[0]} ({outputs[1]})"
+        type_collector.extend(extract_non_primary_type(outputs[1]))
 
         type_explanations_list = list(
             get_all_type_explanations(type_collector, registry_data).values()
@@ -461,6 +461,22 @@ class JacFeatureDefaults:
     def Model(model: Any, kwargs: dict):  # noqa: ANN401
         """Jac's Model feature."""
         return create_model(model, **kwargs)
+
+    @staticmethod
+    @hookimpl
+    def get_semstr_type(file_loc: str, scope: str, attr: str, index: int) -> str:
+        """Jac's get_semstr_type feature."""
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+            ),
+            "r",
+        ) as f:
+            registry_data = json.load(f)
+        semstr_typ = registry_data[scope][attr][index]
+        return semstr_typ
 
 
 class JacBuiltin:

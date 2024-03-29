@@ -241,6 +241,13 @@ class JacFeature:
         """Jac's Model CC feature."""
         return pm.hook.Model(model=model, kwargs=kwargs)
 
+    @staticmethod
+    def get_semstr_type(file_loc: str, scope: str, attr: str, index: int) -> str:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.get_semstr_type(
+            file_loc=file_loc, scope=scope, attr=attr, index=index
+        )
+
 
 class JacCmd:
     """Jac CLI command."""

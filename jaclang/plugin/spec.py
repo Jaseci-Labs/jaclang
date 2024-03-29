@@ -226,6 +226,14 @@ class JacFeatureSpec:
         """Jac's Model CC feature."""
         raise NotImplementedError
 
+    @staticmethod
+    @hookspec(firstresult=True)
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, index: str
+    ) -> str:  # noqa: ANN401
+        """Jac's get_semstr_type stmt feature."""
+        raise NotImplementedError
+
 
 class JacBuiltin:
     """Jac Builtins."""

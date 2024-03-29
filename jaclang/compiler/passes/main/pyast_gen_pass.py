@@ -1301,13 +1301,6 @@ class PyastGenPass(Pass):
                                                                 )
                                                             ),
                                                             (
-                                                                node.signature.return_type.gen.py_ast[
-                                                                    0
-                                                                ]
-                                                                if node.signature.return_type
-                                                                else None
-                                                            ),
-                                                            (
                                                                 self.sync(
                                                                     ast3.Constant(
                                                                         value=(
@@ -2041,37 +2034,48 @@ class PyastGenPass(Pass):
         name: Name,
         """
         from icecream import ic
-        _right=node.value.target
-        while isinstance(_right,ast.AtomTrailer) and _right.right:
-            _right=_right.right
-        _output_=_right.value if isinstance(_right,ast.Name) else ''
-        _output = (_output_,node.semstr.lit_value if node.semstr else _output_ )        
-        _input={}
+
+        _right = node.value.target
+        while isinstance(_right, ast.AtomTrailer) and _right.right:
+            _right = _right.right
+        _output_ = _right.value if isinstance(_right, ast.Name) else ""
+        _output = (_output_, node.semstr.lit_value if node.semstr else _output_)
+        _input = {}
         for i in node.value.params.items:
-            if isinstance(i.value,ast.MultiString):
-                val=''
+            if isinstance(i.value, ast.MultiString):
+                val = ""
                 for j in i.value.strings:
-                  val+=j.value
-            elif isinstance(i.value,ast.Name) or isinstance(i.value,ast.Literal):
-                val=i.value.value
+                    val += j.value
+            elif isinstance(i.value, ast.Name) or isinstance(i.value, ast.Literal):
+                val = i.value.value
             else:
-                print('need to implement it ')
+                print("need to implement it ")
                 exit()
-            _input[i.key.value]=[None,None,i.key.value,val]
+            _input[i.key.value] = [None, None, i.key.value, val]
         _target = "".join(self.bfs_collect_type(node.target))
         _body = node.func
         _model_params, _include_info, _exclude_info = self.func_collector(node.func)
         txt = []
-        def foo(val:ast.AtomTrailer |ast.Name|ast.FuncCall)->list:
-            if isinstance(val,ast.Name):
+
+        def foo(val: ast.AtomTrailer | ast.Name | ast.FuncCall) -> list:
+            if isinstance(val, ast.Name):
                 txt.append(val.value)
-            elif isinstance(val,ast.AtomTrailer) and isinstance(val.right,(ast.AtomTrailer ,ast.Name,ast.FuncCall)) and isinstance(val.target,(ast.AtomTrailer ,ast.Name,ast.FuncCall)):
+            elif (
+                isinstance(val, ast.AtomTrailer)
+                and isinstance(val.right, (ast.AtomTrailer, ast.Name, ast.FuncCall))
+                and isinstance(val.target, (ast.AtomTrailer, ast.Name, ast.FuncCall))
+            ):
                 foo(val.target)
                 foo(val.right)
-            elif isinstance(val,ast.FuncCall) and isinstance(val.target,(ast.AtomTrailer ,ast.Name,ast.FuncCall)):
+            elif isinstance(val, ast.FuncCall) and isinstance(
+                val.target, (ast.AtomTrailer, ast.Name, ast.FuncCall)
+            ):
                 foo(val.target)
             return txt
-        _scope = self.get_scope(node) +'.'+'(obj).'.join(foo(node.value.target))+'(obj)' # TODO : need a generalize way
+
+        _scope = (
+            self.get_scope(node) + "." + "(obj).".join(foo(node.value.target)) + "(obj)"
+        )  # TODO : need a generalize way
         node.gen.py_ast = [
             (
                 self.sync(
@@ -2188,7 +2192,7 @@ class PyastGenPass(Pass):
                                             ),
                                         ),
                                     ),
-                                     self.sync(
+                                    self.sync(
                                         ast3.keyword(
                                             arg="inputs",
                                             value=self.sync(
@@ -2200,26 +2204,104 @@ class PyastGenPass(Pass):
                                                                     elts=[
                                                                         (
                                                                             self.sync(
-                                                                                ast3.Constant(
-                                                                                    value=param[0]
+                                                                                ast3.Call(
+                                                                                    func=self.sync(
+                                                                                        ast3.Attribute(
+                                                                                            value=self.sync(
+                                                                                                ast3.Name(
+                                                                                                    id=Con.JAC_FEATURE.value,
+                                                                                                    ctx=ast3.Load(),
+                                                                                                )
+                                                                                            ),
+                                                                                            attr="get_semstr_type",
+                                                                                            ctx=ast3.Load(),
+                                                                                        )
+                                                                                    ),
+                                                                                    args=[
+                                                                                        self.sync(
+                                                                                            ast3.Name(
+                                                                                                id="__file__",
+                                                                                                ctx=ast3.Load(),
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=_scope
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=param[
+                                                                                                    2
+                                                                                                ]
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=1
+                                                                                            )
+                                                                                        ),
+                                                                                    ],
+                                                                                    keywords=[],
                                                                                 )
                                                                             )
                                                                         ),
                                                                         (
-                                                                          self.sync(
-                                                                                ast3.Constant(
-                                                                                    value=param[1]
+                                                                            self.sync(
+                                                                                ast3.Call(
+                                                                                    func=self.sync(
+                                                                                        ast3.Attribute(
+                                                                                            value=self.sync(
+                                                                                                ast3.Name(
+                                                                                                    id=Con.JAC_FEATURE.value,
+                                                                                                    ctx=ast3.Load(),
+                                                                                                )
+                                                                                            ),
+                                                                                            attr="get_semstr_type",
+                                                                                            ctx=ast3.Load(),
+                                                                                        )
+                                                                                    ),
+                                                                                    args=[
+                                                                                        self.sync(
+                                                                                            ast3.Name(
+                                                                                                id="__file__",
+                                                                                                ctx=ast3.Load(),
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=_scope
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=param[
+                                                                                                    2
+                                                                                                ]
+                                                                                            )
+                                                                                        ),
+                                                                                        self.sync(
+                                                                                            ast3.Constant(
+                                                                                                value=0
+                                                                                            )
+                                                                                        ),
+                                                                                    ],
+                                                                                    keywords=[],
                                                                                 )
                                                                             )
                                                                         ),
                                                                         self.sync(
                                                                             ast3.Constant(
-                                                                                value=param[2]
+                                                                                value=param[
+                                                                                    2
+                                                                                ]
                                                                             )
                                                                         ),
                                                                         self.sync(
                                                                             ast3.Constant(
-                                                                                value=param[3],
+                                                                                value=param[
+                                                                                    3
+                                                                                ],
                                                                             )
                                                                         ),
                                                                     ],
@@ -2245,13 +2327,6 @@ class PyastGenPass(Pass):
                                                                 self.sync(
                                                                     ast3.Constant(
                                                                         value=_output[1]
-                                                                    )
-                                                                )
-                                                            ),
-                                                            (
-                                                                self.sync(
-                                                                    ast3.Name(
-                                                                        id=_output[0],ctx=ast3.Load()
                                                                     )
                                                                 )
                                                             ),
