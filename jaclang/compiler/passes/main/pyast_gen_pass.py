@@ -2046,7 +2046,11 @@ class PyastGenPass(Pass):
                 val = ""
                 for j in i.value.strings:
                     val += j.value
-            elif isinstance(i.value, ast.Name) or isinstance(i.value, ast.Literal):
+            elif (
+                isinstance(i.value, ast.Name)
+                or isinstance(i.value, ast.Literal)
+                and isinstance(i.value, ast.Name)
+            ):
                 val = i.value.value
             else:
                 print("need to implement it ")
@@ -2350,9 +2354,10 @@ class PyastGenPass(Pass):
                                             value=(
                                                 self.sync(
                                                     ast3.Constant(
-                                                        value="Create an Object in Given Output Type"
-                                                        " using the given information or use common"
-                                                        " knowledge to fill in the missing information"
+                                                        value="Create an object of the specified type,"
+                                                        " using the specifically provided input value(s)"
+                                                        "and look up any missing attributes from reliable"
+                                                        " online sources to fill them in accurately."
                                                     )
                                                 )
                                             ),

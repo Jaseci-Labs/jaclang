@@ -48,7 +48,7 @@ Outer2{
 with entry{
     # person_obj:'Person object ':Person = Person(name='Einstein',a=9) by llm(x='khjkh');
     # person_obj:'Person object ':Person = Outer().Person(name='Einstein',a=9) by llm(x='khjkh');
-    person_obj:'Person object ':Person = Outer().Person(name='Einstein') by llm(x='khjkh');
+    person_obj:'Person object ':Person = Outer().Person(name='Einstein') by llm(temperature=0.2);
     # Outer.a:'Person object ':Person = Outer().Person(name='Einstein') by llm(y=8);
     # person_obj:Person = Outer.Person(name='Einstein') by llm;
     # print(person_obj.dob);
