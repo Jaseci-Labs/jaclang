@@ -1702,14 +1702,15 @@ class PyastGenPass(Pass):
                 )
             )
         ]
+        extracted_type = (
+            "".join(self.bfs_collect_type(node.type_tag.kid[1:][0]))
+            if node.type_tag
+            else None
+        )
         self.set_register(
             node.name.value,
             self.get_scope(node),
-            (
-                node.type_tag.tag.value
-                if node.type_tag and isinstance(node.type_tag.tag, ast.Name)
-                else None
-            ),
+            extracted_type,
             node.semstr.lit_value if node.semstr else "",
         )
 

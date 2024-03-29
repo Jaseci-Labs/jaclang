@@ -142,7 +142,7 @@ class JacLanguageTests(TestCase):
             stdout_value,
         )
         self.assertIn(
-            'Diary Entries (diary_entries) (None) = ["I won noble prize in Physics", "I am popular for my theory of relativity"]',  # noqa E501
+            '["I won noble prize in Physics", "I am popular for my theory of relativity"]',  # noqa E501
             stdout_value,
         )
         del os.environ["JAC_REGISTRY_DEBUG"]
@@ -174,6 +174,24 @@ class JacLanguageTests(TestCase):
                 "__jac_gen__",
                 "with_llm_lower_registry.json",
             )
+        )
+        del os.environ["JAC_REGISTRY_DEBUG"]
+
+    def test_with_llm_type(self) -> None:
+        """Parse micro jac file."""
+        os.environ["JAC_REGISTRY_DEBUG"] = "1"
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("with_llm_type", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn(
+            "14/03/1879",
+            stdout_value,
+        )
+        self.assertIn(
+            "Person(name='Jason Mars', dob='1994-01-01', age=30)",
+            stdout_value,
         )
         del os.environ["JAC_REGISTRY_DEBUG"]
 

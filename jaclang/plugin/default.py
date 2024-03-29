@@ -422,10 +422,9 @@ class JacFeatureDefaults:
         reason = False
         if "reason" in model_params:
             reason = model_params.pop("reason")
-
+        context = ""
         if "context" in model_params:
-            context = model_params.pop("context")
-        context = "\n".join(context)
+            context = "\n".join(model_params.pop("context"))
 
         type_collector: list = []
         information, collected_types = filter(scope, registry_data, incl_info)
