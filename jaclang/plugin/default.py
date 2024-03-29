@@ -423,6 +423,10 @@ class JacFeatureDefaults:
         if "reason" in model_params:
             reason = model_params.pop("reason")
 
+        if "context" in model_params:
+            context = model_params.pop("context")
+        context = "\n".join(context)
+
         type_collector: list = []
         information, collected_types = filter(scope, registry_data, incl_info)
         type_collector.extend(collected_types)
@@ -449,6 +453,7 @@ class JacFeatureDefaults:
             inputs_information,
             output_information,
             type_explanations,
+            context,
             action,
             reason,
         )

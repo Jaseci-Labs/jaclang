@@ -15,10 +15,10 @@ Person {
         age: 'Age of the Person': int;
 }
 
-with entry {
-    einstein: 'Einstein Object': Person = Person(name="Albert Einstein") by llm();
-    print(einstein.dob);
-}
+# with entry {
+#     einstein: 'Einstein Object': Person = Person(name="Albert Einstein") by llm();
+#     print(einstein.dob);
+# }
 
 
 obj 'University'
@@ -35,7 +35,9 @@ University {
 
 with entry {
     mit: 'MIT University': University = University(name="University of Michigan", location="Ann Arbor, Michigan");
-    cs_department: 'Computer Science Department': University.Department = University.Department(name="Computer Science") by llm(incl_info=(mit));
+    cs_department: 'Computer Science Department': University.Department = University.Department(name="Computer Science")
+    by llm(incl_info=(mit), context=["Jason Mars is the head of the department.", "He is now 30 years old.", "Now is 2024"]);
+    
     print(cs_department);
     print(cs_department.head);
 }

@@ -41,6 +41,9 @@ Input/Type formatting: Explanation of the Input (variable_name) (type) = value
 [Type Explanations]
 {type_explanations}
 
+[Context]
+{context}
+
 [Action]
 {action}
 
@@ -65,6 +68,7 @@ def aott_raise(
     inputs_information: str,
     output_information: str,
     type_explanations: str,
+    context: str,
     action: str,
     reason: bool,
 ) -> str:
@@ -74,6 +78,7 @@ def aott_raise(
         inputs_information=inputs_information,
         output_information=output_information,
         type_explanations=type_explanations,
+        context=context,
         action=action,
         reason_suffix=with_reason_suffix if reason else without_reason_suffix,
     )
