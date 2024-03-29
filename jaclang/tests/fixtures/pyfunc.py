@@ -1,13 +1,13 @@
 """Python function."""
 
-# from enum import Enum
+from enum import Enum
 
 
-# class ShapeType(Enum):
-#     """Enum for shape types"""
+class ShapeType(Enum):
+    """Enum for shape types"""
 
-#     CIRCLE = "Circle"
-#     UNKNOWN = "Unknown"
+    CIRCLE = "Circle"
+    UNKNOWN = "Unknown"
 
 
 f: int = 34
@@ -18,12 +18,12 @@ f: int = 34
 # ff = b"hello"
 
 
-# def my_print(x: object) -> None:
-#     """Print function."""
-#     print(x)
+def my_print(x: object) -> None:
+    """Print function."""
+    print(x)
 
 
-# print("Hello world!")
+print("Hello world!")
 
 
 # class MyClass2:

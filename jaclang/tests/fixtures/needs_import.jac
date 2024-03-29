@@ -1,11 +1,15 @@
 """Test of jac importing python."""
-import:py openai;
+# import:py openai;
 import:py pyfunc;
 # import:py random;
 # import:py from pyfunc, my_print;
+# import:py torch;
+# import:y tensor;
 
 with entry {
-    print("pyfunc.f");
+    print('pyfunc f: ',pyfunc.f);
+    # print(torch.rand(5, 3));
+    # print(tensor.rand(5, 3));
     # print(pyfunc.hello_world_bytes);
     # print(pyfunc.path);
     # print(type(pyfunc.path));
