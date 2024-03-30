@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import types
 from dataclasses import field
 from functools import wraps
 from typing import Any, Callable, Optional, Type
+
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
@@ -456,6 +458,8 @@ class JacFeatureDefaults:
             action,
             reason,
         )
+        if os.environ.get("JAC_GENAI_DEBUG", False):
+            logging.info(meaning_in)
         meaning_out = model.__infer__(meaning_in, **model_params)
         reasoning, output = get_reasoning_output(meaning_out)
         return output
