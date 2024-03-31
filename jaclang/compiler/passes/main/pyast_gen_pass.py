@@ -2395,11 +2395,7 @@ class PyastGenPass(Pass):
             )
         )
         if node.type_tag:
-            assign_target = (
-                node.target.items[0].value
-                if isinstance(node.target.items[0], ast.Name)
-                else ""
-            )
+            assign_target=extracted_type ="".join(self.bfs_collect_type(node.target))                 
             node.gen.py_ast = [
                 self.sync(
                     ast3.AnnAssign(
@@ -2421,11 +2417,7 @@ class PyastGenPass(Pass):
                 )
             ]
         else:
-            assign_target = (
-                node.target.items[0].value
-                if isinstance(node.target.items[0], ast.Name)
-                else ""
-            )
+            assign_target=extracted_type ="".join(self.bfs_collect_type(node.target))
             node.gen.py_ast = [
                 self.sync(ast3.Assign(targets=node.target.gen.py_ast, value=value))
             ]
