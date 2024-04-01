@@ -234,6 +234,12 @@ class JacFeatureSpec:
         """Jac's get_semstr_type stmt feature."""
         raise NotImplementedError
 
+    @staticmethod
+    @hookspec(firstresult=True)
+    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        raise NotImplementedError
+
 
 class JacBuiltin:
     """Jac Builtins."""

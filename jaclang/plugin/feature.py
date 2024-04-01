@@ -248,6 +248,11 @@ class JacFeature:
             file_loc=file_loc, scope=scope, attr=attr, index=index
         )
 
+    @staticmethod
+    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.gather_scope(file_loc=file_loc, scope=scope, attr=attr)
+
 
 class JacCmd:
     """Jac CLI command."""

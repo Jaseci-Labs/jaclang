@@ -1039,8 +1039,8 @@ class PyastGenPass(Pass):
             extracted_type.extend(self.bfs_collect_type(child))
         return extracted_type
 
-    def func_collector(self, body: ast.FuncCall)-> tuple[dict, list, list]:
-        '''Collect function call information.'''
+    def func_collector(self, body: ast.FuncCall) -> tuple[dict, list, list]:
+        """Collect function call information."""
         model_params: dict = {}
         include_info: list = []
         exclude_info: list = []
@@ -1173,7 +1173,7 @@ class PyastGenPass(Pass):
             )
 
             _target = "output"
-            _scope = self.get_scope(node)
+            _scope = self.sync(ast3.Constant(value=self.get_scope(node)))
             return [
                 self.llm_assign(
                     _target,
@@ -1909,9 +1909,35 @@ class PyastGenPass(Pass):
         _target = "".join(self.bfs_collect_type(node.target))
         _model = node.func.target.gen.py_ast[0]
         _model_params, _include_info, _exclude_info = self.func_collector(node.func)
-        _scope = f"{self.get_scope(node)}.{"(obj).".join(_output_.split('.'))}(obj)"
+        # _scope = f"{self.get_scope(node)}.{"(obj).".join(_output_.split('.'))}(obj)"
         # TODO:This hardcoded for now need to be able to work with Nodes, Class, as well
-
+        _scope = self.sync(
+            ast3.Call(
+                func=self.sync(
+                    ast3.Attribute(
+                        value=self.sync(
+                            ast3.Name(
+                                id=Con.JAC_FEATURE.value,
+                                ctx=ast3.Load(),
+                            )
+                        ),
+                        attr="gather_scope",
+                        ctx=ast3.Load(),
+                    )
+                ),
+                args=[
+                    self.sync(
+                        ast3.Name(
+                            id="__file__",
+                            ctx=ast3.Load(),
+                        )
+                    ),
+                    self.sync(ast3.Constant(value=self.get_scope(node))),
+                    self.sync(ast3.Constant(value=_output_)),
+                ],
+                keywords=[],
+            )
+        )
         inputs = [
             self.sync(
                 ast3.Tuple(
@@ -1938,7 +1964,7 @@ class PyastGenPass(Pass):
                                                 ctx=ast3.Load(),
                                             )
                                         ),
-                                        self.sync(ast3.Constant(value=_scope)),
+                                        _scope,
                                         self.sync(ast3.Constant(value=param[2])),
                                         self.sync(ast3.Constant(value=1)),
                                     ],
@@ -1968,7 +1994,7 @@ class PyastGenPass(Pass):
                                                 ctx=ast3.Load(),
                                             )
                                         ),
-                                        self.sync(ast3.Constant(value=_scope)),
+                                        _scope,
                                         self.sync(ast3.Constant(value=param[2])),
                                         self.sync(ast3.Constant(value=0)),
                                     ],
@@ -2064,7 +2090,7 @@ class PyastGenPass(Pass):
         _outputs,
         _action,
     ):
-        '''Assign the llm function call to the target variable.'''
+        """Assign the llm function call to the target variable."""
         return self.sync(
             ast3.Assign(
                 targets=[self.sync(ast3.Name(id=_target, ctx=ast3.Store()))],
@@ -2118,7 +2144,7 @@ class PyastGenPass(Pass):
                             self.sync(
                                 ast3.keyword(
                                     arg="scope",
-                                    value=(self.sync(ast3.Constant(value=_scope))),
+                                    value=_scope,
                                 )
                             ),
                             self.sync(
@@ -2395,7 +2421,7 @@ class PyastGenPass(Pass):
             )
         )
         if node.type_tag:
-            assign_target=extracted_type ="".join(self.bfs_collect_type(node.target))                 
+            assign_target = extracted_type = "".join(self.bfs_collect_type(node.target))
             node.gen.py_ast = [
                 self.sync(
                     ast3.AnnAssign(
@@ -2417,7 +2443,7 @@ class PyastGenPass(Pass):
                 )
             ]
         else:
-            assign_target=extracted_type ="".join(self.bfs_collect_type(node.target))
+            assign_target = extracted_type = "".join(self.bfs_collect_type(node.target))
             node.gen.py_ast = [
                 self.sync(ast3.Assign(targets=node.target.gen.py_ast, value=value))
             ]

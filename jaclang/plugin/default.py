@@ -486,6 +486,36 @@ class JacFeatureDefaults:
         semstr_typ = registry_data[scope][attr][index]
         return semstr_typ
 
+    @staticmethod
+    @hookimpl
+    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+            ),
+            "r",
+        ) as f:
+            registry_data = json.load(f)
+        list_of_scopes: list[str] | str = [scope] + [
+            ".".join(scope.split(".")[:i]) for i in range(1, len(scope.split(".")))
+        ]
+        list_of_attrs = attr.split(".")
+        for i in list_of_scopes:
+            avail_typees = registry_data[i].keys()
+            for j in list_of_attrs:
+                list_of_attrs.pop(0)
+                if j in avail_typees:
+                    new_scope = f"{i}.{j}({registry_data[i][j][0]})"
+                    list_of_scopes = new_scope
+                    if len(list_of_attrs) != 0:
+                        pass
+                    else:
+                        break
+        return new_scope
+
 
 class JacBuiltin:
     """Jac Builtins."""
