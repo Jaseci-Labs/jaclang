@@ -3419,8 +3419,10 @@ class MatchStmt(CodeBlockStmt):
             self.gen_token(Tok.KW_MATCH),
             self.target,
         ]
+        new_kid.append(self.gen_token(Tok.LBRACE))
         for case in self.cases:
             new_kid.append(case)
+        new_kid.append(self.gen_token(Tok.RBRACE))
 
         AstNode.__init__(self, kid=new_kid)
         return res

@@ -7,7 +7,7 @@ import:py pyfunc;
 # import:y tensor;
 
 with entry {
-    print('pyfunc f: ',pyfunc.f);
+    print('pyfunc f: ',pyfunc);
     # print(torch.rand(5, 3));
     # print(tensor.rand(5, 3));
     # print(pyfunc.hello_world_bytes);

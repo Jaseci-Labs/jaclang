@@ -1291,12 +1291,20 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         )
         modpaths: list[ast.Name] = []
         if node.module:
+            value = ""
+            for _ in range(node.level):
+                value += "."
+            file_path = self.mod_path
+            if node.level != 0:
+                path_parts = self.mod_path.split(os.path.sep)
+                cropped_path = path_parts[: -node.level]
+                file_path = os.path.sep.join(cropped_path)
             for i in node.module.split("."):
                 modpaths.append(
                     ast.Name(
-                        file_path=self.mod_path,
+                        file_path=file_path,
                         name=Tok.NAME,
-                        value=i,
+                        value=value + i if node.module.split(".").index(i) == 0 else i,
                         line=node.lineno,
                         col_start=0,
                         col_end=0,
@@ -1504,7 +1512,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 raise self.ice()
         else:
             patterns_sub = None
-
         if len(node.kwd_patterns):
             names: list[ast.Name] = []
             kv_pairs: list[ast.MatchKVPair] = []
@@ -1537,6 +1544,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 items=kv_pairs, delim=Tok.COMMA, kid=kv_pairs
             )
             kid.append(kw_patterns)
+        else:
+            kw_patterns = None
+
         if isinstance(cls, ast.NameSpec):
             return ast.MatchArch(
                 name=cls, arg_patterns=patterns_sub, kw_patterns=kw_patterns, kid=kid
