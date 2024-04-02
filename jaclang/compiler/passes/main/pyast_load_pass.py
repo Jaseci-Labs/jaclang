@@ -345,8 +345,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body=valid_body,
             kid=kid,
             doc=doc,
-            # decorators=valid_decorators,
-            decorators=[],
+            decorators=valid_decorators,
         )
 
     def proc_return(self, node: py_ast.Return) -> ast.ReturnStmt | None:
