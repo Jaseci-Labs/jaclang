@@ -69,19 +69,19 @@ class Pass(Transform[ast.T]):
         return result
 
     @staticmethod
-    def has_parent_of_type(node:ast.AstNode, typ: Type[ast.T]) -> Optional[ast.T]:
+    def has_parent_of_type(node: ast.AstNode, typ: Type[ast.T]) -> Optional[ast.T]:
         """Check if node has parent of type."""
         while node.parent:
             if isinstance(node.parent, typ):
-                return typ   
+                return typ
             node = node.parent
         return None
-    
-    @staticmethod          
-    def has_parent_of_node(node:ast.AstNode, parent: ast.AstNode) -> bool:
-        '''check if node has parent of type'''
+
+    @staticmethod
+    def has_parent_of_node(node: ast.AstNode, parent: ast.AstNode) -> bool:
+        """check if node has parent of type"""
         while node.parent:
-            if node.parent == parent:     
+            if node.parent == parent:
                 return True
             node = node.parent
         return False

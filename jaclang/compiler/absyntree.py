@@ -109,14 +109,14 @@ class AstNode:
 
         return Pass.get_all_sub_nodes(node=self, typ=typ, brute_force=brute_force)
 
-    def has_parent_of_type(self,typ:Type[T]) -> Optional[T]:
-        '''Get all sub node of type.'''
+    def has_parent_of_type(self, typ: Type[T]) -> Optional[T]:
+        """Get all sub node of type."""
         from jaclang.compiler.passes import Pass
 
         return Pass.has_parent_of_type(node=self, typ=typ)
-    
-    def has_parent_of_node(self,parent:AstNode) -> bool:
-        '''Get all sub node of type.'''
+
+    def has_parent_of_node(self, parent: AstNode) -> bool:
+        """Get all sub node of type."""
         from jaclang.compiler.passes import Pass
 
         return Pass.has_parent_of_node(node=self, parent=parent)
@@ -816,8 +816,8 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
         if self.doc:
             new_kid.append(self.doc)
         if self.decorators:
-                new_kid.append(self.gen_token(Tok.DECOR_OP))
-                new_kid.append(self.decorators)
+            new_kid.append(self.gen_token(Tok.DECOR_OP))
+            new_kid.append(self.decorators)
         new_kid.append(self.arch_type)
         if self.access:
             new_kid.append(self.access)
@@ -2456,6 +2456,15 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.op = op
         AstNode.__init__(self, kid=kid)
+
+    @property
+    def is_star_target(self) -> bool:
+        """Check if the unary expression is a star target."""
+        if self.op.name == Tok.STAR_MUL:
+            assign = self.has_parent_of_type(Assignment)
+            if assign:
+                return self.has_parent_of_node(assign.target)
+        return False
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""

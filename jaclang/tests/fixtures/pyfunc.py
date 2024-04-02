@@ -59,7 +59,8 @@ class MyClass:
     def my_method(self):
         print("My method")
 
-#new class student inherit myclass
+
+# new class student inherit myclass
 class Student(MyClass):
     """Student class"""
 
@@ -71,7 +72,7 @@ class Student(MyClass):
         print("My method")
 
 
-a=9
+a = 9
 for i in range(a):
     print(i)
     b = i
