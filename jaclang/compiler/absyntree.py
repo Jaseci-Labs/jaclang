@@ -109,18 +109,6 @@ class AstNode:
 
         return Pass.get_all_sub_nodes(node=self, typ=typ, brute_force=brute_force)
 
-    def has_parent_of_type(self, typ: Type[T]) -> Optional[T]:
-        """Get all sub node of type."""
-        from jaclang.compiler.passes import Pass
-
-        return Pass.has_parent_of_type(node=self, typ=typ)
-
-    def has_parent_of_node(self, parent: AstNode) -> bool:
-        """Get all sub node of type."""
-        from jaclang.compiler.passes import Pass
-
-        return Pass.has_parent_of_node(node=self, parent=parent)
-
     def format(self) -> str:
         """Get all sub nodes of type."""
         from jaclang.compiler.passes.tool import JacFormatPass
@@ -422,11 +410,7 @@ class Module(AstDocNode):
 
     def unparse(self) -> str:
         """Unparse module node."""
-        unparsed = super().unparse()
-        from icecream import ic
-
-        ic(unparsed)
-        print(unparsed)
+        super().unparse()
         return self.format()
 
 
@@ -1604,12 +1588,9 @@ class ExprStmt(CodeBlockStmt):
             res = self.expr.normalize(deep)
         new_kid: list[AstNode] = []
         if self.in_fstring:
-            new_kid.append(self.gen_token(Tok.FSTRING))
-            new_kid.append(self.gen_token(Tok.SQUOTE))
             new_kid.append(self.gen_token(Tok.LBRACE))
             new_kid.append(self.expr)
             new_kid.append(self.gen_token(Tok.RBRACE))
-            new_kid.append(self.gen_token(Tok.SQUOTE))
         else:
             new_kid.append(self.expr)
             new_kid.append(self.gen_token(Tok.SEMI))
@@ -2457,15 +2438,6 @@ class UnaryExpr(Expr):
         self.op = op
         AstNode.__init__(self, kid=kid)
 
-    @property
-    def is_star_target(self) -> bool:
-        """Check if the unary expression is a star target."""
-        if self.op.name == Tok.STAR_MUL:
-            assign = self.has_parent_of_type(Assignment)
-            if assign:
-                return self.has_parent_of_node(assign.target)
-        return False
-
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""
         res = True
@@ -2566,8 +2538,11 @@ class FString(AtomExpr):
         if deep:
             res = self.parts.normalize(deep) if self.parts else res
         new_kid: list[AstNode] = []
+        new_kid.append(self.gen_token(Tok.FSTRING))
+        new_kid.append(self.gen_token(Tok.SQUOTE))
         if self.parts:
             new_kid.append(self.parts)
+        new_kid.append(self.gen_token(Tok.SQUOTE))
         AstNode.__init__(self, kid=new_kid)
         return res
 

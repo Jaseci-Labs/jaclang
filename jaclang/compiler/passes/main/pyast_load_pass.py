@@ -52,36 +52,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         self.ir: ast.Module = self.proc_module(ir.ast)
         return self.ir
 
-    # def extract_with_entry(
-    #     self, body: list[ast.AstNode], exclude_types: TypeAlias = T
-    # ) -> list[T | ast.ModuleCode]:
-    #     """Extract with entry from a body."""
-
-    #     def gen_mod_code(with_entry_body: list[ast.CodeBlockStmt]) -> ast.ModuleCode:
-    #         with_entry_subnodelist = ast.SubNodeList[ast.CodeBlockStmt](
-    #             items=with_entry_body, delim=Tok.WS, kid=with_entry_body
-    #         )
-    #         return ast.ModuleCode(
-    #             name=None,
-    #             body=with_entry_subnodelist,
-    #             kid=with_entry_body,
-    #             doc=None,
-    #         )
-
-    #     extracted: list[T | ast.ModuleCode] = []
-    #     with_entry_body: list[ast.CodeBlockStmt] = []
-    #     for i in body:
-    #         if isinstance(i, exclude_types):
-    #             extracted.append(i)
-    #         elif isinstance(i, ast.CodeBlockStmt):
-    #             with_entry_body.append(i)
-    #         else:
-    #             self.ice("Invalid type for with entry body")
-
-    #     if len(with_entry_body):
-    #         extracted.append(gen_mod_code(with_entry_body))
-    #     return extracted
-
     def extract_with_entry(self, input_list: list[ast.AstNode]) -> list:
         """Extract with entry from a body."""
         grouped_list: list = []
@@ -151,7 +121,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             kid=valid,
         )
         ret.gen.py_ast = [node]
-        ret.unparse()  # need to clarify
+        ret.unparse()
         return self.nu(ret)
 
     def proc_function_def(
@@ -305,8 +275,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         valid2: list[ast.Expr] = [
             base for base in base_classes if isinstance(base, ast.Expr)
         ]
-        # if len(valid2) != len(base_classes):
-        #     raise self.ice("Length mismatch in base classes")
         valid_bases = (
             ast.SubNodeList[ast.Expr](items=valid2, delim=Tok.COMMA, kid=base_classes)
             if len(valid2)
@@ -1073,9 +1041,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
         """
         type = self.convert(node.type) if node.type is not None else None
-        # Handle the case where type is None (bare except block in Python)
         if not type:
-            # bare except block, which catches exceptions of any type
             type = ast.Name(
                 file_path=self.mod_path,
                 name=Tok.NAME,
@@ -1461,32 +1427,39 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         else:
             raise self.ice()
 
-    def proc_match_as(self, node: py_ast.MatchAs) -> ast.MatchAs:
+    def proc_match_as(self, node: py_ast.MatchAs) -> ast.MatchAs | ast.MatchWild:
         """Process python node.
 
         class MatchAs(pattern):
             pattern: _Pattern | None
-            name: _Identifier | None
+            name: _Identifier | None Day
         """
-        pattern = self.convert(node.pattern) if node.pattern is not None else None
+        print("pattern", node.pattern)
+        print("name", node.name)
+        pattern = self.convert(node.pattern) if node.pattern else None
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.name if node.name is not None else "_",
+            value=node.name if node.name else "_",
             line=node.lineno,
             col_start=node.col_offset,
-            col_end=node.col_offset + len(node.name if node.name is not None else "_"),
+            col_end=(
+                (node.col_offset + len(node.name))
+                if node.name
+                else (node.col_offset + 1)
+            ),
             pos_start=0,
             pos_end=0,
         )
-        if isinstance(pattern, ast.MatchPattern) or pattern is None:
+
+        if isinstance(pattern, ast.MatchPattern):
             return ast.MatchAs(
                 name=name,
                 pattern=pattern,
-                kid=[name, pattern] if pattern is not None else [name],
+                kid=[name, pattern] if pattern else [name],
             )
         else:
-            raise self.ice()
+            return ast.MatchWild(kid=[name])
 
     def proc_match_class(self, node: py_ast.MatchClass) -> ast.MatchArch:
         """Process python node.

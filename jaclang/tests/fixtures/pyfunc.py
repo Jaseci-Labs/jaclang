@@ -1,86 +1,78 @@
 """Python function."""
 
-from enum import Enum
+# from enum import Enum
+
+# class ShapeType(Enum):
+#     """Enum for shape types"""
+
+#     CIRCLE = "Circle"
+#     UNKNOWN = "Unknown"
 
 
-class ShapeType(Enum):
-    """Enum for shape types"""
-
-    CIRCLE = "Circle"
-    UNKNOWN = "Unknown"
-
-
-f: int = 34
+# f: int = 34
 # a = f > 3
-
 # qq = {}
 # e = "hello"
 # ff = b"hello"
 
 
-def my_print(x: object) -> None:
-    """Print function."""
-    print(x)
+# def my_print(x: object) -> None:
+#     """Print function."""
+#     print(x)
+
+# print("Hello world!")
+
+# class MyClass2:
+#     """This is a docstring for MyClass."""
+
+#     def __init__(self):
+#         """Constructor docstring."""
+#         pass
+
+#     def my_method(self) -> None:
+#         """Method docstring."""
+#         print("My method")
+#         return "done"
 
 
-print("Hello world!")
+# name, age, city = "Alice", 30, "Wonderland"
+# message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+# result = f"The result of 5 times 7 is {5 * 7}."
+
+# def my_some_func(a: int, b: int) -> int:
+#     pass
 
 
-class MyClass2:
-    """This is a docstring for MyClass."""
+# class MyClass:
+#     """My class"""
 
-    def __init__(self):
-        """Constructor docstring."""
-        pass
+#     def __init__(self, x):
+#         self.x = x
 
-    def my_method(self) -> None:
-        """Method docstring."""
-        print("My method")
-        return "done"
+#     def my_method(self):
+#         print("My method")
 
 
-name, age, city = "Alice", 30, "Wonderland"
+# class Student(MyClass):
+#     """Student class"""
 
-message = f"Hello, my name is {name}, I am {age} years old, and I live in {city}."
+#     def __init__(self, x, y):
+#         super().__init__(x)
+#         self.y = y
 
-result = f"The result of 5 times 7 is {5 * 7}."
-
-
-def my_some_func(a: int, b: int) -> int:
-    pass
-
-
-class MyClass:
-    """My class"""
-
-    def __init__(self, x):
-        self.x = x
-
-    def my_method(self):
-        print("My method")
+#     def my_method(self):
+#         print("My method")
 
 
-# new class student inherit myclass
-class Student(MyClass):
-    """Student class"""
-
-    def __init__(self, x, y):
-        super().__init__(x)
-        self.y = y
-
-    def my_method(self):
-        print("My method")
-
-
-a = 9
-for i in range(a):
-    print(i)
-    b = i
-    if i == 5:
-        break
-    print(b)
-else:
-    print("Loop completed normally{}".format(i))
+# a = 9
+# for i in range(a):
+#     print(i)
+#     b = i
+#     if i == 5:
+#         break
+#     print(b)
+# else:
+#     print("Loop completed normally{}".format(i))
 
 
 # def fooo45() -> None:
@@ -125,10 +117,6 @@ else:
 # print(type(rb))  # output : <class 'bytes'>
 
 
-# def my_some_func(a: int, b: int) -> int:
-#     pass
-
-
 # for i in range(a):
 #     print(i)
 #     if i == 5:
@@ -155,8 +143,11 @@ else:
 #     return wrapper
 
 
-# x = 5
-# print(f"hello {x}")
+# @my_decorator
+# def say_hello():
+#     """Say hello"""
+#     print("Hello!")
+
 
 # def print_base_classes(cls: type) -> type:
 #     print(f'Base classes of {cls.__name__}: {[c.__name__ for c in cls.__bases__]}')
@@ -181,12 +172,6 @@ else:
 # x = ()
 # c = {1, 2, 3, 4, 5}
 # d = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
-
-
-# @my_decorator
-# def say_hello():
-#     """Say hello"""
-#     print("Hello!")
 
 
 # x = {}
@@ -670,11 +655,11 @@ else:
 # print(True or False)
 # print(False and False)
 
-# day = " sunday"
+# day = "sunday"
 # match day:
 #     case "monday":
 #         print("confirmed")
-#     case _:
+#     case _ as day:
 #         print("other")
 
 # num = 89
@@ -890,72 +875,3 @@ else:
 
 # for z in x:
 #     print(z)
-
-# import sys
-# import sysconfig
-
-
-# # Taken from _osx_support _read_output function
-# def _read_cmd_output(commandstring, capture_stderr=False):
-#     """Output from successful command execution or None"""
-#     import os
-#     import contextlib
-
-#     fp = open("/tmp/_aix_support.%s" % (os.getpid(),), "w+b")
-
-#     with contextlib.closing(fp) as fp:
-#         if capture_stderr:
-#             cmd = "%s >'%s' 2>&1" % (commandstring, fp.name)
-#         else:
-#             cmd = "%s 2>/dev/null >'%s'" % (commandstring, fp.name)
-#         return fp.read() if not os.system(cmd) else None
-
-
-# def _aix_tag(vrtl, bd):
-#     _sz = 32 if sys.maxsize == (2**31 - 1) else 64
-#     _bd = bd if bd != 0 else 9988
-#     return "aix-{:1x}{:1d}{:02d}-{:04d}-{}".format(vrtl[0], vrtl[1], vrtl[2], _bd, _sz)
-
-
-# def _aix_vrtl(vrmf):
-#     v, r, tl = vrmf.split(".")[:3]
-#     return [int(v[-1]), int(r), int(tl)]
-
-
-# def _aix_bos_rte():
-#     try:
-#         import subprocess
-
-#         out = subprocess.check_output(["/usr/bin/lslpp", "-Lqc", "bos.rte"])
-#     except ImportError:
-#         out = _read_cmd_output("/usr/bin/lslpp -Lqc bos.rte")
-#     out = out.decode("utf-8")
-#     out = out.strip().split(":")  # type: ignore
-#     _bd = int(out[-1]) if out[-1] != "" else 9988
-#     return (str(out[2]), _bd)
-
-
-# def aix_platform():
-#     """
-#     AIX filesets are identified by four decimal values: V.R.M.F."""
-#     vrmf, bd = _aix_bos_rte()
-#     return _aix_tag(_aix_vrtl(vrmf), bd)
-
-
-# def _aix_bgt():
-#     gnu_type = sysconfig.get_config_var("BUILD_GNU_TYPE")
-#     if not gnu_type:
-#         raise ValueError("BUILD_GNU_TYPE is not defined")
-#     return _aix_vrtl(vrmf=gnu_type)
-
-
-# def aix_buildtag():
-#     """
-#     Return the platform_tag of the system Python was built on.
-#     """
-#     build_date = sysconfig.get_config_var("AIX_BUILDDATE")
-#     try:
-#         build_date = int(build_date)
-#     except (ValueError, TypeError):
-#         raise ValueError(f"AIX_BUILDDATE is not defined or invalid: " f"{build_date!r}")
-#     return _aix_tag(_aix_bgt(), build_date)
