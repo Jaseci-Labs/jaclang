@@ -73,7 +73,7 @@ class Pass(Transform[ast.T]):
         """Check if node has parent of type."""
         while node.parent:
             if isinstance(node.parent, typ):
-                return typ
+                return node.parent
             node = node.parent
         return None
 

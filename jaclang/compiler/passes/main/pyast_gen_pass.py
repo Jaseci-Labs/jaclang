@@ -2273,7 +2273,7 @@ class PyastGenPass(Pass):
                 self.sync(
                     ast3.Starred(
                         value=node.operand.gen.py_ast[0],
-                        ctx=ast3.Store if node.is_star_target else ast3.Load(),
+                        ctx=ast3.Store() if node.is_star_target else ast3.Load(),
                     )
                 )
             ]
