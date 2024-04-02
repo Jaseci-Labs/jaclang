@@ -392,3 +392,13 @@ class JacLanguageTests(TestCase):
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
         self.assertIn("2.0\n", stdout_value)
+
+    def test_tuple_unpack(self) -> None:
+        """Test tuple unpack in jac."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        jac_import("tupleunpack", base_path=self.fixture_abs_path("./"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("1", stdout_value.split("\n")[0])
+        self.assertIn("[2, 3, 4]", stdout_value.split("\n")[1])
