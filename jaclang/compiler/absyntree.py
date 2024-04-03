@@ -1588,9 +1588,12 @@ class ExprStmt(CodeBlockStmt):
             res = self.expr.normalize(deep)
         new_kid: list[AstNode] = []
         if self.in_fstring:
+            new_kid.append(self.gen_token(Tok.FSTRING))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
             new_kid.append(self.gen_token(Tok.LBRACE))
             new_kid.append(self.expr)
             new_kid.append(self.gen_token(Tok.RBRACE))
+            new_kid.append(self.gen_token(Tok.SQUOTE))
         else:
             new_kid.append(self.expr)
             new_kid.append(self.gen_token(Tok.SEMI))
@@ -2538,11 +2541,8 @@ class FString(AtomExpr):
         if deep:
             res = self.parts.normalize(deep) if self.parts else res
         new_kid: list[AstNode] = []
-        new_kid.append(self.gen_token(Tok.FSTRING))
-        new_kid.append(self.gen_token(Tok.SQUOTE))
         if self.parts:
             new_kid.append(self.parts)
-        new_kid.append(self.gen_token(Tok.SQUOTE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
