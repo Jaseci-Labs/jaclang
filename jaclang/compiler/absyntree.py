@@ -404,13 +404,13 @@ class Module(AstDocNode):
         new_kid: list[AstNode] = []
         if self.doc:
             new_kid.append(self.doc)
-        new_kid.extend(self.body)
+        new_kid.extend([i for i in self.body if not isinstance(i, AbilityDef)])
         AstNode.__init__(self, kid=new_kid)
         return res
 
     def unparse(self) -> str:
         """Unparse module node."""
-        super().unparse()
+        print(super().unparse())
         return self.format()
 
 
@@ -534,7 +534,7 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module code node."""
         res = True
-        print(self.pp())
+
         if deep:
             res = self.name.normalize(deep) if self.name else res
             res = res and self.body.normalize(deep)
@@ -2297,7 +2297,9 @@ class Assignment(AstSemStrNode, AstTypedVarNode, EnumBlockStmt, CodeBlockStmt):
             new_kid.append(self.gen_token(Tok.EQ))
         if self.value:
             new_kid.append(self.value)
-        if not isinstance(self.parent, (GlobalVars)):
+        if not isinstance(self.parent, (GlobalVars)) and not isinstance(
+            self.parent, IterForStmt
+        ):
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res

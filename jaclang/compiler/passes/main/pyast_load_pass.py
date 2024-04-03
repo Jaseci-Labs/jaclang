@@ -35,14 +35,14 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def convert(self, node: py_ast.AST) -> ast.AstNode:
         """Get python node type."""
-        print(
-            f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
-        )
+        # print(
+        #     f"working on {type(node).__name__} line {node.lineno if hasattr(node, 'lineno') else 0}"
+        # )
         if hasattr(self, f"proc_{pascal_to_snake(type(node).__name__)}"):
             ret = getattr(self, f"proc_{pascal_to_snake(type(node).__name__)}")(node)
         else:
             raise self.ice(f"Unknown node type {type(node).__name__}")
-        print(f"finshed {type(node).__name__} ---------------------")
+        # print(f"finshed {type(node).__name__} ---------------------")
         print("normalizing", ret.__class__.__name__)
         print(ret.unparse())
         return ret
@@ -450,7 +450,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         else:
             raise self.ice()
 
-    def proc_for(self, node: py_ast.For) -> ast.InForStmt:
+    def proc_for(self, node: py_ast.For) -> ast.InForStmt:  # | ast.IterForStmt:
         """Process python node.
 
         class For(stmt):
@@ -498,6 +498,63 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                     else [target, iter, valid_body]
                 ),
             )
+        # elif isinstance(target, ast.Expr) and isinstance(iter, ast.FuncCall):
+        #     def create_int(value:str)-> ast.Int:
+        #         return ast.Int(
+        #             file_path=self.mod_path,
+        #             name="INT",
+        #             value=value,
+        #             line=node.lineno,
+        #             col_start=node.col_offset,
+        #             col_end=node.col_offset + 1,
+        #             pos_start=0,
+        #             pos_end=0,
+        #         )
+
+        #     iter_target = ast.SubNodeList[ast.Expr](items=[target],delim=None, kid=[target])
+        #     start = iter.params.items[0] if len(iter.params.items)>1 else create_int("0")
+        #     end = iter.params.items[1] if len(iter.params.items)>1 else iter.params.items[0]
+        #     move = iter.params.items[2] if len(iter.params.items)>2 else create_int("1")
+        #     lt_op = self.operator(Tok.LT, "<")
+        #     add_op = self.operator(Tok.PLUS, "+")
+
+        #     new_iter = ast.Assignment(
+        #         target=iter_target,
+        #         value=start,
+        #         type_tag=None,
+        #         kid=[iter_target, start],
+        #     )
+        #     print("new_iter: ",new_iter.pp())
+        #     condition = ast.CompareExpr(
+        #         left=target,
+        #         rights=[end],
+        #         ops=[lt_op],
+        #         kid=[target, end, lt_op],
+        #     )
+        #     print("condition: ",condition.pp())
+        #     count_by = ast.Assignment(
+        #         target=iter_target,
+        #         value=move,
+        #         type_tag=None,
+        #         aug_op=add_op,
+        #         kid=[iter_target, move, add_op],
+        #     )
+        #     print("count_by: ",count_by.pp())
+        #     ret = ast.IterForStmt(
+        #         iter=new_iter,
+        #         is_async=False,
+        #         condition=condition,
+        #         count_by=count_by,
+        #         body=valid_body,
+        #         else_body=fin_orelse,
+        #         kid=(
+        #             [new_iter, end, move, valid_body, fin_orelse]
+        #             if fin_orelse
+        #             else [new_iter, end, move, valid_body]
+        #         ),
+        #     )
+        #     print(ret.pp())
+        #     return ret
         else:
             raise self.ice()
 
@@ -1434,8 +1491,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pattern: _Pattern | None
             name: _Identifier | None Day
         """
-        print("pattern", node.pattern)
-        print("name", node.name)
         pattern = self.convert(node.pattern) if node.pattern else None
         name = ast.Name(
             file_path=self.mod_path,
