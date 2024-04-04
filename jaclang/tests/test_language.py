@@ -5,11 +5,12 @@ import os
 import pickle
 import sys
 
+import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
 from jaclang.cli import cli
 from jaclang.compiler.compile import jac_file_to_pass, jac_str_to_pass
+from jaclang.compiler.passes.main.import_pass import ImportPass  # noqa: I100
 from jaclang.core import construct
-from jaclang.tests.utils import get_child_import_module
 from jaclang.utils.test import TestCase
 
 
@@ -430,7 +431,10 @@ class JacLanguageTests(TestCase):
         """Test py ast to Jac ast conversion."""
         os.environ["JAC_PROC_DEBUG"] = "1"
         mod_path = self.fixture_abs_path("needs_import_1.jac")
-        output = get_child_import_module(mod_path)
+        mod = jac_file_to_pass(mod_path, target=ImportPass).ir.get_all_sub_nodes(
+            ast.Module
+        )[0]
+        output = mod.__class__.__bases__[0].unparse(mod)
         self.assertIn("with entry { avg = average ( 1 , 2 , 3 , 4 , 5 ) ; }", output)
         self.assertEqual(output.count("with entry"), 12)
         self.assertIn("'My class' obj MyClass { can init ( x : Any )", output)
@@ -444,7 +448,10 @@ class JacLanguageTests(TestCase):
         """Test py ast to Jac ast conversion."""
         os.environ["JAC_PROC_DEBUG"] = "1"
         mod_path = self.fixture_abs_path("needs_import_2.jac")
-        output = get_child_import_module(mod_path)
+        mod = jac_file_to_pass(mod_path, target=ImportPass).ir.get_all_sub_nodes(
+            ast.Module
+        )[0]
+        output = mod.__class__.__bases__[0].unparse(mod)
         self.assertIn(
             "except AssertionError as e { print ( 'Asserted:' , e ) ; }", output
         )
@@ -455,7 +462,10 @@ class JacLanguageTests(TestCase):
         """Test py ast to Jac ast conversion."""
         os.environ["JAC_PROC_DEBUG"] = "1"
         mod_path = self.fixture_abs_path("needs_import_3.jac")
-        output = get_child_import_module(mod_path)
+        mod = jac_file_to_pass(mod_path, target=ImportPass).ir.get_all_sub_nodes(
+            ast.Module
+        )[0]
+        output = mod.__class__.__bases__[0].unparse(mod)
         self.assertIn(" case _ as day : print ( 'o", output)
         self.assertIn(
             "'Python function for testing py imports.' with entry { :g:|:global:",
