@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast as ast3
-import os
 from types import EllipsisType
 from typing import Any, Callable, Generic, Optional, Sequence, Type, TypeVar
 
@@ -414,14 +413,7 @@ class Module(AstDocNode):
 
     def unparse(self) -> str:
         """Unparse module node."""
-        if os.environ.get("JAC_PROC_DEBUG", False):
-            directory = os.path.dirname(self.source.file_path)
-            gen = os.path.join(directory, Con.JAC_GEN_DIR)
-            if not os.path.exists(gen):
-                os.makedirs(gen)
-            file_path = f"{self.name}.txt"
-            with open(os.path.join(gen, file_path), "w") as file:
-                file.write(super().unparse())
+        super().unparse()
         return self.format()
 
 
