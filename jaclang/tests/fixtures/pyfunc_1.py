@@ -1,3 +1,5 @@
+# flake8: noqa
+
 """Python function for testing py imports."""
 
 from enum import Enum
@@ -101,24 +103,35 @@ result78 = [
 ]
 print(result78)
 
-path = r"C:\Users\Alice\Documents"
-print(path)  # output : C:\Users\Alice\Documents
-print(type(path))  # output : <class 'str'>
 
-hello_world_bytes = b"\x48\x65\x6C\x6C\x6F\x20\x57\x6F\x72\x6C\x64"
-print(hello_world_bytes)  # output : b'Hello World'
-print(type(hello_world_bytes))  # output : <class 'bytes'>
+class Car:
+    wheels: int = 4
 
-ret_str = r"Hello\\nWorld"
-print(ret_str)  # output : Hello\\nWorld
+    def __init__(self, make: str, model: str, year: int):
+        self.make = make
+        self.model = model
+        self.year = year
 
-br = rb"Hello\\nWorld"
-print(br)  # output : b'Hello\\\\nWorld'
-print(type(br))  # output : <class 'bytes'>
+    def display_car_info(self):
+        print(f"Car Info: {self.year} {self.make} {self.model}")
 
-rb = rb"Hello\\nWorld"
-print(rb)  # output : b'Hello\\\\nWorld'
-print(type(rb))  # output : <class 'bytes'>
+    @staticmethod
+    def get_wheels():
+        return Car.wheels
+
+
+car1 = Car("Toyota", "Camry", 2020)
+car1.display_car_info()
+print("Number of wheels:", Car.get_wheels())
+
+p = print
+
+p("Multiply:", 7 * 2)
+p("Division:", 15 / 3)
+p("Floor:", 15 // 3)
+p("Modulo:", 17 % 5)
+p("Expon:", 2**3)
+p("combo:", (9 + 2) * 9 - 2)
 
 
 for i in range(a):

@@ -1,3 +1,5 @@
+# flake8: noqa
+
 """Python function for testing py imports."""
 
 global a, X, y, z

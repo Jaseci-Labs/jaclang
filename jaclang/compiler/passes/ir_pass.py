@@ -79,7 +79,7 @@ class Pass(Transform[ast.T]):
 
     @staticmethod
     def has_parent_of_node(node: ast.AstNode, parent: ast.AstNode) -> bool:
-        """check if node has parent of type"""
+        """Check if node has parent of type."""
         while node.parent:
             if node.parent == parent:
                 return True
