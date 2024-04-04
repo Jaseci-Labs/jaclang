@@ -268,8 +268,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             else None
         )
         body = body[1:] if doc else body
+        val_body = [i for i in body if isinstance(i, ast.ArchBlockStmt)]
         valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-            items=body, delim=Tok.WS, kid=body
+            items=val_body, delim=Tok.WS, kid=body
         )
 
         base_classes = [self.convert(base) for base in node.bases]
