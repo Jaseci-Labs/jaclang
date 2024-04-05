@@ -1,8 +1,8 @@
 """Test Jac language generally."""
 
 import io
-import json
 import os
+import pickle
 import sys
 
 from jaclang import jac_import
@@ -109,7 +109,6 @@ class JacLanguageTests(TestCase):
 
     def test_with_llm_function(self) -> None:
         """Parse micro jac file."""
-        os.environ["JAC_REGISTRY_DEBUG"] = "1"
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("with_llm_function", base_path=self.fixture_abs_path("./"))
@@ -122,11 +121,9 @@ class JacLanguageTests(TestCase):
             'Examples of Text to Emoji (emoji_examples) (list[dict[str,str]]) = [{"input": "I love tp drink pina coladas"',  # noqa E501
             stdout_value,
         )
-        del os.environ["JAC_REGISTRY_DEBUG"]
 
     def test_with_llm_method(self) -> None:
         """Parse micro jac file."""
-        os.environ["JAC_REGISTRY_DEBUG"] = "1"
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("with_llm_method", base_path=self.fixture_abs_path("./"))
@@ -134,7 +131,7 @@ class JacLanguageTests(TestCase):
         stdout_value = captured_output.getvalue()
         self.assertIn("[Reasoning] <Reason>", stdout_value)
         self.assertIn(
-            "Personality Index of a Person (PersonalityIndex) (class) = Personality Index (index) (int)",
+            "Personality Index of a Person (class) (PersonalityIndex) = Personality Index (int) (index)",
             stdout_value,
         )
         self.assertIn(
@@ -142,14 +139,12 @@ class JacLanguageTests(TestCase):
             stdout_value,
         )
         self.assertIn(
-            '["I won noble prize in Physics", "I am popular for my theory of relativity"]',  # noqa E501
+            'Diary Entries (diary_entries) (list[str]) = ["I won noble prize in Physics", "I am popular for my theory of relativity"]',  # noqa E501
             stdout_value,
         )
-        del os.environ["JAC_REGISTRY_DEBUG"]
 
     def test_with_llm_lower(self) -> None:
         """Parse micro jac file."""
-        os.environ["JAC_REGISTRY_DEBUG"] = "1"
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("with_llm_lower", base_path=self.fixture_abs_path("./"))
@@ -161,21 +156,13 @@ class JacLanguageTests(TestCase):
             stdout_value,
         )
         self.assertIn(
-            "Person (Person) (obj) = Fullname of the Person (full_name) (str), Year of Death (yod) (int), Personality of the Person (personality) (Personality)",  # noqa E501
+            "Person (obj) (Person) = Fullname of the Person (str) (full_name), Year of Death (int) (yod), Personality of the Person (Personality) (personality)",  # noqa E501
             stdout_value,
         )
         self.assertIn(
             "J. Robert Oppenheimer was a Introvert person who died in 1967",
             stdout_value,
         )
-        os.remove(
-            os.path.join(
-                self.fixture_abs_path("./"),
-                "__jac_gen__",
-                "with_llm_lower_registry.json",
-            )
-        )
-        del os.environ["JAC_REGISTRY_DEBUG"]
 
     def test_with_llm_type(self) -> None:
         """Parse micro jac file."""
@@ -474,7 +461,6 @@ class JacLanguageTests(TestCase):
 
     def test_registry(self) -> None:
         """Test Jac registry feature."""
-        os.environ["JAC_REGISTRY_DEBUG"] = "1"
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("registry", base_path=self.fixture_abs_path("./"))
@@ -484,22 +470,12 @@ class JacLanguageTests(TestCase):
 
         with open(
             os.path.join(
-                self.fixture_abs_path("./"), "__jac_gen__", "registry_registry.json"
+                self.fixture_abs_path("./"), "__jac_gen__", "registry.registry.pkl"
             ),
-            "r",
+            "rb",
         ) as f:
-            registry = json.load(f)
-        self.assertEqual(
-            registry["registry(Module)"]["personality_examples"],
-            ["dict[str,Personality|None]", "Personality Information of Famous People"],
-        )
-        self.assertEqual(
-            registry["registry(Module).Personality(Enum)"]["INTROVERT"],
-            [None, "Person who is shy and reticent"],
-        )
-        os.remove(
-            os.path.join(
-                self.fixture_abs_path("./"), "__jac_gen__", "registry_registry.json"
-            )
-        )
-        del os.environ["JAC_REGISTRY_DEBUG"]
+            registry = pickle.load(f)
+
+        self.assertEqual(len(registry.registry), 3)
+        self.assertEqual(len(list(registry.registry.items())[0][1]), 10)
+        self.assertEqual(list(registry.registry.items())[1][0].scope, "Person")

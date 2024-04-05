@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import json
-import logging
+import fnmatch
 import os
+import pickle
 import types
 from dataclasses import field
 from functools import wraps
@@ -13,7 +13,15 @@ from typing import Any, Callable, Optional, Type
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
-from jaclang.core.aott import aott_raise, get_reasoning_output
+from jaclang.core.aott import (
+    aott_raise,
+    extract_non_primary_type,
+    get_all_type_explanations,
+    get_info_types,
+    get_object_string,
+    get_reasoning_output,
+    get_type_annotation,
+)
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -30,14 +38,8 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.utils import (
-    extract_non_primary_type,
-    filter,
-    get_all_type_explanations,
-    get_object_string,
-    get_type_annotation,
-    traverse_graph,
-)
+from jaclang.core.registry import Scope
+from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -195,20 +197,57 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def run_test(filename: str) -> bool:
-        """Run the test suite in the specified .jac file.
-
-        :param filename: The path to the .jac file.
-        """
-        if filename.endswith(".jac"):
-            base, mod_name = os.path.split(filename)
-            base = base if base else "./"
-            mod_name = mod_name[:-4]
-            JacTestCheck.reset()
-            Jac.jac_import(target=mod_name, base_path=base)
-            JacTestCheck.run_test()
+    def run_test(
+        filepath: str,
+        filter: Optional[str],
+        xit: bool,
+        maxfail: Optional[int],
+        directory: Optional[str],
+        verbose: bool,
+    ) -> bool:
+        """Run the test suite in the specified .jac file."""
+        test_file = False
+        if filepath:
+            if filepath.endswith(".jac"):
+                base, mod_name = os.path.split(filepath)
+                base = base if base else "./"
+                mod_name = mod_name[:-4]
+                JacTestCheck.reset()
+                Jac.jac_import(target=mod_name, base_path=base)
+                JacTestCheck.run_test(xit, maxfail, verbose)
+            else:
+                print("Not a .jac file.")
         else:
-            print("Not a .jac file.")
+            directory = directory if directory else os.getcwd()
+
+        if filter or directory:
+            current_dir = directory if directory else os.getcwd()
+            for root_dir, _, files in os.walk(current_dir, topdown=True):
+                files = (
+                    [file for file in files if fnmatch.fnmatch(file, filter)]
+                    if filter
+                    else files
+                )
+                files = [
+                    file
+                    for file in files
+                    if not file.endswith((".test.jac", ".impl.jac"))
+                ]
+                for file in files:
+                    if file.endswith(".jac"):
+                        test_file = True
+                        print(f"\n\n\t\t* Inside {root_dir}" + "/" + f"{file} *")
+                        JacTestCheck.reset()
+                        Jac.jac_import(target=file[:-4], base_path=root_dir)
+                        JacTestCheck.run_test(xit, maxfail, verbose)
+
+                    if JacTestCheck.breaker and (xit or maxfail):
+                        break
+                if JacTestCheck.breaker and (xit or maxfail):
+                    break
+            JacTestCheck.breaker = False
+            print("No test files found.") if not test_file else None
+
         return True
 
     @staticmethod
@@ -403,8 +442,8 @@ class JacFeatureDefaults:
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
         scope: str,
-        incl_info: tuple[str, str],
-        excl_info: tuple,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
         inputs: tuple,
         outputs: tuple,
         action: str,
@@ -414,11 +453,14 @@ class JacFeatureDefaults:
             os.path.join(
                 os.path.dirname(file_loc),
                 "__jac_gen__",
-                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
             ),
-            "r",
+            "rb",
         ) as f:
-            registry_data = json.load(f)
+            mod_registry = pickle.load(f)
+
+        _scope = Scope.get_scope_from_str(scope)
+        assert _scope is not None
 
         reason = False
         if "reason" in model_params:
@@ -428,7 +470,7 @@ class JacFeatureDefaults:
             context = "\n".join(model_params.pop("context"))
 
         type_collector: list = []
-        information, collected_types = filter(scope, registry_data, incl_info)
+        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
         type_collector.extend(collected_types)
 
         inputs_information_list = []
@@ -444,7 +486,7 @@ class JacFeatureDefaults:
         type_collector.extend(extract_non_primary_type(outputs[1]))
 
         type_explanations_list = list(
-            get_all_type_explanations(type_collector, registry_data).values()
+            get_all_type_explanations(type_collector, mod_registry).values()
         )
         type_explanations = "\n".join(type_explanations_list)
 
