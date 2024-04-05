@@ -6,7 +6,7 @@ import:jac from utils.file2, green_apple;
 import:py ast;
 import:py os;
 
-obj VariableClassFinder:ast.NodeVisitor: { 
+obj VariableClassFinder:ast.NodeVisitor: {
     has obj: str,
         found: bool = False;
 
@@ -62,7 +62,7 @@ can get_declaration_loc(obj: str, file_path: str = os.path.realpath(__file__)) {
         if not os.path.exists(import_path) {continue;}
         did_found = get_declaration_loc(obj, import_path);
         if did_found {return did_found;}
-     }       
+     }
 }
 
 with entry {
