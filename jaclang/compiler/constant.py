@@ -79,7 +79,6 @@ class Tokens(str, Enum):
     KW_LET = "KW_LET"
     KW_ABSTRACT = "KW_ABSTRACT"
     KW_OBJECT = "KW_OBJECT"
-    KW_MODEL = "KW_MODEL"
     KW_CLASS = "KW_CLASS"
     KW_ENUM = "KW_ENUM"
     KW_NODE = "KW_NODE"

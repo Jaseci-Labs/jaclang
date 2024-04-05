@@ -38,7 +38,6 @@ from jaclang.core.utils import (
     get_type_annotation,
     traverse_graph,
 )
-from jaclang.core.model import create_model
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -463,12 +462,6 @@ class JacFeatureDefaults:
         meaning_out = model.__infer__(meaning_in, **model_params)
         reasoning, output = get_reasoning_output(meaning_out)
         return output
-
-    @staticmethod
-    @hookimpl
-    def Model(model: Any, kwargs: dict):  # noqa: ANN401
-        """Jac's Model feature."""
-        return create_model(model, **kwargs)
 
     @staticmethod
     @hookimpl

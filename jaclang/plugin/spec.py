@@ -222,12 +222,6 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def Model(model: Any, kwargs: dict):  # noqa: ANN401
-        """Jac's Model CC feature."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
     def get_semstr_type(
         file_loc: str, scope: str, attr: str, index: str
     ) -> str:  # noqa: ANN401

@@ -15,7 +15,6 @@ element: import_stmt
        | free_code
        | py_code_block
        | test
-       | model
 
 // Import/Include Statements
 import_stmt: KW_IMPORT sub_name KW_FROM from_path COMMA import_items SEMI
@@ -45,7 +44,6 @@ arch_type: KW_WALKER
           | KW_EDGE
           | KW_NODE
           | KW_CLASS
-          | KW_MODEL
 
 // Architype bodies
 member_block: LBRACE member_stmt* RBRACE
@@ -67,10 +65,6 @@ enum_stmt: NAME (COLON STRING)? EQ expression
          | NAME (COLON STRING)?
          | py_code_block
 
-// Model
-model: KW_MODEL NAME COLON NAME model_block
-model_block: LBRACE (model_param COMMA)* model_param SEMI RBRACE
-model_param: NAME EQ expression
 
 // Abilities
 ability: decorators? ability_def
@@ -507,7 +501,6 @@ TYP_TYPE: "type"
 KW_LET: "let"
 KW_ABSTRACT: "abs"
 KW_CLASS: "class"
-KW_MODEL: "model"
 KW_OBJECT: "obj"
 KW_ENUM: "enum"
 KW_NODE: "node"
