@@ -2160,6 +2160,30 @@ class LlmTypeStmt(CodeBlockStmt, AstSemStrNode):
         AstNode.__init__(self, kid=kid)
         AstSemStrNode.__init__(self, semstr=semstr)
 
+    def normalize(self, deep: bool = False) -> bool:
+        """Normalize llm type statement node."""
+        res = True
+        if deep:
+            res = self.type_tag.normalize(deep)
+            res = res and self.value.normalize(deep)
+            res = res and self.target.normalize(deep)
+            res = res and self.func.normalize(deep)
+            res = res and self.semstr.normalize(deep) if self.semstr else res
+        new_kid: list[AstNode] = []
+        new_kid.append(self.target)
+        new_kid.append(self.gen_token(Tok.COLON))
+        if self.semstr:
+            new_kid.append(self.semstr)
+            new_kid.append(self.gen_token(Tok.COLON))
+        new_kid.append(self.type_tag)
+        new_kid.append(self.gen_token(Tok.EQ))
+        new_kid.append(self.value)
+        new_kid.append(self.gen_token(Tok.KW_BY))
+        new_kid.append(self.func)
+        new_kid.append(self.gen_token(Tok.SEMI))
+        AstNode.__init__(self, kid=new_kid)
+        return res
+
 
 class DisengageStmt(WalkerStmtOnlyNode, CodeBlockStmt):
     """DisengageStmt node type for Jac Ast."""

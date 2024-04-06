@@ -251,16 +251,18 @@ class JacFeature:
         )
 
     @staticmethod
-    def get_semstr_type(file_loc: str, scope: str, attr: str, index: int) -> str:
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool = True
+    ) -> Optional[str]:
         """Jac's get_semstr_type feature."""
         return pm.hook.get_semstr_type(
-            file_loc=file_loc, scope=scope, attr=attr, index=index
+            file_loc=file_loc, scope=scope, attr=attr, return_semstr=return_semstr
         )
 
     @staticmethod
-    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
+    def obj_scope(file_loc: str, attr: str) -> str:
         """Jac's get_semstr_type feature."""
-        return pm.hook.gather_scope(file_loc=file_loc, scope=scope, attr=attr)
+        return pm.hook.obj_scope(file_loc=file_loc, attr=attr)
 
 
 class JacCmd:

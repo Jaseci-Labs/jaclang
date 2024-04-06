@@ -227,14 +227,14 @@ class JacFeatureSpec:
     @staticmethod
     @hookspec(firstresult=True)
     def get_semstr_type(
-        file_loc: str, scope: str, attr: str, index: str
-    ) -> str:  # noqa: ANN401
+        file_loc: str, scope: str, attr: str, return_semstr: bool = True
+    ) -> Optional[str]:
         """Jac's get_semstr_type stmt feature."""
         raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)
-    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
+    def obj_scope(file_loc: str, attr: str) -> str:
         """Jac's get_semstr_type feature."""
         raise NotImplementedError
 
