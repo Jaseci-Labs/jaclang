@@ -13,7 +13,7 @@ import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Constants as Con
 from jaclang.compiler.passes import Pass
 from jaclang.core.registry import Registry, Scope, SemInfo
-from jaclang.core.utils import get_scope
+from jaclang.core.utils import get_scope, extract_type
 
 
 class RegistryPass(Pass):
@@ -68,9 +68,7 @@ class RegistryPass(Pass):
     def exit_has_var(self, node: ast.HasVar) -> None:
         """Save variable information."""
         extracted_type = (
-            "".join(self.extract_type(node.type_tag.kid[1:][0]))
-            if node.type_tag
-            else None
+            "".join(extract_type(node.type_tag.kid[1:][0])) if node.type_tag else None
         )
         scope = get_scope(node)
         seminfo = SemInfo(
@@ -87,9 +85,7 @@ class RegistryPass(Pass):
             return
 
         extracted_type = (
-            "".join(self.extract_type(node.type_tag.kid[1:][0]))
-            if node.type_tag
-            else None
+            "".join(extract_type(node.type_tag.kid[1:][0])) if node.type_tag else None
         )
         scope = get_scope(node)
         seminfo = SemInfo(
@@ -137,12 +133,3 @@ class RegistryPass(Pass):
             if node.parent:
                 return get_scope(node.parent)
         return Scope("", "", None)
-
-    def extract_type(self, node: ast.AstNode) -> list[str]:
-        """Collect type information in assignment using bfs."""
-        extracted_type = []
-        if isinstance(node, (ast.BuiltinType, ast.Token)):
-            extracted_type.append(node.value)
-        for child in node.kid:
-            extracted_type.extend(self.extract_type(child))
-        return extracted_type

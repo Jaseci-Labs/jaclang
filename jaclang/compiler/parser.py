@@ -1680,7 +1680,7 @@ class JacParser(Pass):
             value = chomp[2]
             func = chomp[-1]
             if (
-                isinstance(target, (ast.Name, ast.AtomTrailer))
+                isinstance(target, (ast.Expr))
                 and isinstance(value, ast.FuncCall)
                 and isinstance(type_tag, ast.SubTag)
                 and isinstance(func, ast.FuncCall)

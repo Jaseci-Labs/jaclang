@@ -113,3 +113,72 @@ def get_scope(node: ast.AstNode) -> Scope:
         if node.parent:
             return get_scope(node.parent)
     return Scope("", "", None)
+
+
+def extract_type(node: ast.AstNode) -> list[str]:
+    """Collect type information in assignment using bfs."""
+    extracted_type = []
+    if isinstance(node, (ast.BuiltinType, ast.Token)):
+        extracted_type.append(node.value)
+    for child in node.kid:
+        extracted_type.extend(extract_type(child))
+    return extracted_type
+
+
+def get_with_llm_params(body: ast.FuncCall) -> tuple[dict, list, list]:
+    """Collect function call information."""
+    model_params: dict = {}
+    include_info: list = []
+    exclude_info: list = []
+    if body.params:
+        for param in body.params.items:
+            if isinstance(param, ast.KWPair) and isinstance(param.key, ast.Name):
+                key = param.key.value
+                value = param.value
+                if key not in ["incl_info", "excl_info"]:
+                    model_params[key] = value
+                elif key == "incl_info":
+                    if isinstance(value, ast.AtomUnit):
+                        var_name = (
+                            value.value.right.value
+                            if isinstance(value.value, ast.AtomTrailer)
+                            and isinstance(value.value.right, ast.Name)
+                            else (
+                                value.value.value
+                                if isinstance(value.value, ast.Name)
+                                else ""
+                            )
+                        )
+                        include_info.append((var_name, value.gen.py_ast[0]))
+                    elif isinstance(value, ast.TupleVal) and value.values:
+                        for i in value.values.items:
+                            var_name = (
+                                i.right.value
+                                if isinstance(i, ast.AtomTrailer)
+                                and isinstance(i.right, ast.Name)
+                                else (i.value if isinstance(i, ast.Name) else "")
+                            )
+                            include_info.append((var_name, i.gen.py_ast[0]))
+                elif key == "excl_info":
+                    if isinstance(value, ast.AtomUnit):
+                        var_name = (
+                            value.value.right.value
+                            if isinstance(value.value, ast.AtomTrailer)
+                            and isinstance(value.value.right, ast.Name)
+                            else (
+                                value.value.value
+                                if isinstance(value.value, ast.Name)
+                                else ""
+                            )
+                        )
+                        exclude_info.append((var_name, value.gen.py_ast[0]))
+                    elif isinstance(value, ast.TupleVal) and value.values:
+                        for i in value.values.items:
+                            var_name = (
+                                i.right.value
+                                if isinstance(i, ast.AtomTrailer)
+                                and isinstance(i.right, ast.Name)
+                                else (i.value if isinstance(i, ast.Name) else "")
+                            )
+                            exclude_info.append((var_name, i.gen.py_ast[0]))
+    return model_params, include_info, exclude_info

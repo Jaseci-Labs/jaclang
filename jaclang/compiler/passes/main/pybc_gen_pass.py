@@ -38,6 +38,7 @@ class PyBytecodeGenPass(Pass):
                     node,
                 )
                 continue
+            # print(ast3.dump(mod.gen.py_ast[0], indent=2))
             mod.gen.py_bytecode = marshal.dumps(
                 compile(
                     source=mod.gen.py_ast[0], filename=mod.loc.mod_path, mode="exec"

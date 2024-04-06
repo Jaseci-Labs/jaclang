@@ -24,7 +24,6 @@
 **Grammar Snippet**
 ```yaml linenums="20"
 --8<-- "jaclang/compiler/jac.lark:20:30"
---8<-- "jaclang/compiler/jac.lark:20:30"
 ```
 **Code Example**
 === "Jac"

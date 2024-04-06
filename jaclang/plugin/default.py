@@ -38,7 +38,7 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.registry import Scope
+from jaclang.core.registry import Scope, Registry
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -507,49 +507,43 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_semstr_type(file_loc: str, scope: str, attr: str, index: int) -> str:
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool = True
+    ) -> Optional[str]:
         """Jac's get_semstr_type feature."""
+        _scope = Scope.get_scope_from_str(scope)
         with open(
             os.path.join(
                 os.path.dirname(file_loc),
                 "__jac_gen__",
-                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
             ),
-            "r",
+            "rb",
         ) as f:
-            registry_data = json.load(f)
-        semstr_typ = registry_data[scope][attr][index]
-        return semstr_typ
+            mod_registry: Registry = pickle.load(f)
+        _, attr_seminfo = mod_registry.lookup(_scope, attr)
+        if attr_seminfo:
+            return attr_seminfo.semstr if return_semstr else attr_seminfo.type
+        return None
 
     @staticmethod
     @hookimpl
-    def gather_scope(file_loc: str, scope: str, attr: str) -> str:
-        """Jac's get_semstr_type feature."""
+    def obj_scope(file_loc: str, attr: str) -> str:
+        """Jac's gather_scope feature."""
         with open(
             os.path.join(
                 os.path.dirname(file_loc),
                 "__jac_gen__",
-                os.path.basename(file_loc).replace(".jac", "_registry.json"),
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
             ),
-            "r",
+            "rb",
         ) as f:
-            registry_data = json.load(f)
-        list_of_scopes: list[str] | str = [scope] + [
-            ".".join(scope.split(".")[:i]) for i in range(1, len(scope.split(".")))
-        ]
-        list_of_attrs = attr.split(".")
-        for i in list_of_scopes:
-            avail_typees = registry_data[i].keys()
-            for j in list_of_attrs:
-                list_of_attrs.pop(0)
-                if j in avail_typees:
-                    new_scope = f"{i}.{j}({registry_data[i][j][0]})"
-                    list_of_scopes = new_scope
-                    if len(list_of_attrs) != 0:
-                        pass
-                    else:
-                        break
-        return new_scope
+            mod_registry: Registry = pickle.load(f)
+
+        attr_scope = None
+        for x in attr.split("."):
+            attr_scope, _ = mod_registry.lookup(attr_scope, x)
+        return str(attr_scope)
 
 
 class JacBuiltin:

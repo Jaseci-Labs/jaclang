@@ -2145,7 +2145,7 @@ class LlmTypeStmt(CodeBlockStmt, AstSemStrNode):
 
     def __init__(
         self,
-        target: Name | AtomTrailer,
+        target: SubNodeList[Expr],
         type_tag: SubTag[Expr],
         value: FuncCall,
         func: FuncCall,
