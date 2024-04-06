@@ -129,6 +129,7 @@ class AstSyncTestMixin:
                 "name_spec",
                 "arch_spec",
                 "match_pattern",
+                "llm_type_stmt",
             ]
         ]
         pygen_func_names = []
