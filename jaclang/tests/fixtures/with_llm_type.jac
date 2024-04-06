@@ -34,9 +34,17 @@ University {
     }
 }
 
-with entry {
-    mit: 'MIT University': University = University(name="University of Michigan", location="Ann Arbor, Michigan");
-    cs_department: 'Computer Science Department': University.Department = mit.Department(name="Computer Science")
-    by llm2(incl_info=(mit), context=["Jason Mars is the head of the department.", "He is now 30 years old.", "Now is 2024"]);
-    print(cs_department.head); # Person(name='Jason Mars', dob='1994-01-01', age=30)
+obj 'Country'
+country {
+    can create_univeristy(location: str) {
+        university: "New Univerisity": University = University(location=location)
+        by llm1(context=["Choose a tamil name"]);
+    }
 }
+
+# with entry {
+#     mit: 'MIT University': University = University(name="University of Michigan", location="Ann Arbor, Michigan");
+#     cs_department: 'Computer Science Department': University.Department = mit.Department(name="Computer Science")
+#     by llm2(incl_info=(mit), context=["Jason Mars is the head of the department.", "He is now 30 years old.", "Now is 2024"]);
+#     print(cs_department.head); # Person(name='Jason Mars', dob='1994-01-01', age=30)
+# }
