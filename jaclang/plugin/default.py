@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import logging
 import os
 import pickle
 import types
@@ -38,7 +39,7 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.registry import Scope, Registry
+from jaclang.core.registry import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -457,9 +458,9 @@ class JacFeatureDefaults:
             ),
             "rb",
         ) as f:
-            mod_registry = pickle.load(f)
+            mod_registry: SemRegistry = pickle.load(f)
 
-        _scope = Scope.get_scope_from_str(scope)
+        _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
         reason = False
@@ -511,7 +512,7 @@ class JacFeatureDefaults:
         file_loc: str, scope: str, attr: str, return_semstr: bool = True
     ) -> Optional[str]:
         """Jac's get_semstr_type feature."""
-        _scope = Scope.get_scope_from_str(scope)
+        _scope = SemScope.get_scope_from_str(scope)
         with open(
             os.path.join(
                 os.path.dirname(file_loc),
@@ -520,9 +521,9 @@ class JacFeatureDefaults:
             ),
             "rb",
         ) as f:
-            mod_registry: Registry = pickle.load(f)
+            mod_registry: SemRegistry = pickle.load(f)
         _, attr_seminfo = mod_registry.lookup(_scope, attr)
-        if attr_seminfo:
+        if attr_seminfo and isinstance(attr_seminfo, SemInfo):
             return attr_seminfo.semstr if return_semstr else attr_seminfo.type
         return None
 
@@ -538,7 +539,7 @@ class JacFeatureDefaults:
             ),
             "rb",
         ) as f:
-            mod_registry: Registry = pickle.load(f)
+            mod_registry: SemRegistry = pickle.load(f)
 
         attr_scope = None
         for x in attr.split("."):

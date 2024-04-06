@@ -6,12 +6,12 @@ in each node. Module nodes contain the entire module code.
 
 import ast as ast3
 import textwrap
-from typing import Optional, Sequence, TypeVar, Any
+from typing import Any, Optional, Sequence, TypeVar
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Constants as Con, EdgeDir, Tokens as Tok
 from jaclang.compiler.passes import Pass
-from jaclang.core.utils import get_scope, extract_type, get_with_llm_params
+from jaclang.core.utils import extract_type, get_sem_scope, get_with_llm_params
 
 T = TypeVar("T", bound=ast3.AST)
 
@@ -933,7 +933,7 @@ class PyastGenPass(Pass):
         if isinstance(node.body, ast.FuncCall):
             _target = self.sync(ast3.Name(id="output", ctx=ast3.Store()))
             _model = node.body.target.gen.py_ast[0]
-            _scope = self.sync(ast3.Constant(value=str(get_scope(node))))
+            _scope = self.sync(ast3.Constant(value=str(get_sem_scope(node))))
             _model_params, _include_info, _exclude_info = get_with_llm_params(node.body)
             inputs = (
                 [
@@ -1912,7 +1912,7 @@ class PyastGenPass(Pass):
         _inputs: list[ast3.Tuple],
         _outputs: list[ast3.Constant],
         _action: ast3.AST | None,
-    ):
+    ) -> ast3.AST:
         """Assign the llm function call to the target variable."""
         return self.sync(
             ast3.Assign(
