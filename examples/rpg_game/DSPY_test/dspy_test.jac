@@ -1,6 +1,6 @@
 import:py sys;
 import:py os;
-import:py from dspy, OpenAI;
+import:py dspy;
 
 with entry{
     gpt3_turbo:Any = dspy.OpenAI(model='gpt-3.5-turbo-1106', max_tokens=300);
