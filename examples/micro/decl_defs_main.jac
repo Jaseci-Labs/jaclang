@@ -3,14 +3,14 @@
 A data-spatial object is shown in this example, however it applies
 to all types of object classes.
 """
-include:jac decl_defs_impl;
+# include:jac decl_defs_impl;
 
-walker travelor {
-    can say_hello with entry abs;  # data spatial ability declared
-    can say_whatever(msg: str) -> None abs;  # traditional method declared
+# walker travelor {
+#     can say_hello with entry abs;  # data spatial ability declared
+#     can say_whatever(msg: str) -> None abs;  # traditional method declared
 
-    # inline ability definition (python only supports this)
-    can say_goodbye {
-        "Goodbye" |> print;
-    }
-}
+#     # inline ability definition (python only supports this)
+#     can say_goodbye {
+#         "Goodbye" |> print;
+#     }
+# }

@@ -20,15 +20,15 @@ node turn {
     } else {
         "That's not a valid number! Try again." |> print;
     }
-    visit [-->];
+    # visit [-->];
 }
 
 :walker:GuessGame:can:start_game {
-    end = here;
-    for i=0 to i<10 by i+=1  {
-        end ++> (end := turn());
-    }
-    visit [-->];
+    # end = here;
+    # for i=0 to i<10 by i+=1  {
+    #     end ++> (end := turn());
+    # }
+    # visit [-->];
 }
 
 :walker:GuessGame:can:process_guess

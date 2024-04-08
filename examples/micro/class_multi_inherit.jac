@@ -1,11 +1,11 @@
 """Example of multiple inheritance."""
 
-obj Parent {
-    can init {
-    # Parent initialization
-    }
-    can speak() -> None abs;# Abstract method
-}
+# obj Parent {
+#     can init {
+#     # Parent initialization
+#     }
+#     can speak() -> None abs;# Abstract method
+# }
 
 obj Mom :Parent: {
     can init {

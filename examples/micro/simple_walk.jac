@@ -10,10 +10,10 @@ walker Creator {
     has count: int = 0;
 
     can create with `root | Item entry {
-        here ++> Item();
+        # here ++> Item();
         self.count+=1;
         if self.count < 10 {
-            visit [-->];
+            # visit [-->];
         }
     }
 }
@@ -28,7 +28,8 @@ walker Walk {
     can step with Item entry {
         here.value = self.count;
         self.count+=1;
-        visit [-->] else {
+        # visit [-->] 
+        else {
             print(f'Final Value: {here.value - 1}');
             "Done walking." |> print;
             disengage;

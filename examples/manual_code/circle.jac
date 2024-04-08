@@ -23,12 +23,12 @@ enum ShapeType  {
     UNKNOWN="Unknown"
 }
 
-"""Base class for a shape."""
+# """Base class for a shape."""
 obj Shape {
     has shape_type: ShapeType;
 
-    """Abstract method to calculate the area of a shape."""
-    can area -> float abs;
+#     """Abstract method to calculate the area of a shape."""
+#     can area -> float abs;
 }
 
 """Circle class inherits from Shape."""
@@ -50,9 +50,10 @@ with entry {
 # Global also works here
 
 with entry:__main__ {
+    print(78);
 # To run the program functionality
-print(f"Area of a circle with radius {RAD} using function: {calculate_area(RAD)}");
-print(f"Area of a {c.shape_type.value} with radius {RAD} using class: {c.area()}");
+# print(f"Area of a circle with radius {RAD} using function: {calculate_area(RAD)}");
+# print(f"Area of a {c.shape_type.value} with radius {RAD} using class: {c.area()}");
 }
 # Unit Tests!
 

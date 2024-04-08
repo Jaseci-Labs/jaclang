@@ -5,29 +5,29 @@ the area of a circle in all of Jac's glory.
 
 import:py math;
 
-enum ShapeType;
+# enum ShapeType;
 
-can calculate_area(radius: float) -> float;
+# can calculate_area(radius: float) -> float;
 
-can main_run;
+# can main_run;
 
-"""Base class for a shape."""
-obj Shape {
-    has shape_type: ShapeType;
+# """Base class for a shape."""
+# obj Shape {
+#     has shape_type: ShapeType;
 
-    can area -> float abs;
-}
+#     can area -> float abs;
+# }
 
-"""Circle class inherits from Shape."""
-obj Circle :Shape: {
-    has radius: float;
+# """Circle class inherits from Shape."""
+# obj Circle :Shape: {
+#     has radius: float;
 
-    can init(radius: float);
-    can area -> float;
-}
+#     can init(radius: float);
+#     can area -> float;
+# }
 # Radius of the demo circle
 
-glob RAD = 5, c = Circle(radius=RAD);
+# glob RAD = 5, c = Circle(radius=RAD);
 
 """Here we run the main program."""
 with entry:__main__ {

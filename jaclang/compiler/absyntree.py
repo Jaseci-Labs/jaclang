@@ -150,6 +150,10 @@ class AstNode:
 
     def unparse(self) -> str:
         """Unparse ast node."""
+        # print(f"Unparsing  {type(self).__name__}")
+        if isinstance(self , Module):
+            # print(f"Unparsing  {self.name}")
+            pass
         valid = self.normalize()
         res = " ".join([i.unparse() for i in self.kid])
         if not valid:
@@ -414,6 +418,7 @@ class Module(AstDocNode):
     def unparse(self) -> str:
         """Unparse module node."""
         super().unparse()
+        # print('super unparse : -->' , super().unparse())
         return self.format()
 
 
@@ -452,7 +457,7 @@ class GlobalVars(ElementStmt, AstAccessNode):
         if self.access:
             new_kid.append(self.access)
         new_kid.append(self.assignments)
-        new_kid.append(self.gen_token(Tok.SEMI))
+        # new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -549,10 +554,11 @@ class ModuleCode(ElementStmt, ArchBlockStmt, EnumBlockStmt):
         new_kid.append(self.gen_token(Tok.KW_ENTRY))
         if self.name:
             new_kid.append(self.name)
-        new_kid.append(self.gen_token(Tok.LBRACE))
+        # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-        new_kid.append(self.gen_token(Tok.RBRACE))
+        # new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
+        # print('newkidd : -->',new_kid)
         return res
 
 
@@ -817,7 +823,7 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
             if isinstance(self.body, AstImplOnlyNode):
                 new_kid.append(self.body.body)
             else:
-                new_kid.append(self.gen_token(Tok.LBRACE))
+                # new_kid.append(self.gen_token(Tok.LBRACE))
                 for item in self.body.items:
                     if isinstance(item, Ability) and isinstance(item.name_ref, Name):
                         if item.name_ref.value == "__init__":
@@ -834,7 +840,7 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
                             ]
 
                 new_kid.append(self.body)
-                new_kid.append(self.gen_token(Tok.RBRACE))
+                # new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -941,9 +947,13 @@ class Enum(ArchSpec, AstAccessNode, AstImplNeedingNode):
             new_kid.append(self.gen_token(Tok.COLON))
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
+                new_kid.append(self.gen_token(Tok.LBRACE))
                 new_kid.append(self.body.body)
+                new_kid.append(self.gen_token(Tok.RBRACE))
             else:
+                new_kid.append(self.gen_token(Tok.LBRACE))
                 new_kid.append(self.body)
+                new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -987,9 +997,9 @@ class EnumDef(ArchSpec, AstImplOnlyNode):
         if self.doc:
             new_kid.append(self.doc)
         new_kid.append(self.target)
-
+        new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-
+        new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -1099,11 +1109,15 @@ class Ability(
             new_kid.append(self.signature)
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
-                new_kid.append(self.body.body)
+                # if not self.is_method:
+                    # print('tfftftf : ',not self.is_method)
+                #     new_kid.append(self.gen_token(Tok.SEMI))
+                # else:
+                    new_kid.append(self.body.body)
             else:
-                new_kid.append(self.gen_token(Tok.LBRACE))
+                # new_kid.append(self.gen_token(Tok.LBRACE))
                 new_kid.append(self.body)
-                new_kid.append(self.gen_token(Tok.RBRACE))
+                # new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -1511,9 +1525,9 @@ class IfStmt(CodeBlockStmt, AstElseBodyNode):
         new_kid: list[AstNode] = [
             self.gen_token(Tok.KW_IF),
             self.condition,
-            self.gen_token(Tok.LBRACE),
+            # self.gen_token(Tok.LBRACE),
             self.body,
-            self.gen_token(Tok.RBRACE),
+            # self.gen_token(Tok.RBRACE),
         ]
         if self.else_body:
             new_kid.append(self.else_body)
@@ -1534,9 +1548,9 @@ class ElseIf(IfStmt):
         new_kid: list[AstNode] = [
             self.gen_token(Tok.KW_ELIF),
             self.condition,
-            self.gen_token(Tok.LBRACE),
+            # self.gen_token(Tok.LBRACE),
             self.body,
-            self.gen_token(Tok.RBRACE),
+            # self.gen_token(Tok.RBRACE),
         ]
         if self.else_body:
             new_kid.append(self.else_body)
@@ -1563,9 +1577,9 @@ class ElseStmt(AstNode):
             res = self.body.normalize(deep)
         new_kid: list[AstNode] = [
             self.gen_token(Tok.KW_ELSE),
-            self.gen_token(Tok.LBRACE),
+            # self.gen_token(Tok.LBRACE),
             self.body,
-            self.gen_token(Tok.RBRACE),
+            # self.gen_token(Tok.RBRACE),
         ]
         AstNode.__init__(self, kid=new_kid)
         return res
@@ -1585,18 +1599,18 @@ class ExprStmt(CodeBlockStmt):
         self.in_fstring = in_fstring
         AstNode.__init__(self, kid=kid)
 
-    def normalize(self, deep: bool = True) -> bool:
+   r def normalize(self, deep: bool = True) -> bool:
         """Normalize ast node."""
         if deep:
             res = self.expr.normalize(deep)
         new_kid: list[AstNode] = []
         if self.in_fstring:
-            new_kid.append(self.gen_token(Tok.FSTRING))
-            new_kid.append(self.gen_token(Tok.SQUOTE))
-            new_kid.append(self.gen_token(Tok.LBRACE))
+            # new_kid.append(self.gen_token(Tok.FSTRING))
+            # new_kid.append(self.gen_token(Tok.SQUOTE))
+            # new_kid.append(self.gen_token(Tok.LBRACE))
             new_kid.append(self.expr)
-            new_kid.append(self.gen_token(Tok.RBRACE))
-            new_kid.append(self.gen_token(Tok.SQUOTE))
+            # new_kid.append(self.gen_token(Tok.RBRACE))
+            # new_kid.append(self.gen_token(Tok.SQUOTE))
         else:
             new_kid.append(self.expr)
             new_kid.append(self.gen_token(Tok.SEMI))
@@ -1604,7 +1618,7 @@ class ExprStmt(CodeBlockStmt):
             self,
             kid=new_kid,
         )
-        return res and self.expr is not None
+        return res and self.exp is not None
 
 
 class TryStmt(AstElseBodyNode, CodeBlockStmt):
@@ -1638,9 +1652,9 @@ class TryStmt(AstElseBodyNode, CodeBlockStmt):
         new_kid: list[AstNode] = [
             self.gen_token(Tok.KW_TRY),
         ]
-        new_kid.append(self.gen_token(Tok.LBRACE))
+        # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-        new_kid.append(self.gen_token(Tok.RBRACE))
+        # new_kid.append(self.gen_token(Tok.RBRACE))
         if self.excepts:
             new_kid.append(self.excepts)
         if self.else_body:
@@ -1681,9 +1695,9 @@ class Except(CodeBlockStmt):
         if self.name:
             new_kid.append(self.gen_token(Tok.KW_AS))
             new_kid.append(self.name)
-        new_kid.append(self.gen_token(Tok.LBRACE))
+        # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-        new_kid.append(self.gen_token(Tok.RBRACE))
+        # new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -1708,9 +1722,9 @@ class FinallyStmt(CodeBlockStmt):
         new_kid: list[AstNode] = [
             self.gen_token(Tok.KW_FINALLY),
         ]
-        new_kid.append(self.gen_token(Tok.LBRACE))
+        # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-        new_kid.append(self.gen_token(Tok.RBRACE))
+        # new_kid.append(self.gen_token(Tok.RBRACE))
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -1755,9 +1769,9 @@ class IterForStmt(AstAsyncNode, AstElseBodyNode, CodeBlockStmt):
         new_kid.append(self.condition)
         new_kid.append(self.gen_token(Tok.KW_BY))
         new_kid.append(self.count_by)
-        new_kid.append(self.gen_token(Tok.LBRACE))
+        # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
-        new_kid.append(self.gen_token(Tok.RBRACE))
+        # new_kid.append(self.gen_token(Tok.RBRACE))
         if self.else_body:
             new_kid.append(self.else_body)
         AstNode.__init__(self, kid=new_kid)
@@ -1801,9 +1815,9 @@ class InForStmt(AstAsyncNode, AstElseBodyNode, CodeBlockStmt):
         new_kid.append(self.collection)
 
         if self.body:
-            new_kid.append(self.gen_token(Tok.LBRACE))
+            # new_kid.append(self.gen_token(Tok.LBRACE))
             new_kid.append(self.body)
-            new_kid.append(self.gen_token(Tok.RBRACE))
+            # new_kid.append(self.gen_token(Tok.RBRACE))
 
         if self.else_body:
             new_kid.append(self.else_body)
@@ -1836,9 +1850,9 @@ class WhileStmt(CodeBlockStmt):
             self.condition,
         ]
         if self.body:
-            new_kid.append(self.gen_token(Tok.LBRACE))
+            # new_kid.append(self.gen_token(Tok.LBRACE))
             new_kid.append(self.body)
-            new_kid.append(self.gen_token(Tok.RBRACE))
+            # new_kid.append(self.gen_token(Tok.RBRACE))
 
         AstNode.__init__(self, kid=new_kid)
         return res
@@ -2295,14 +2309,12 @@ class Assignment(AstSemStrNode, AstTypedVarNode, EnumBlockStmt, CodeBlockStmt):
             new_kid.append(self.type_tag)
         if self.aug_op:
             new_kid.append(self.aug_op)
-            new_kid.append(self.gen_token(Tok.EQ))
+            # new_kid.append(self.gen_token(Tok.EQ))
         else:
             new_kid.append(self.gen_token(Tok.EQ))
         if self.value:
             new_kid.append(self.value)
-        if not isinstance(self.parent, (GlobalVars)) and not isinstance(
-            self.parent, IterForStmt
-        ):
+        if (not self.is_enum_stmt) :
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res

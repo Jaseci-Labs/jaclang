@@ -1,5 +1,5 @@
 obj Point {
-    has x: flaot, y: float;
+    has x: float, y: float;
 }
 
 can match_example(data: dict) {
@@ -28,16 +28,16 @@ can match_example(data: dict) {
             print(f"Matched a mapping with key1 and key2. Rest: {rest}");
 
         # MatchClass
-        case Point(int(a), y=0):
-            print(f"Point with x={a} and y=0");
+        # case Point(int(a), y=0):
+        #     print(f"Point with x={a} and y=0");
 
         # MatchAs
         case [1, 2, rest_val as value]:
             print(f"Matched a sequence and captured the last value: {value}");
 
         # MatchOr
-        case [1, 2] | [3, 4]:
-            print("Matched either the sequence [1, 2] or [3, 4].");
+        # case [1, 2] | [3, 4]:
+        #     print("Matched either the sequence [1, 2] or [3, 4].");
 
         case _:
             print("No match found.");
