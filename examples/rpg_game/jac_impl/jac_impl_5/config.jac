@@ -127,7 +127,7 @@ glob MAP_smstr = 'the map of the level having (B) as block, (E) as enemy, (P) as
 #     }
 # }
 
-glob MAP_EXAMPLES:list[str] = [  
+glob MAP_EXAMPLES:list[str] = [
                                 "["
                                 "'BBBBBBBBBBBBBBBBBBBB',"
                                 "'B..................B',"

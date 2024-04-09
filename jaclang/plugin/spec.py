@@ -88,11 +88,15 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def run_test(filename: str) -> bool:
-        """Run the test suite in the specified .jac file.
-
-        :param filename: The path to the .jac file.
-        """
+    def run_test(
+        filepath: str,
+        filter: Optional[str],
+        xit: bool,
+        maxfail: Optional[int],
+        directory: Optional[str],
+        verbose: bool,
+    ) -> bool:
+        """Run the test suite in the specified .jac file."""
         raise NotImplementedError
 
     @staticmethod
@@ -211,8 +215,8 @@ class JacFeatureSpec:
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
         scope: str,
-        incl_info: tuple[str, str],
-        excl_info: tuple,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
         inputs: tuple,
         outputs: tuple,
         action: str,

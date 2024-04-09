@@ -92,7 +92,7 @@
 
 --8<-- "examples/reference/enumerations.md"
 
-## model_llm
+## Model
 **Grammar Snippet**
 ```yaml linenums="71"
 --8<-- "jaclang/compiler/jac.lark:71:73"
@@ -100,15 +100,15 @@
 **Code Example**
 === "Jac"
     ```jac linenums="1"
-    --8<-- "examples/reference/model_llm.jac"
+    --8<-- "examples/reference/model.jac"
     ```
 === "Python"
     ```python linenums="1"
-    --8<-- "examples/reference/model_llm.py"
+    --8<-- "examples/reference/model.py"
     ```
 **Description**
 
---8<-- "examples/reference/model_llm.md"
+--8<-- "examples/reference/model.md"
 
 ## Abilities
 **Grammar Snippet**

@@ -1,10 +1,10 @@
 """Utility functions and classes for Jac compilation toolchain."""
 
+import dis
+import marshal
 import os
+import pdb
 import re
-
-
-import jaclang.compiler.absyntree as ast
 
 
 def pascal_to_snake(pascal_string: str) -> str:
@@ -43,6 +43,7 @@ def get_ast_nodes_as_snake_case() -> list[str]:
     """Get all AST nodes as snake case."""
     import inspect
     import sys
+    import jaclang.compiler.absyntree as ast
 
     module_name = ast.__name__
     module = sys.modules[module_name]
@@ -85,6 +86,46 @@ def extract_headings(file_path: str) -> dict[str, tuple[int, int]]:
     return headings
 
 
+def auto_generate_refs() -> None:
+    """Auto generate lang reference for docs."""
+    file_path = os.path.join(
+        os.path.split(os.path.dirname(__file__))[0], "../jaclang/compiler/jac.lark"
+    )
+    result = extract_headings(file_path)
+    created_file_path = os.path.join(
+        os.path.split(os.path.dirname(__file__))[0],
+        "../support/jac-lang.org/docs/learn/jac_ref.md",
+    )
+    destination_folder = os.path.join(
+        os.path.split(os.path.dirname(__file__))[0], "../examples/reference/"
+    )
+    with open(created_file_path, "w") as md_file:
+        md_file.write(
+            '# Jac Language Reference\n\n--8<-- "examples/reference/introduction.md"\n\n'
+        )
+    for heading, lines in result.items():
+        heading = heading.strip()
+        heading_snakecase = heading_to_snake(heading)
+        content = (
+            f'## {heading}\n**Grammar Snippet**\n```yaml linenums="{lines[0]}"\n--8<-- '
+            f'"jaclang/compiler/jac.lark:{lines[0]}:{lines[1]}"\n```\n'
+            f'**Code Example**\n=== "Jac"\n    ```jac linenums="1"\n    --8<-- "examples/reference/'
+            f'{heading_snakecase}.jac"\n'
+            f'    ```\n=== "Python"\n    ```python linenums="1"\n    --8<-- "examples/reference/'
+            f'{heading_snakecase}.py"\n    ```\n'
+            "**Description**\n\n--8<-- "
+            f'"examples/reference/'
+            f'{heading_snakecase}.md"\n'
+        )
+        with open(created_file_path, "a") as md_file:
+            md_file.write(f"{content}\n")
+        md_file_name = f"{heading_snakecase}.md"
+        md_file_path = os.path.join(destination_folder, md_file_name)
+        if not os.path.exists(md_file_path):
+            with open(md_file_path, "w") as md_file:
+                md_file.write("")
+
+
 def import_target_to_relative_path(
     import_target: str, base_path: str | None = None, file_extension: str = ".jac"
 ) -> str:
@@ -104,3 +145,25 @@ def import_target_to_relative_path(
         base_path = os.path.dirname(base_path)
     relative_path = os.path.join(base_path, *actual_parts) + file_extension
     return relative_path
+
+
+class Jdb(pdb.Pdb):
+    """Jac debugger."""
+
+    def __init__(self, *args, **kwargs) -> None:  # noqa
+        """Initialize the Jac debugger."""
+        super().__init__(*args, **kwargs)
+        self.prompt = "Jdb > "
+
+    def has_breakpoint(self, bytecode: bytes) -> bool:
+        """Check for breakpoint."""
+        code = marshal.loads(bytecode)
+        instructions = dis.get_instructions(code)
+        return any(
+            instruction.opname in ("LOAD_GLOBAL", "LOAD_NAME", "LOAD_FAST")
+            and instruction.argval == "breakpoint"
+            for instruction in instructions
+        )
+
+
+debugger = Jdb()

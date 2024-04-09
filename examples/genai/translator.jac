@@ -6,8 +6,8 @@ model llm:ClaudeModel {
 
 # model llm:OpenAIModel {
 #     model_name="gpt-4";
-# 
- 
+#
+
  can 'Translate English Representation to the given language'
 translate(input: 'English Representation': str, lang: 'Desired Language': str = "French")-> 'Translation': str by llm();
 

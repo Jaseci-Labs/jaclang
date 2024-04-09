@@ -6,7 +6,7 @@ model llm:ClaudeModel {
 
 # model llm:OpenAIModel {
 #     model_name="gpt-4";
-# 
+#
 
 enum 'Personality of the Person'
 Personality {

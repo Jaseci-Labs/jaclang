@@ -6,7 +6,7 @@ model llm:ClaudeModel {
 
 # model llm:OpenAIModel {
 #     model_name="gpt-4";
-# 
+#
 
 can 'Finds the best professional to answer the given question'
 get_expert(question: 'Question': str)-> 'Expert Profession': str by llm(reason=True);

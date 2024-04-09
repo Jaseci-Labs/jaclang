@@ -6,7 +6,7 @@ model llm:ClaudeModel {
 
 # model llm:OpenAIModel {
 #     model_name="gpt-4";
-# 
+#
 
 glob examples: 'Examples for Picking Odd Word out': list[dict] = [
     {

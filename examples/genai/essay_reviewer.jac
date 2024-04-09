@@ -6,7 +6,7 @@ model llm:ClaudeModel {
 
 # model llm:OpenAIModel {
 #     model_name="gpt-4";
-# 
+#
 
 obj Essay {
     has essay: 'Essay': str;
