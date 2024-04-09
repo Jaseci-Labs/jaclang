@@ -20,7 +20,7 @@ from jaclang.compiler.symtable import (
 from jaclang.core.registry import Registry
 from jaclang.utils.treeprinter import dotgen_ast_tree, print_ast_tree
 
-
+from icecream import ic
 class AstNode:
     """Abstract syntax tree node for Jac."""
 
@@ -110,6 +110,12 @@ class AstNode:
 
         return Pass.get_all_sub_nodes(node=self, typ=typ, brute_force=brute_force)
 
+    def has_parent_of_type(self, typ: Type[T]) -> Optional[T]:
+        """Get parent of type."""
+        from jaclang.compiler.passes import Pass
+        
+        return Pass.has_parent_of_type(node=self, typ=typ)
+
     def format(self) -> str:
         """Get all sub nodes of type."""
         from jaclang.compiler.passes.tool import JacFormatPass
@@ -150,7 +156,7 @@ class AstNode:
 
     def unparse(self) -> str:
         """Unparse ast node."""
-        print(f"Unparsing  {type(self).__name__}")
+        # print(f"Unparsing  {type(self).__name__}")
         valid = self.normalize()
         res = " ".join([i.unparse() for i in self.kid])
         if not valid:
@@ -453,14 +459,11 @@ class GlobalVars(ElementStmt, AstAccessNode):
             new_kid.append(self.doc)
         if self.access:
             new_kid.append(self.access)
-        print(self.assignments.kid)
-        print('extracrted gobal',extract_type(self))
-        print('parent : ',self.parent)
         new_kid.append(self.assignments)
-        # new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res
     
+
 def extract_type( node: AstNode) -> list[str]:
         """Collect type information in assignment using bfs."""
         extracted_type = []
@@ -822,6 +825,8 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
         new_kid.append(self.arch_type)
         if self.access:
             new_kid.append(self.access)
+        if self.semstr:
+            new_kid.append(self.semstr)
         new_kid.append(self.name)
         if self.base_classes:
             new_kid.append(self.gen_token(Tok.COLON))
@@ -946,6 +951,8 @@ class Enum(ArchSpec, AstAccessNode, AstImplNeedingNode):
         new_kid.append(self.gen_token(Tok.KW_ENUM))
         if self.access:
             new_kid.append(self.access)
+        if self.semstr:
+            new_kid.append(self.semstr) 
         new_kid.append(self.name)
         if self.base_classes:
             new_kid.append(self.gen_token(Tok.COLON))
@@ -953,9 +960,7 @@ class Enum(ArchSpec, AstAccessNode, AstImplNeedingNode):
             new_kid.append(self.gen_token(Tok.COLON))
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
-                new_kid.append(self.gen_token(Tok.LBRACE))
-                new_kid.append(self.body.body)
-                new_kid.append(self.gen_token(Tok.RBRACE))
+                new_kid.append(self.gen_token(Tok.SEMI))
             else:
                 new_kid.append(self.gen_token(Tok.LBRACE))
                 new_kid.append(self.body)
@@ -1113,6 +1118,8 @@ class Ability(
         new_kid.append(self.name_ref)
         if self.signature:
             new_kid.append(self.signature)
+        if self.is_abstract:
+            new_kid.append(self.gen_token(Tok.KW_ABSTRACT))
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
                 new_kid.append(self.gen_token(Tok.SEMI))
@@ -1366,6 +1373,9 @@ class ParamVar(AstSymbolNode, AstTypedVarNode, AstSemStrNode):
         if self.unpack:
             new_kid.append(self.unpack)
         new_kid.append(self.name)
+        if self.semstr:
+            new_kid.append(self.gen_token(Tok.COLON))
+            new_kid.append(self.semstr)
         if self.type_tag:
             new_kid.append(self.type_tag)
         if self.value:
@@ -1764,12 +1774,13 @@ class IterForStmt(AstAsyncNode, AstElseBodyNode, CodeBlockStmt):
         if self.is_async:
             new_kid.append(self.gen_token(Tok.KW_ASYNC))
         new_kid.append(self.gen_token(Tok.KW_FOR))
-        print('iter : ',self.iter.kid)
+        # print('iter : ',self.iter.kid)
         new_kid.append(self.iter)
         new_kid.append(self.gen_token(Tok.KW_TO))
         new_kid.append(self.condition)
         new_kid.append(self.gen_token(Tok.KW_BY))
         new_kid.append(self.count_by)
+        # print('sefor parent',self.parent)
         # new_kid.append(self.gen_token(Tok.LBRACE))
         new_kid.append(self.body)
         # new_kid.append(self.gen_token(Tok.RBRACE))
@@ -2305,21 +2316,35 @@ class Assignment(AstSemStrNode, AstTypedVarNode, EnumBlockStmt, CodeBlockStmt):
             res = res and self.type_tag.normalize(deep) if self.type_tag else res
             res = res and self.aug_op.normalize(deep) if self.aug_op else res
         new_kid: list[AstNode] = []
-        new_kid.append(self.target)
+        new_kid.append(self.target)    
         if self.type_tag:
             new_kid.append(self.type_tag)
-        print('self.parent : -> ',self.parent.parent)
         if self.aug_op:
-            new_kid.append(self.aug_op)
-            # new_kid.append(self.gen_token(Tok.EQ))
-        else:
-            new_kid.append(self.gen_token(Tok.EQ))
+            new_kid.append(self.aug_op)     
         if self.value:
+            if not self.aug_op:
+                new_kid.append(self.gen_token(Tok.EQ))
             new_kid.append(self.value)
-        if (not self.is_enum_stmt) :
+        # if (not self.is_enum_stmt) and end_of_asignment(self) :
+        if (not self.is_enum_stmt) and not self.has_parent_of_type(IterForStmt) :
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res
+
+
+# def end_of_asignment(x):
+#     kid_of_subnodelist = x.parent.kid
+#     last_assign_index = last_index_finder(kid_of_subnodelist , x)
+#     if kid_of_subnodelist.index(x) == last_assign_index:
+#         return True
+#     return False
+
+
+# def last_index_finder(kid_of_subnodelist , j):
+#     for i in kid_of_subnodelist[::-1]:
+#         if isinstance(i, Assignment):
+#             return kid_of_subnodelist.index(i)
+#     return kid_of_subnodelist.index(j)
 
 
 class BinaryExpr(Expr):
@@ -3240,7 +3265,9 @@ class EdgeOpRef(WalkerStmtOnlyNode, AtomExpr):
                 new_kid.append(self.gen_token(Tok.ARROW_L_P2))
         elif self.edge_dir == EdgeDir.OUT:
             if not self.filter_cond:
+                new_kid.append(self.gen_token(Tok.LSQUARE))
                 new_kid.append(self.gen_token(Tok.ARROW_R))
+                new_kid.append(self.gen_token(Tok.RSQUARE))
             else:
                 new_kid.append(self.gen_token(Tok.ARROW_R_P1))
                 new_kid.append(self.filter_cond)
