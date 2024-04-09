@@ -24,7 +24,7 @@ node turn {
 }
 
 :walker:GuessGame:can:start_game {
-    # end = here;
+    end = here;
     # for i=0 to i<10 by i+=1  {
     #     end ++> (end := turn());
     # }

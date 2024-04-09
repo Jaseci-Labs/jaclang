@@ -150,10 +150,7 @@ class AstNode:
 
     def unparse(self) -> str:
         """Unparse ast node."""
-        # print(f"Unparsing  {type(self).__name__}")
-        if isinstance(self , Module):
-            # print(f"Unparsing  {self.name}")
-            pass
+        print(f"Unparsing  {type(self).__name__}")
         valid = self.normalize()
         res = " ".join([i.unparse() for i in self.kid])
         if not valid:
@@ -411,7 +408,7 @@ class Module(AstDocNode):
         new_kid: list[AstNode] = []
         if self.doc:
             new_kid.append(self.doc)
-        new_kid.extend([i for i in self.body if not isinstance(i, AbilityDef)])
+        new_kid.extend([i for i in self.body])
         AstNode.__init__(self, kid=new_kid)
         return res
 
@@ -456,11 +453,22 @@ class GlobalVars(ElementStmt, AstAccessNode):
             new_kid.append(self.doc)
         if self.access:
             new_kid.append(self.access)
+        print(self.assignments.kid)
+        print('extracrted gobal',extract_type(self))
+        print('parent : ',self.parent)
         new_kid.append(self.assignments)
         # new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
         return res
-
+    
+def extract_type( node: AstNode) -> list[str]:
+        """Collect type information in assignment using bfs."""
+        extracted_type = []
+        if isinstance(node, (BuiltinType, Token)):
+            extracted_type.append(node.value)
+        for child in node.kid:
+            extracted_type.extend(extract_type(child))
+        return extracted_type
 
 class Test(AstSymbolNode, ElementStmt):
     """Test node type for Jac Ast."""
@@ -821,9 +829,8 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
             new_kid.append(self.gen_token(Tok.COLON))
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
-                new_kid.append(self.body.body)
+                new_kid.append(self.gen_token(Tok.SEMI))
             else:
-                # new_kid.append(self.gen_token(Tok.LBRACE))
                 for item in self.body.items:
                     if isinstance(item, Ability) and isinstance(item.name_ref, Name):
                         if item.name_ref.value == "__init__":
@@ -840,7 +847,6 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
                             ]
 
                 new_kid.append(self.body)
-                # new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -1109,15 +1115,9 @@ class Ability(
             new_kid.append(self.signature)
         if self.body:
             if isinstance(self.body, AstImplOnlyNode):
-                # if not self.is_method:
-                    # print('tfftftf : ',not self.is_method)
-                #     new_kid.append(self.gen_token(Tok.SEMI))
-                # else:
-                    new_kid.append(self.body.body)
+                new_kid.append(self.gen_token(Tok.SEMI))
             else:
-                # new_kid.append(self.gen_token(Tok.LBRACE))
                 new_kid.append(self.body)
-                # new_kid.append(self.gen_token(Tok.RBRACE))
         else:
             new_kid.append(self.gen_token(Tok.SEMI))
         AstNode.__init__(self, kid=new_kid)
@@ -1599,7 +1599,7 @@ class ExprStmt(CodeBlockStmt):
         self.in_fstring = in_fstring
         AstNode.__init__(self, kid=kid)
 
-   r def normalize(self, deep: bool = True) -> bool:
+    def normalize(self, deep: bool = True) -> bool:
         """Normalize ast node."""
         if deep:
             res = self.expr.normalize(deep)
@@ -1618,7 +1618,7 @@ class ExprStmt(CodeBlockStmt):
             self,
             kid=new_kid,
         )
-        return res and self.exp is not None
+        return res and self.expr is not None
 
 
 class TryStmt(AstElseBodyNode, CodeBlockStmt):
@@ -1764,6 +1764,7 @@ class IterForStmt(AstAsyncNode, AstElseBodyNode, CodeBlockStmt):
         if self.is_async:
             new_kid.append(self.gen_token(Tok.KW_ASYNC))
         new_kid.append(self.gen_token(Tok.KW_FOR))
+        print('iter : ',self.iter.kid)
         new_kid.append(self.iter)
         new_kid.append(self.gen_token(Tok.KW_TO))
         new_kid.append(self.condition)
@@ -2307,6 +2308,7 @@ class Assignment(AstSemStrNode, AstTypedVarNode, EnumBlockStmt, CodeBlockStmt):
         new_kid.append(self.target)
         if self.type_tag:
             new_kid.append(self.type_tag)
+        print('self.parent : -> ',self.parent.parent)
         if self.aug_op:
             new_kid.append(self.aug_op)
             # new_kid.append(self.gen_token(Tok.EQ))

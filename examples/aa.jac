@@ -1,15 +1,15 @@
 """A Ninja Myca"""
 
 can plan {
-    # can say_hi(m: str);
+    can say_hi(m: str);
 
-    print("Hello, world!");
+    # print("Hello, world!");
     # say_hi("I'm a ninja Myca!");
 
-    # :can:say_hi
-    # (m: str) {
-    #     print(m);
-    # }
+    :can:say_hi
+    (m: str) {
+        print(m);
+    }
 }
 
 with entry { plan(); }
