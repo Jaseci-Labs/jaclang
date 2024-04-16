@@ -37,8 +37,20 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
+<<<<<<< HEAD
 from jaclang.core.registry import SemScope
 from jaclang.core.utils import traverse_graph
+=======
+from jaclang.core.utils import (
+    extract_non_primary_type,
+    filter,
+    get_all_type_explanations,
+    get_object_string,
+    get_type_annotation,
+    traverse_graph,
+)
+from jaclang.core.model import create_model
+>>>>>>> 11095feb51f0466feb663be5115e5d7a97fe237a
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
@@ -498,6 +510,12 @@ class JacFeatureDefaults:
         meaning_out = model.__infer__(meaning_in, **model_params)
         reasoning, output = get_reasoning_output(meaning_out)
         return output
+
+    @staticmethod
+    @hookimpl
+    def Model(model: Any, kwargs: dict):  # noqa: ANN401
+        """Jac's Model feature."""
+        return create_model(model, **kwargs)
 
 
 class JacBuiltin:

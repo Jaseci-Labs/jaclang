@@ -15,6 +15,7 @@ element: import_stmt
        | free_code
        | py_code_block
        | test
+       | model
 
 // Import/Include Statements
 import_stmt: KW_IMPORT sub_name KW_FROM from_path COMMA import_items SEMI
@@ -65,6 +66,11 @@ enum_block: LBRACE ((enum_stmt COMMA)* enum_stmt)? RBRACE
 enum_stmt: NAME (COLON STRING)? EQ expression
          | NAME (COLON STRING)?
          | py_code_block
+
+// Model
+model: KW_MODEL NAME COLON NAME model_block
+model_block: LBRACE (model_param COMMA)* model_param SEMI RBRACE
+model_param: NAME EQ expression
 
 // Abilities
 ability: decorators? ability_def

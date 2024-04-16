@@ -703,6 +703,7 @@ class PyastGenPass(Pass):
                     )
                 )
             )
+
         node.gen.py_ast = [
             self.sync(
                 ast3.ClassDef(
@@ -833,6 +834,61 @@ class PyastGenPass(Pass):
                 self.link_jac_py_nodes(
                     jac_node=i.name_ref, py_nodes=i.sym_link.decl.gen.py_ast
                 )
+
+    def exit_model(self, node: ast.Model) -> None:
+        """Sub objects.
+
+        name: Name,
+        base_class: Name,
+        body: Optional[SubNodeList[ModelParam]],
+        """
+        self.needs_jac_feature()
+        node.gen.py_ast = [
+            self.sync(
+                ast3.Assign(
+                    targets=[
+                        self.sync(ast3.Name(id=node.name.sym_name, ctx=ast3.Store()))
+                    ],
+                    value=self.sync(
+                        ast3.Call(
+                            func=self.sync(
+                                ast3.Attribute(
+                                    value=self.sync(
+                                        ast3.Name(
+                                            id=Con.JAC_FEATURE.value,
+                                            ctx=ast3.Load(),
+                                        )
+                                    ),
+                                    attr="Model",
+                                    ctx=ast3.Load(),
+                                )
+                            ),
+                            args=[node.base_class.gen.py_ast[0]],
+                            keywords=(
+                                [i.gen.py_ast[0] for i in node.body.items]
+                                if isinstance(node.body, ast.SubNodeList)
+                                else []
+                            ),
+                        )
+                    ),
+                )
+            )
+        ]
+
+    def exit_model_param(self, node: ast.ModelParam) -> None:
+        """Sub objects.
+
+        target: Name,
+        right: Expr,
+        """
+        node.gen.py_ast = [
+            self.sync(
+                ast3.keyword(
+                    arg=node.target.sym_name,
+                    value=node.right.gen.py_ast[0],
+                )
+            )
+        ]
 
     def exit_ability(self, node: ast.Ability) -> None:
         """Sub objects.

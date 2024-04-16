@@ -250,6 +250,11 @@ class JacFeature:
             action=action,
         )
 
+    @staticmethod
+    def Model(model: Any, **kwargs):  # noqa: ANN401
+        """Jac's Model CC feature."""
+        return pm.hook.Model(model=model, kwargs=kwargs)
+
 
 class JacCmd:
     """Jac CLI command."""
