@@ -1,8 +1,7 @@
+import:py from pydantic, BaseModel, Field;
 import:py sys;
 import:py os;
 import:py dspy;
-
-import:py from pydantic, BaseModel, Field;
 
 obj Input:BaseModel:{
     static has context: str = Field(description="The context for the question");
