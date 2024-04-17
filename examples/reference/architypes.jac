@@ -16,3 +16,8 @@ walker Labrador :Dog: {}
 
 @print_base_classes
 walker DecoratedLabrador :Labrador: {}
+
+class School {}
+
+@print_base_classes
+edge student :School: {}

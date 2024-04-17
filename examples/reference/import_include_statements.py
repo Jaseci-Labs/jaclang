@@ -8,3 +8,4 @@ from base_module_structure import add, subtract
 
 for i in range(int(square_root(dt.datetime.now().year))):
     print(os.getcwd(), add(i, subtract(i, 1)))
+print("6")

@@ -1,34 +1,20 @@
 node node_a {
     has value: int;
 }
-
-walker Creator {
-    can create with `root entry;
-    can travel with `root | node_a entry;
+node node_b {
+    has val:int;
 }
 
-edge MyEdge {
-    has val: int = 5;
+with entry{
+    list_1 = [node_a(value=5) for i in range(0,5)];
+    list_2 = [node_b(val=10) for i in range(0,5)];
+
+#connecting the list of nodes to another list of nodes
+    list_1 ++> list_2;
+    print([list_1-->list_2]);
+
+#disconnecting the list_1 nodes and list_2 nodes
+    list_1 del-->list_2;
+    print([list_1-->list_2]);   
 }
 
-:walker:Creator:can:create {
-    end = here;
-    for i=0 to i<7 by i+=1  {
-        if i % 2 == 0 {
-            end ++> (end := node_a(value=i));
-        } else {
-            end +:MyEdge:val=i:+> (end := node_a(value=i + 10));
-        }
-    }
-}
-
-:walker:Creator:can:travel {
-    for i in [-:MyEdge:val <= 6:->] {
-        print(i.value);
-    }
-    visit [-->];
-}
-
-with entry {
-    root spawn Creator();
-}

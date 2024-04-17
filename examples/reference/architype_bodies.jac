@@ -1,4 +1,5 @@
-obj Car {
+obj 'This defines the properties of the obj Car'
+Car {
     has make: str,
         model: str,
         year: int;

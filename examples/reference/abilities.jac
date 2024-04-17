@@ -3,7 +3,6 @@ obj Divider {
         return (x / y);
     }
 }
-#this is an abstract class as it has the abstract method
 
 obj Calculator {
     static can : priv multiply(a: float, b: float) -> float {
