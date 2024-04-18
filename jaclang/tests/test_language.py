@@ -470,3 +470,16 @@ class JacLanguageTests(TestCase):
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
         self.assertEqual("2\n", stdout_value)
+
+    def test_something_eq_true(self) -> None:
+        """Basic precedence test."""
+        prog = jac_str_to_pass(
+            "with entry {class a{}; a.True=1;print(a.True);}", "sometrue.jac"
+        )
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        exec(compile(prog.ir.gen.py_ast[0], "test.py", "exec"))
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        print(stdout_value)
+        self.assertEqual(stdout_value, "1\n")

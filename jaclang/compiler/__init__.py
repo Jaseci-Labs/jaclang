@@ -16,6 +16,8 @@ if not os.path.exists(os.path.join(cur_dir, "__jac_gen__", "jac_parser.py")):
     save_argv = sys.argv
     sys.argv = [
         "lark",
+        "-l",
+        "basic",
         os.path.join(cur_dir, "jac.lark"),
         "-o",
         os.path.join(cur_dir, "__jac_gen__", "jac_parser.py"),
