@@ -1,13 +1,18 @@
-enum Color;
+#example of using semstring with enum
+enum 'represents the values for the colors'
+Color;
 
-with entry {
-    print(Color.RED.value);
+:enum:Color{
+    Red,
+    Green,
+    Blue,
+    Black
 }
 
-:enum:Color {
-    RED=1,
-    pencil,
+with entry {
+    print(Color.Black.value);
+    
     ::py::
-    print('text')
+    print(Color.Green.value)
     ::py::
 }
