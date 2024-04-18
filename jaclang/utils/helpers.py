@@ -141,9 +141,9 @@ def import_target_to_relative_path(
             break  # Stop at the first non-empty part
     traversal_levels = traversal_levels - 1 if traversal_levels > 0 else 0
     actual_parts = parts[traversal_levels:]
-    relative_path = os.path.join(base_path, *actual_parts) + file_extension
     for _ in range(traversal_levels):
-        relative_path = os.path.join("..", relative_path)
+        base_path = os.path.dirname(base_path)
+    relative_path = os.path.join(base_path, *actual_parts) + file_extension
     return relative_path
 
 
