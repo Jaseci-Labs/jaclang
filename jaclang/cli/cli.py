@@ -61,7 +61,7 @@ def format(path: str, outfile: str = "", debug: bool = False) -> None:
 def run(filename: str, main: bool = True, cache: bool = True) -> None:
     """Run the specified .jac file."""
     base, mod = os.path.split(filename)
-    base = base if base else "./"
+    base = base if base else os.path.join(os.getcwd(),mod)
     mod = mod[:-4]
     if filename.endswith(".jac"):
         jac_import(
