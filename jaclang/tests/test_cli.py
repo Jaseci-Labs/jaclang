@@ -223,6 +223,8 @@ class JacCliTests(TestCase):
         cli.graph(
             f"{self.fixture_abs_path('../../../examples/reference/connect_expressions.jac')}"
         )
+        if os.path.exists("connect_expressions.dot"):
+            os.remove("connect_expressions.dot")
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
         self.assertIn(">>> Graph content saved", stdout_value)
