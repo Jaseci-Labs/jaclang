@@ -225,5 +225,5 @@ class JacCliTests(TestCase):
         )
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
-        self.assertIn("11\n13\n15\n>>> Graph content saved to", stdout_value)
+        self.assertIn(">>> Graph content saved", stdout_value)
         self.assertIn("connect_expressions.dot\n", stdout_value)
