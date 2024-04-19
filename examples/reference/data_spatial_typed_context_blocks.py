@@ -4,7 +4,6 @@ from dataclasses import dataclass as dataclass
 
 
 @Jac.make_walker(on_entry=[Jac.DSFunc("produce", Jac.RootType)], on_exit=[])
-@dataclass(eq=False)
 class Producer:
 
     def produce(self, here: Jac.RootType) -> None:

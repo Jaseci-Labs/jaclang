@@ -1,8 +1,8 @@
-#example of using semstring for the has variables of an object 
+#example of using semstring for the has variables of an object
 obj Car {
     has make:str,
         model:str,
-        year:'represents the year in which the car was produced' int;   
+        year:'represents the year in which the car was produced' int;
     static has wheels: int = 4;
 
     can display_car_info {

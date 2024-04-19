@@ -11,7 +11,7 @@ Color;
 
 with entry {
     print(Color.Black.value);
-    
+
     ::py::
     print(Color.Green.value)
     ::py::
