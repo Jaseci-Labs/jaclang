@@ -61,7 +61,7 @@ def format(path: str, outfile: str = "", debug: bool = False) -> None:
 def run(filename: str, main: bool = True, cache: bool = True) -> None:
     """Run the specified .jac file."""
     base, mod = os.path.split(filename)
-    base = base if base else os.path.join(os.getcwd(),mod)
+    base = base if base else os.path.join(os.getcwd(), mod)
     mod = mod[:-4]
     if filename.endswith(".jac"):
         jac_import(
@@ -130,7 +130,7 @@ def enter(filename: str, entrypoint: str, args: list) -> None:
     """
     if filename.endswith(".jac"):
         base, mod_name = os.path.split(filename)
-        base = base if base else "./"
+        base = base if base else os.path.join(os.getcwd(), mod_name)
         mod_name = mod_name[:-4]
         mod = jac_import(target=mod_name, base_path=base)
         if not mod:
@@ -212,7 +212,7 @@ def clean() -> None:
 def debug(filename: str, main: bool = True, cache: bool = False) -> None:
     """Debug the specified .jac file using pdb."""
     base, mod = os.path.split(filename)
-    base = base if base else "./"
+    base = base if base else os.path.join(os.getcwd(), mod)
     mod = mod[:-4]
     if filename.endswith(".jac"):
         bytecode = jac_file_to_pass(filename).ir.gen.py_bytecode
