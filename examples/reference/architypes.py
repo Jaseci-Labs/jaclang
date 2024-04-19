@@ -1,7 +1,5 @@
 from __future__ import annotations
-from jaclang.plugin.feature import JacFeature as _Jac
-from jaclang.plugin.builtin import *
-from dataclasses import dataclass as __jac_dataclass__
+from jaclang.plugin.feature import JacFeature as jac
 
 
 def print_base_classes(cls: type) -> type:
@@ -9,51 +7,43 @@ def print_base_classes(cls: type) -> type:
     return cls
 
 
-@_Jac.make_obj(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_obj(on_entry=[], on_exit=[])
 class Animal:
     pass
 
 
-@_Jac.make_obj(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_obj(on_entry=[], on_exit=[])
 class Domesticated:
     pass
 
 
 @print_base_classes
-@_Jac.make_node(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_node(on_entry=[], on_exit=[])
 class Mammal(Animal, Domesticated):
     pass
 
 
-@_Jac.make_walker(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_walker(on_entry=[], on_exit=[])
 class Dog(Mammal):
     pass
 
 
-@_Jac.make_walker(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_walker(on_entry=[], on_exit=[])
 class Labrador(Dog):
     pass
 
 
 @print_base_classes
-@_Jac.make_walker(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_walker(on_entry=[], on_exit=[])
 class DecoratedLabrador(Labrador):
     pass
 
 
-@__jac_dataclass__(eq=False)
 class School:
     pass
 
 
 @print_base_classes
-@_Jac.make_edge(on_entry=[], on_exit=[])
-@__jac_dataclass__(eq=False)
+@jac.make_edge(on_entry=[], on_exit=[])
 class student(School):
     pass
