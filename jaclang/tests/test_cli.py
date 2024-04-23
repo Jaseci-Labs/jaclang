@@ -203,7 +203,6 @@ class JacCliTests(TestCase):
             text=True,
         )
         stdout, stderr = process.communicate()
-        print(stderr)
         self.assertIn("...F", stderr)
         self.assertIn("F.F", stderr)
 
@@ -227,5 +226,16 @@ class JacCliTests(TestCase):
             os.remove("connect_expressions.dot")
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
+        if os.path.exists("connect_expressions.dot"):
+            os.remove("connect_expressions.dot")
         self.assertIn(">>> Graph content saved", stdout_value)
         self.assertIn("connect_expressions.dot\n", stdout_value)
+
+    def test_py_to_jac(self) -> None:
+        """Test for graph CLI cmd."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        cli.py_to_jac(f"{self.fixture_abs_path('../../tests/fixtures/pyfunc.py')}")
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn("can my_print(x: object) -> None", stdout_value)
