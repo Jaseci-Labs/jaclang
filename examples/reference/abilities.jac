@@ -11,11 +11,17 @@ obj Calculator {
     can substract -> float abs;
     can add(number: float, *a: tuple) -> float;
 }
+obj model {
+    can __infer__(meaning_in: str, **kwargs: dict) {
+        return "[Output] 11";
+    }
+}
+glob llm = model();
 
 obj substractor :Calculator: {
-    can substract(x: float, y: float) -> float {
-        return (x - y);
-    }
+    can 'Calculate the difference between two numbers'
+    substract(x: float, y: float) -> 'Difference':float by llm();
+
 }
 
 :obj:Calculator:can:add
