@@ -4,13 +4,15 @@ node node_a {
 node node_b {
     has val:int;
 }
+glob list_1 = [node_a(value=5) for i in range(0,5)];
+glob list_2 = [node_b(val=10) for i in range(0,5)];
 
 walker Connector{
-    can connect with `root entry;
+    can connect with node_a|node_b entry;
 }
 
 walker Disconnector{
-    can disconnect with `root entry;
+    can disconnect with node_a|node_b entry;
 }
 
 :walker:Connector:can:connect {
@@ -28,11 +30,7 @@ walker Disconnector{
     }
 
 with entry{
-    list_1 = [node_a(value=5) for i in range(0,5)];
-    list_2 = [node_b(val=10) for i in range(0,5)];
-
-    root spawn Connector();
-    root spawn Disconnector();
-
+    list_1[0] spawn Connector();
+    list_1[0] spawn Disconnector();
 }
 
