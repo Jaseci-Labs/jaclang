@@ -593,7 +593,7 @@ class Import(ElementStmt, CodeBlockStmt):
         self,
         lang: SubTag[Name],
         paths: list[ModulePath],
-        items: Optional[SubNodeList[ModuleItem]],
+        items: Optional[SubNodeList[ModuleItem | ModulePath]],
         is_absorb: bool,  # For includes
         kid: Sequence[AstNode],
         doc: Optional[String] = None,

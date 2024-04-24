@@ -286,9 +286,26 @@ class JacParser(Pass):
             """
             lang = kid[1]
             paths = [i for i in kid if isinstance(i, ast.ModulePath)]
-
             items = kid[-2] if isinstance(kid[-2], ast.SubNodeList) else None
-            is_absorb = False
+            if len(paths) == 1 and paths[0].path_str.endswith(".") and items:
+                old_items = items
+                new_items = []
+                for i in items.items:
+                    if isinstance(i, ast.ModuleItem):
+                        new_items.append(
+                            ast.ModulePath(
+                                path=[i.name],
+                                level=paths[0].level,
+                                alias=i.alias,
+                                kid=i.kid,
+                            )
+                        )
+                    else:
+                        self.ice()
+                items = ast.SubNodeList[ast.ModulePath](
+                    items=new_items, delim=items.delim, kid=new_items
+                )
+                kid[kid.index(old_items)] = items
             if isinstance(lang, ast.SubTag) and (
                 isinstance(items, ast.SubNodeList) or items is None
             ):
@@ -297,7 +314,7 @@ class JacParser(Pass):
                         lang=lang,
                         paths=paths,
                         items=items,
-                        is_absorb=is_absorb,
+                        is_absorb=False,
                         kid=kid,
                     )
                 )

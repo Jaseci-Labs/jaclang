@@ -502,9 +502,12 @@ class PyastGenPass(Pass):
         imp_from = {}
         if node.items:
             for item in node.items.items:
-                imp_from[item.name.sym_name] = (
-                    item.alias.sym_name if item.alias else False
+                imp_name = (
+                    item.name.sym_name
+                    if isinstance(item, ast.ModuleItem)
+                    else item.path[0].sym_name
                 )
+                imp_from[imp_name] = item.alias.sym_name if item.alias else False
 
         keys = []
         values = []
@@ -614,6 +617,20 @@ class PyastGenPass(Pass):
             py_nodes.append(
                 self.sync(ast3.Import(names=[i.gen.py_ast[0] for i in node.paths]))
             )
+        # elif isinstance(node.items.items[0], ast.ModulePath):
+        #     imp_name = (
+        #         node.items.items[0].alias
+        #         if node.items.items[0].alias
+        #         else (
+        #             node.items.items[0].path[0]
+        #             if node.items.items[0].path
+        #             else self.ice()
+        #         )
+        #     )
+        #     print(imp_name.gen.py_ast[0])
+        #     print(node.items.items[0].path[0].sym_name)
+        #     py_nodes.append(self.sync(ast3.Import(names=[imp_name.gen.py_ast[0]])))
+        #     print(ast3.dump(py_nodes[-1], indent=2))
         else:
             py_nodes.append(
                 self.sync(

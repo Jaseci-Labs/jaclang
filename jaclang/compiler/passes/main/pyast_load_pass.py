@@ -1420,8 +1420,8 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             else:
                 raise self.ice()
         items = (
-            ast.SubNodeList[ast.ModuleItem](
-                items=valid_names, delim=Tok.COMMA, kid=valid_names
+            ast.SubNodeList[ast.ModuleItem | ast.ModulePath](
+                items=[*valid_names], delim=Tok.COMMA, kid=valid_names
             )
             if valid_names
             else None

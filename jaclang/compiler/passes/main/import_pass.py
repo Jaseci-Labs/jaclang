@@ -34,9 +34,14 @@ class ImportPass(Pass):
         self.run_again = True
         while self.run_again:
             self.run_again = False
-            all_imports = self.get_all_sub_nodes(node, ast.ModulePath)
+            all_imports = [
+                i for i in self.get_all_sub_nodes(node, ast.ModulePath) if i.path
+            ]
             for i in all_imports:
-                if i.parent.lang.tag.value == "jac" and not i.sub_module:
+                if (
+                    i.has_parent_of_type(ast.Import).lang.tag.value == "jac"
+                    and not i.sub_module
+                ):
                     self.run_again = True
                     mod = self.import_module(
                         node=i,
@@ -48,9 +53,9 @@ class ImportPass(Pass):
                     self.annex_impl(mod)
                     i.sub_module = mod
                     i.add_kids_right([mod], pos_update=False)
-                elif i.parent.lang.tag.value == "py" and os.environ.get(
-                    "JAC_PROC_DEBUG", False
-                ):
+                elif i.has_parent_of_type(
+                    ast.Import
+                ).lang.tag.value == "py" and os.environ.get("JAC_PROC_DEBUG", False):
                     mod = self.import_py_module(node=i, mod_path=node.loc.mod_path)
                     i.sub_module = mod
                     i.add_kids_right([mod], pos_update=False)
