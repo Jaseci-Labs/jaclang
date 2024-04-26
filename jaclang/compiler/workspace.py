@@ -163,14 +163,14 @@ class Workspace:
 
     def get_dependencies(
         self, file_path: str, deep: bool = False
-    ) -> list[ast.PackageItem]:
+    ) -> list[ast.ImportItem]:
         """Return a list of dependencies for a file."""
         mod_ir = self.modules[file_path].ir
         if deep:
             return (
                 [
                     i
-                    for i in mod_ir.get_all_sub_nodes(ast.PackageItem)
+                    for i in mod_ir.get_all_sub_nodes(ast.ImportItem)
                     if i.parent
                     and isinstance(i.parent, ast.Import)
                     and i.parent.lang.tag.value == "jac"
@@ -182,7 +182,7 @@ class Workspace:
             return (
                 [
                     i
-                    for i in mod_ir.get_all_sub_nodes(ast.PackageItem)
+                    for i in mod_ir.get_all_sub_nodes(ast.ImportItem)
                     if i.loc.mod_path == file_path
                     and i.parent
                     and isinstance(i.parent, ast.Import)

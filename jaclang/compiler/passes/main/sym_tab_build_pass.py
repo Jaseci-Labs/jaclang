@@ -393,7 +393,7 @@ class SymTabBuildPass(SymTabPass):
                 for v in node.paths[0].sub_module.sym_tab.tab.values():
                     self.def_insert(v.decl, table_override=self.cur_scope())
 
-    def enter_package_item(self, node: ast.PackageItem) -> None:
+    def enter_package_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
@@ -402,7 +402,7 @@ class SymTabBuildPass(SymTabPass):
         """
         self.sync_node_to_scope(node)
 
-    def exit_package_item(self, node: ast.PackageItem) -> None:
+    def exit_package_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],

@@ -364,7 +364,7 @@ class JacFormatPass(Pass):
         else:
             self.emit(node, node.strings[0].gen.jac)
 
-    def exit_package_item(self, node: ast.PackageItem) -> None:
+    def exit_package_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         path: list[Token],

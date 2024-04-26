@@ -1333,7 +1333,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 isinstance(name.alias, ast.Name) or name.alias is None
             ):
                 paths.append(
-                    ast.PackageItem(
+                    ast.ImportItem(
                         path=[name.expr],
                         level=0,
                         alias=name.alias,
@@ -1396,7 +1396,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                         pos_end=0,
                     )
                 )
-        path = ast.PackageItem(
+        path = ast.ImportItem(
             path=modpaths,
             level=node.level,
             alias=None,

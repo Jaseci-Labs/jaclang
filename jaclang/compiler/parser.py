@@ -285,7 +285,7 @@ class JacParser(Pass):
                     | KW_IMPORT sub_name import_path (COMMA import_path)* SEMI
             """
             lang = kid[1]
-            paths = [i for i in kid if isinstance(i, ast.PackageItem)]
+            paths = [i for i in kid if isinstance(i, ast.ImportItem)]
 
             items = kid[-2] if isinstance(kid[-2], ast.SubNodeList) else None
             is_absorb = False
@@ -305,7 +305,7 @@ class JacParser(Pass):
             else:
                 raise self.ice()
 
-        def from_path(self, kid: list[ast.AstNode]) -> ast.PackageItem:
+        def from_path(self, kid: list[ast.AstNode]) -> ast.ImportItem:
             """Grammar rule.
 
             from_path: (DOT | ELLIPSIS)* import_path
@@ -318,7 +318,7 @@ class JacParser(Pass):
                         level += 1
                     elif i.name == Tok.ELLIPSIS:
                         level += 3
-            if isinstance(kid[-1], ast.PackageItem):
+            if isinstance(kid[-1], ast.ImportItem):
                 ret = kid[-1]
                 adds = [i for i in kid if isinstance(i, ast.Token)]
                 ret.level = level
@@ -326,7 +326,7 @@ class JacParser(Pass):
                 return ret
             else:
                 return self.nu(
-                    ast.PackageItem(
+                    ast.ImportItem(
                         path=None,
                         level=level,
                         alias=None,
@@ -340,14 +340,14 @@ class JacParser(Pass):
             include_stmt: KW_INCLUDE sub_name import_path SEMI
             """
             lang = kid[1]
-            paths = [i for i in kid if isinstance(i, ast.PackageItem)]
+            names = [i for i in kid if isinstance(i, ast.ImportItem)]
+
             is_absorb = True
             if isinstance(lang, ast.SubTag):
                 return self.nu(
                     ast.Import(
                         lang=lang,
-                        paths=paths,
-                        items=None,
+                        items=names,
                         is_absorb=is_absorb,
                         kid=kid,
                     )
@@ -355,7 +355,7 @@ class JacParser(Pass):
             else:
                 raise self.ice()
 
-        def import_path(self, kid: list[ast.AstNode]) -> ast.PackageItem:
+        def import_path(self, kid: list[ast.AstNode]) -> ast.ImportItem:
             """Grammar rule.
 
             import_path: named_ref (DOT named_ref)* (KW_AS NAME)?
@@ -373,9 +373,8 @@ class JacParser(Pass):
                 valid_path = valid_path[:-1]
 
             return self.nu(
-                ast.PackageItem(
-                    path=valid_path,
-                    level=0,
+                ast.ImportItem(
+                    names=valid_path,
                     alias=alias,
                     kid=kid,
                 )

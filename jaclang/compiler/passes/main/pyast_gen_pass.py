@@ -624,7 +624,7 @@ class PyastGenPass(Pass):
             )
         node.gen.py_ast = py_nodes
 
-    def exit_package_item(self, node: ast.PackageItem) -> None:
+    def exit_package_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
