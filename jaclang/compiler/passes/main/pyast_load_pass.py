@@ -1333,7 +1333,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 isinstance(name.alias, ast.Name) or name.alias is None
             ):
                 paths.append(
-                    ast.ModulePath(
+                    ast.PackageItem(
                         path=[name.expr],
                         level=0,
                         alias=name.alias,
@@ -1396,7 +1396,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                         pos_end=0,
                     )
                 )
-        path = ast.ModulePath(
+        path = ast.PackageItem(
             path=modpaths,
             level=node.level,
             alias=None,
@@ -1411,7 +1411,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 and (isinstance(name.alias, ast.Name) or name.alias is None)
             ):
                 valid_names.append(
-                    ast.ModuleItem(
+                    ast.ImportItem(
                         name=name.expr,
                         alias=name.alias if name.alias is not None else None,
                         kid=[i for i in name.kid if i],
@@ -1420,7 +1420,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             else:
                 raise self.ice()
         items = (
-            ast.SubNodeList[ast.ModuleItem](
+            ast.SubNodeList[ast.ImportItem](
                 items=valid_names, delim=Tok.COMMA, kid=valid_names
             )
             if valid_names

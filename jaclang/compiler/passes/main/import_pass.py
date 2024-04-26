@@ -34,7 +34,7 @@ class ImportPass(Pass):
         self.run_again = True
         while self.run_again:
             self.run_again = False
-            all_imports = self.get_all_sub_nodes(node, ast.ModulePath)
+            all_imports = self.get_all_sub_nodes(node, ast.PackageItem)
             for i in all_imports:
                 if i.parent.lang.tag.value == "jac" and not i.sub_module:
                     self.run_again = True
@@ -54,7 +54,7 @@ class ImportPass(Pass):
                     mod = self.import_py_module(node=i, mod_path=node.loc.mod_path)
                     i.sub_module = mod
                     i.add_kids_right([mod], pos_update=False)
-                self.enter_module_path(i)
+                self.enter_package_item(i)
             SubNodeTabPass(prior=self, input_ir=node)
         self.annex_impl(node)
         node.mod_deps = self.import_table
@@ -80,7 +80,7 @@ class ImportPass(Pass):
                 node.add_kids_right([mod], pos_update=False)
                 mod.parent = node
 
-    def enter_module_path(self, node: ast.ModulePath) -> None:
+    def enter_package_item(self, node: ast.PackageItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
@@ -94,7 +94,7 @@ class ImportPass(Pass):
     # Utility functions
     # -----------------
 
-    def import_module(self, node: ast.ModulePath, mod_path: str) -> ast.Module | None:
+    def import_module(self, node: ast.PackageItem, mod_path: str) -> ast.Module | None:
         """Import a module."""
         self.cur_node = node  # impacts error reporting
         target = import_target_to_relative_path(
@@ -130,7 +130,7 @@ class ImportPass(Pass):
             return None
 
     def import_py_module(
-        self, node: ast.ModulePath, mod_path: str
+        self, node: ast.PackageItem, mod_path: str
     ) -> Optional[ast.Module]:
         """Import a module."""
         from jaclang.compiler.passes.main import PyastBuildPass

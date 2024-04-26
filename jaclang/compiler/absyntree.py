@@ -592,8 +592,8 @@ class Import(ElementStmt, CodeBlockStmt):
     def __init__(
         self,
         lang: SubTag[Name],
-        paths: list[ModulePath],
-        items: Optional[SubNodeList[ModuleItem]],
+        paths: list[PackageItem],
+        items: Optional[SubNodeList[ImportItem]],
         is_absorb: bool,  # For includes
         kid: Sequence[AstNode],
         doc: Optional[String] = None,
@@ -637,7 +637,7 @@ class Import(ElementStmt, CodeBlockStmt):
         return res
 
 
-class ModulePath(AstSymbolNode):
+class PackageItem(AstSymbolNode):
     """ModulePath node type for Jac Ast."""
 
     def __init__(
@@ -693,7 +693,7 @@ class ModulePath(AstSymbolNode):
         )
 
 
-class ModuleItem(AstSymbolNode):
+class ImportItem(AstSymbolNode):
     """ModuleItem node type for Jac Ast."""
 
     def __init__(

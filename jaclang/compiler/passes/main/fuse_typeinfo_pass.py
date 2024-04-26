@@ -169,12 +169,12 @@ class FuseTypeInfoPass(Pass):
         self.__collect_type_from_symbol(node)
 
     @__handle_node
-    def enter_module_path(self, node: ast.ModulePath) -> None:
+    def enter_package_item(self, node: ast.PackageItem) -> None:
         """Pass handler for ModulePath nodes."""
         self.__debug_print("Getting type not supported in", type(node))
 
     @__handle_node
-    def enter_module_item(self, node: ast.ModuleItem) -> None:
+    def enter_import_item(self, node: ast.ImportItem) -> None:
         """Pass handler for ModuleItem nodes."""
         self.__debug_print("Getting type not supported in", type(node))
 

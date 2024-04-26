@@ -393,7 +393,7 @@ class SymTabBuildPass(SymTabPass):
                 for v in node.paths[0].sub_module.sym_tab.tab.values():
                     self.def_insert(v.decl, table_override=self.cur_scope())
 
-    def enter_module_path(self, node: ast.ModulePath) -> None:
+    def enter_package_item(self, node: ast.PackageItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
@@ -402,7 +402,7 @@ class SymTabBuildPass(SymTabPass):
         """
         self.sync_node_to_scope(node)
 
-    def exit_module_path(self, node: ast.ModulePath) -> None:
+    def exit_package_item(self, node: ast.PackageItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
@@ -416,7 +416,7 @@ class SymTabBuildPass(SymTabPass):
         else:
             pass  # Need to support pythonic import symbols with dots in it
 
-    def enter_module_item(self, node: ast.ModuleItem) -> None:
+    def enter_import_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         name: Name,

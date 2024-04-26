@@ -624,7 +624,7 @@ class PyastGenPass(Pass):
             )
         node.gen.py_ast = py_nodes
 
-    def exit_module_path(self, node: ast.ModulePath) -> None:
+    def exit_package_item(self, node: ast.PackageItem) -> None:
         """Sub objects.
 
         path: Sequence[Token],
@@ -642,7 +642,7 @@ class PyastGenPass(Pass):
         if node.alias:
             self.link_jac_py_nodes(jac_node=node.alias, py_nodes=node.gen.py_ast)
 
-    def exit_module_item(self, node: ast.ModuleItem) -> None:
+    def exit_import_item(self, node: ast.ImportItem) -> None:
         """Sub objects.
 
         name: Name,
