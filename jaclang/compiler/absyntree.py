@@ -592,7 +592,8 @@ class Import(ElementStmt, CodeBlockStmt):
     def __init__(
         self,
         lang: SubTag[Name],
-        paths: list[PackageItem],
+        level: Optional[int],
+        level_name: Optional[Name],
         items: Optional[SubNodeList[ImportItem]],
         is_absorb: bool,  # For includes
         kid: Sequence[AstNode],
@@ -600,7 +601,8 @@ class Import(ElementStmt, CodeBlockStmt):
     ) -> None:
         """Initialize import node."""
         self.lang = lang
-        self.paths = paths
+        self.level = level
+        self.level_name = level_name
         self.items = items
         self.is_absorb = is_absorb
         AstNode.__init__(self, kid=kid)
@@ -611,8 +613,6 @@ class Import(ElementStmt, CodeBlockStmt):
         res = True
         if deep:
             res = self.lang.normalize(deep)
-            for p in self.paths:
-                res = res and p.normalize(deep)
             res = res and self.items.normalize(deep) if self.items else res
             res = res and self.doc.normalize(deep) if self.doc else res
         new_kid: list[AstNode] = []
@@ -625,9 +625,6 @@ class Import(ElementStmt, CodeBlockStmt):
         new_kid.append(self.lang)
         if self.items:
             new_kid.append(self.gen_token(Tok.KW_FROM))
-        for p in self.paths:
-            new_kid.append(p)
-            new_kid.append(self.gen_token(Tok.COMMA))
         new_kid.pop()
         if self.items:
             new_kid.append(self.gen_token(Tok.COMMA))
@@ -637,79 +634,25 @@ class Import(ElementStmt, CodeBlockStmt):
         return res
 
 
-class PackageItem(AstSymbolNode):
-    """ModulePath node type for Jac Ast."""
-
-    def __init__(
-        self,
-        path: Optional[list[Name]],
-        level: int,
-        alias: Optional[Name],
-        kid: Sequence[AstNode],
-        sub_module: Optional[Module] = None,
-    ) -> None:
-        """Initialize module path node."""
-        self.path = path
-        self.level = level
-        self.alias = alias
-        self.sub_module = sub_module
-
-        AstNode.__init__(self, kid=kid)
-        AstSymbolNode.__init__(
-            self,
-            sym_name=alias.sym_name if alias else self.path_str,
-            sym_name_node=alias if alias else self,
-            sym_type=SymbolType.MODULE,
-        )
-
-    def normalize(self, deep: bool = False) -> bool:
-        """Normalize module path node."""
-        res = True
-        if deep:
-            if self.path:
-                for p in self.path:
-                    res = res and p.normalize(deep)
-            res = res and self.alias.normalize(deep) if self.alias else res
-        new_kid: list[AstNode] = []
-        # for _ in range(self.level):
-        #     new_kid.append(self.gen_token(Tok.DOT))
-        if self.path:
-            for p in self.path:
-                res = res and p.normalize(deep)
-                new_kid.append(p)
-                new_kid.append(self.gen_token(Tok.DOT))
-            new_kid.pop()
-        if self.alias:
-            res = res and self.alias.normalize(deep)
-            new_kid.append(self.alias)
-        self.set_kids(nodes=new_kid)
-        return res
-
-    @property
-    def path_str(self) -> str:
-        """Get path string."""
-        return ("." * self.level) + ".".join(
-            [p.value for p in self.path] if self.path else ""
-        )
-
-
 class ImportItem(AstSymbolNode):
     """ModuleItem node type for Jac Ast."""
 
     def __init__(
         self,
-        name: Name,
+        names: list[Name],
         alias: Optional[Name],
         kid: Sequence[AstNode],
+        sub_module: Optional[Module] = None,
     ) -> None:
         """Initialize module item node."""
-        self.name = name
+        self.names = names
         self.alias = alias
+        self.sub_module = sub_module
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
-            sym_name=alias.sym_name if alias else name.sym_name,
-            sym_name_node=alias if alias else name,
+            sym_name=alias.sym_name if alias else self.dotted_name,
+            sym_name_node=alias if alias else self,
             sym_type=SymbolType.MOD_VAR,
         )
 
@@ -717,14 +660,27 @@ class ImportItem(AstSymbolNode):
         """Normalize module item node."""
         res = True
         if deep:
-            res = res and self.name.normalize(deep)
+            if self.names:
+                for p in self.names:
+                    res = res and p.normalize(deep)
             res = res and self.alias.normalize(deep) if self.alias else res
-        new_kid: list[AstNode] = [self.name]
+        new_kid: list[AstNode] = []
+        if self.names:
+            for p in self.names:
+                res = res and p.normalize(deep)
+                new_kid.append(p)
+                new_kid.append(self.gen_token(Tok.DOT))
+            new_kid.pop()
         if self.alias:
             new_kid.append(self.gen_token(Tok.KW_AS))
             new_kid.append(self.alias)
         self.set_kids(nodes=new_kid)
         return res
+
+    @property
+    def dotted_name(self) -> str:
+        """Get path string."""
+        return ".".join([p.sym_name for p in self.names])
 
 
 class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
