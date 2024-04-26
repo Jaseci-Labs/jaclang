@@ -1,5 +1,6 @@
-# import:jac from .., one_lev_dup;
-# import:jac from ..., needs_import_dup;
+# from ... import ... as ...;
+import:jac from .., one_lev_dup;
+import:jac from ..., needs_import_dup;
 
 with entry {
     print(one_lev_dup.olprint());
