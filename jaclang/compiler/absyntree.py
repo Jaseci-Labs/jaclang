@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast as ast3
+import hashlib
 from types import EllipsisType
 from typing import Any, Callable, Generic, Optional, Sequence, Type, TypeVar
 
@@ -402,6 +403,7 @@ class Module(AstDocNode):
         self.registry = registry
         AstNode.__init__(self, kid=kid)
         AstDocNode.__init__(self, doc=doc)
+        self.checksum = hashlib.sha256(self.unparse().encode()).hexdigest()
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module node."""

@@ -29,6 +29,12 @@ class CodeGenTarget:
         self.py_ast = []
         self.mypy_ast = []
 
+    def __getstate__(self) -> object:
+        """Handle object when picking the object as there are issues with picking mypy nodes."""
+        t = self.__dict__
+        t.pop("mypy_ast")
+        return t
+
 
 class CodeLocInfo:
     """Code location info."""
