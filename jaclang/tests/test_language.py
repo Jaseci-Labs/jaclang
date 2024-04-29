@@ -8,6 +8,7 @@ import sys
 from jaclang import jac_import
 from jaclang.cli import cli
 from jaclang.compiler.compile import jac_file_to_pass, jac_str_to_pass
+from jaclang.compiler.settings import Settings
 from jaclang.core import construct
 from jaclang.utils.test import TestCase
 
@@ -17,6 +18,7 @@ class JacLanguageTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
+        self.config = Settings()
         return super().setUp()
 
     def test_sub_abilities(self) -> None:
@@ -528,7 +530,7 @@ class JacLanguageTests(TestCase):
 
     def test_needs_import_1(self) -> None:
         """Test py ast to Jac ast conversion output."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("needs_import_1", base_path=self.fixture_abs_path("./"))
@@ -539,7 +541,7 @@ class JacLanguageTests(TestCase):
 
     def test_pyfunc_1(self) -> None:
         """Test py ast to Jac ast conversion."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         from jaclang.compiler.passes.main import PyastBuildPass
         import jaclang.compiler.absyntree as ast
         import ast as py_ast
@@ -568,7 +570,7 @@ class JacLanguageTests(TestCase):
 
     def test_needs_import_2(self) -> None:
         """Test py ast to Jac ast conversion output."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("needs_import_2", base_path=self.fixture_abs_path("./"))
@@ -580,7 +582,7 @@ class JacLanguageTests(TestCase):
 
     def test_pyfunc_2(self) -> None:
         """Test py ast to Jac ast conversion."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         from jaclang.compiler.passes.main import PyastBuildPass
         import jaclang.compiler.absyntree as ast
         import ast as py_ast
@@ -600,7 +602,7 @@ class JacLanguageTests(TestCase):
 
     def test_needs_import_3(self) -> None:
         """Test py ast to Jac ast conversion output."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("needs_import_3", base_path=self.fixture_abs_path("./"))
@@ -611,7 +613,7 @@ class JacLanguageTests(TestCase):
 
     def test_pyfunc_3(self) -> None:
         """Test py ast to Jac ast conversion."""
-        os.environ["JAC_PROC_DEBUG"] = "1"
+        os.environ["JAC_PROC_DEBUG"] = self.config["jac_proc_debug"]
         from jaclang.compiler.passes.main import PyastBuildPass
         import jaclang.compiler.absyntree as ast
         import ast as py_ast
