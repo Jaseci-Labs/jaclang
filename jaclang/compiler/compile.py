@@ -66,7 +66,7 @@ def jac_str_to_pass(
     # Checking if there is a module changed
     if use_cache:
         debug_print("***************************************************")
-        debug_print("**** mypy nodes aren't linked in the saved AST ****")
+        debug_print("******* Jac Incremental Compilation Enabled *******")
         debug_print("***************************************************")
         modules = __get_all_modules(ast_ret.ir)
         if len(modules) > 1:
@@ -80,18 +80,20 @@ def jac_str_to_pass(
                 if cache["checksum"] == module.checksum:
                     debug_print(f"Using jacache for module '{module.name}'")
                     ast_ret.ir = cache["ast"]
+                    for warning in cache["warnnings_had"]:
+                        ast_ret.log_warning(str(warning))
                 else:
                     debug_print(
                         f"Module '{module.name}' checksum is changed, compiling the module..."
                     )
                     ast_ret = jac_run_passes(ast_ret, target, schedule)
-                    jac_save_ast(ast_ret.ir)
+                    jac_save_ast(ast_ret)
             else:
                 debug_print(
                     f"Module '{module.name}' is not found in the cache, compiling the module..."
                 )
                 ast_ret = jac_run_passes(ast_ret, target, schedule)
-                jac_save_ast(ast_ret.ir)
+                jac_save_ast(ast_ret)
     else:
         ast_ret = jac_run_passes(ast_ret, target, schedule)
 
@@ -143,12 +145,18 @@ def jac_file_formatter(
     return prse
 
 
-def jac_save_ast(ir: ast.AstNode) -> None:
+def jac_save_ast(jac_pass: Pass) -> None:
     """Save jac ast into a cache file."""
+    ir = jac_pass.ir
     modules: list[ast.Module] = __get_all_modules(ir)
     for m in modules:
         debug_print("Saving module", m.name)
-        out = {"name": m.name, "checksum": m.checksum, "ast": m}
+        out = {
+            "name": m.name,
+            "checksum": m.checksum,
+            "ast": m,
+            "warnnings_had": jac_pass.warnings_had,
+        }
         with open(f"{m.name}.jacache", "wb") as f:
             f.write(pickle.dumps(out))
 
@@ -159,3 +167,7 @@ def __get_all_modules(ir: ast.AstNode) -> list[ast.Module]:
         modules.append(ir)
     modules += ir.get_all_sub_nodes(ast.Module)
     return modules
+
+
+# M0
+# M1 & M2
