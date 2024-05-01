@@ -113,7 +113,7 @@ class ImportPass(Pass):
         if target in self.import_table:
             return self.import_table[target]
         try:
-            mod_pass = jac_file_to_pass(file_path=target, target=SubNodeTabPass)
+            mod_pass = jac_file_to_pass(file_path=target, target=SubNodeTabPass, disable_cache_saving=True)
             self.errors_had += mod_pass.errors_had
             self.warnings_had += mod_pass.warnings_had
             mod = mod_pass.ir
