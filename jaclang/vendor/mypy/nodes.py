@@ -3479,11 +3479,11 @@ class FakeInfo(TypeInfo):
     def __init__(self, msg: str) -> None:
         self.msg = msg
 
-    def __getattribute__(self, attr: str) -> type:
-        # Handle __class__ so that isinstance still works...
-        if attr == "__class__":
-            return object.__getattribute__(self, attr)  # type: ignore[no-any-return]
-        raise AssertionError(object.__getattribute__(self, "msg"))
+    # def __getattribute__(self, attr: str) -> type:
+    #     # Handle __class__ so that isinstance still works...
+    #     if attr == "__class__":
+    #         return object.__getattribute__(self, attr)  # type: ignore[no-any-return]
+    #     raise AssertionError(object.__getattribute__(self, "msg"))
 
 
 VAR_NO_INFO: Final[TypeInfo] = FakeInfo("Var is lacking info")
