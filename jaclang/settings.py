@@ -1,5 +1,6 @@
 """Main settings of Jac lang."""
 
+import argparse
 import configparser
 import os
 from dataclasses import dataclass, fields
@@ -27,6 +28,7 @@ class Settings:
         """Load settings from all available sources."""
         self.load_config_file()
         self.load_env_vars()
+        self.load_cmd_line_args()
 
     def load_config_file(self) -> None:
         """Load settings from a configuration file."""
@@ -46,19 +48,21 @@ class Settings:
             if env_value is not None:
                 setattr(self, key, self.convert_type(env_value))
 
-        # def load_command_line_arguments(self):
-        #     """Override settings from command-line arguments if provided."""
-        #     parser = argparse.ArgumentParser()
-        #     parser.add_argument(
-        #         "--debug",
-        #         type=self.str_to_bool,
-        #         nargs="?",
-        #         const=True,
-        #         default=self.config["debug"],
-        #     )
-        #     parser.add_argument("--port", type=int, default=self.config["port"])
-        #     parser.add_argument("--host", default=self.config["host"])
-        #     args = parser.parse_args()
+    def load_cmd_line_args(self) -> None:
+        """Override settings from command-line arguments if provided."""
+        parser = argparse.ArgumentParser()
+        for field_name in [f.name for f in fields(self)]:
+            parser.add_argument(
+                f"--{field_name}",
+                type=self.str_to_bool,
+                nargs="?",
+                const=True,
+                default=getattr(self, field_name),
+                help=f"Enable {field_name} debug messages",
+            )
+        args = parser.parse_args()
+        for field_name, value in vars(args).items():
+            setattr(self, field_name, value)
 
     def str_to_bool(self, value: str) -> bool:
         """Convert string to boolean."""
