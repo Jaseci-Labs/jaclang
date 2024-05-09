@@ -232,3 +232,7 @@ def get_type_annotation(data: Any) -> str:  # noqa: ANN401
             return "dict[str, Any]"
     else:
         return str(type(data).__name__)
+
+
+LLMInfo = tuple[str, str]
+SemInputs = tuple[str, str, str, Any]

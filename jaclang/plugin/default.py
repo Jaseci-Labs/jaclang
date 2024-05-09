@@ -14,6 +14,8 @@ from typing import Any, Callable, Optional, Type, Union
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
 from jaclang.core.aott import (
+    LLMInfo,
+    SemInputs,
     aott_raise,
     extract_non_primary_type,
     get_all_type_explanations,
@@ -64,7 +66,6 @@ __all__ = [
     "jac_importer",
     "T",
 ]
-
 
 hookimpl = pluggy.HookimplMarker("jac")
 
@@ -566,9 +567,9 @@ class JacFeatureDefaults:
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
         scope: str,
-        incl_info: list[tuple[str, str]],
-        excl_info: list[tuple[str, str]],
-        inputs: list[tuple[str, str, str, Any]],
+        incl_info: list[LLMInfo],
+        excl_info: list[LLMInfo],
+        inputs: list[SemInputs],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
@@ -622,6 +623,9 @@ class JacFeatureDefaults:
         meaning_out = model.__infer__(meaning_in, **model_params)
         reasoning, output = get_reasoning_output(meaning_out)
         return output
+    
+class JacLLM:
+    
 
 
 class JacBuiltin:
