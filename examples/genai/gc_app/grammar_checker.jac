@@ -1,17 +1,9 @@
-import:py anthropic;
-obj grammar_checker {
-    can __infer__(meaning_in: str, **kwargs: dict) {
-        client = anthropic.Anthropic(api_key='_YOUR_API_KEY_');
-        message = client.messages.create(model="claude-3-opus-20240229",max_tokens=1024,messages=[{"role": "user", "content": meaning_in}]);
-        corrected_text = message.content[0].text;
-        return corrected_text;
-    }
-}
+import:py from jaclang.core.llms, Anthropic;
 
-glob grammar_checker = grammar_checker();
+glob llm = Anthropic(model_name="claude-3-sonnet-20240229");;
 
-can "Correct Text without any  Grammar Errors"
-correct_grammar(text: 'Text with Errors': str) -> 'Corrected Text': str by grammar_checker( temperature=0.9);
+can "Resolve any grammar errors in the given text"
+correct_grammar(text: 'Text with Errors': str) -> 'Grammar Corrected Text': str by llm( temperature=0.9);
 
 with entry {
    with open("fixtures/text.txt", 'r') as file {
