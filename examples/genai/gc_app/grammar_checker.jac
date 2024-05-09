@@ -6,6 +6,7 @@ can "Resolve any grammar errors in the given text"
 correct_grammar(text: 'Text with Errors': str) -> 'Grammar Corrected Text': str by llm( temperature=0.9);
 
 with entry {
+    #open the file and read the text
    with open("fixtures/text.txt", 'r') as file {
        text= file.read();
     }
