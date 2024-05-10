@@ -9,6 +9,7 @@ from jaclang.plugin.default import (  # noqa: E402
     JacBuiltin,
     JacCmdDefaults,
     JacFeatureDefaults,
+    JacLLM,
 )
 from jaclang.plugin.feature import JacFeature, pm  # noqa: E402
 from jaclang.vendor import lark  # noqa: E402
@@ -19,6 +20,7 @@ jac_import = JacFeature.jac_import
 
 pm.register(JacFeatureDefaults)
 pm.register(JacBuiltin)
+pm.register(JacLLM)
 pm.register(JacCmdDefaults)
 pm.load_setuptools_entrypoints("jac")
 

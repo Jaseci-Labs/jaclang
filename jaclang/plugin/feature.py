@@ -13,7 +13,7 @@ from jaclang.core.construct import (
     Root,
     WalkerArchitype,
 )
-from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, T
+from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, JacLLM, T
 
 
 import pluggy
@@ -22,6 +22,7 @@ pm = pluggy.PluginManager("jac")
 pm.add_hookspecs(JacFeatureSpec)
 pm.add_hookspecs(JacCmdSpec)
 pm.add_hookspecs(JacBuiltin)
+pm.add_hookspecs(JacLLM)
 
 
 class JacFeature:
@@ -232,25 +233,6 @@ class JacFeature:
         return pm.hook.build_edge(
             is_undirected=is_undirected, conn_type=conn_type, conn_assign=conn_assign
         )
-
-    @staticmethod
-    def get_semstr_type(
-        file_loc: str, scope: str, attr: str, return_semstr: bool
-    ) -> Optional[str]:
-        """Jac's get_semstr_type feature."""
-        return pm.hook.get_semstr_type(
-            file_loc=file_loc, scope=scope, attr=attr, return_semstr=return_semstr
-        )
-
-    @staticmethod
-    def obj_scope(file_loc: str, attr: str) -> str:
-        """Jac's get_semstr_type feature."""
-        return pm.hook.obj_scope(file_loc=file_loc, attr=attr)
-
-    @staticmethod
-    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
-        """Jac's get_semstr_type feature."""
-        return pm.hook.get_sem_type(file_loc=file_loc, attr=attr)
 
     @staticmethod
     def with_llm(

@@ -458,6 +458,74 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
+    def with_llm(
+        file_loc: str,
+        model: Any,  # noqa: ANN401
+        model_params: dict[str, Any],
+        scope: str,
+        incl_info: list[LLMInfo],
+        excl_info: list[LLMInfo],
+        inputs: list[SemInputs],
+        outputs: tuple,
+        action: str,
+    ) -> Any:  # noqa: ANN401
+        """Jac's with_llm feature."""
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
+            ),
+            "rb",
+        ) as f:
+            mod_registry = pickle.load(f)
+
+        outputs = outputs[0] if isinstance(outputs, list) else outputs
+        _scope = SemScope.get_scope_from_str(scope)
+        assert _scope is not None
+
+        reason = False
+        if "reason" in model_params:
+            reason = model_params.pop("reason")
+
+        type_collector: list = []
+        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
+        type_collector.extend(collected_types)
+        inputs_information_list = []
+        for i in inputs:
+            typ_anno = get_type_annotation(i[3])
+            type_collector.extend(extract_non_primary_type(typ_anno))
+            inputs_information_list.append(
+                f"{i[0]} ({i[2]}) ({typ_anno}) = {get_object_string(i[3])}"
+            )
+        inputs_information = "\n".join(inputs_information_list)
+
+        output_information = f"{outputs[0]} ({outputs[1]})"
+        type_collector.extend(extract_non_primary_type(outputs[1]))
+
+        type_explanations_list = list(
+            get_all_type_explanations(type_collector, mod_registry).values()
+        )
+        type_explanations = "\n".join(type_explanations_list)
+
+        meaning_in = aott_raise(
+            information,
+            inputs_information,
+            output_information,
+            type_explanations,
+            action,
+            reason,
+        )
+        meaning_out = model.__infer__(meaning_in, **model_params)
+        reasoning, output = get_reasoning_output(meaning_out)
+        return output
+
+
+class JacLLM:
+    """Jac LLM."""
+
+    @staticmethod
+    @hookimpl
     def get_semstr_type(
         file_loc: str, scope: str, attr: str, return_semstr: bool
     ) -> Optional[str]:
@@ -559,73 +627,6 @@ class JacFeatureDefaults:
         if isinstance(attr_sem_info, SemInfo) and isinstance(attr_scope, SemScope):
             return attr_sem_info.semstr, attr_scope.as_type_str
         return "", ""  #
-
-    @staticmethod
-    @hookimpl
-    def with_llm(
-        file_loc: str,
-        model: Any,  # noqa: ANN401
-        model_params: dict[str, Any],
-        scope: str,
-        incl_info: list[LLMInfo],
-        excl_info: list[LLMInfo],
-        inputs: list[SemInputs],
-        outputs: tuple,
-        action: str,
-    ) -> Any:  # noqa: ANN401
-        """Jac's with_llm feature."""
-        with open(
-            os.path.join(
-                os.path.dirname(file_loc),
-                "__jac_gen__",
-                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
-            ),
-            "rb",
-        ) as f:
-            mod_registry = pickle.load(f)
-
-        outputs = outputs[0] if isinstance(outputs, list) else outputs
-        _scope = SemScope.get_scope_from_str(scope)
-        assert _scope is not None
-
-        reason = False
-        if "reason" in model_params:
-            reason = model_params.pop("reason")
-
-        type_collector: list = []
-        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
-        type_collector.extend(collected_types)
-        inputs_information_list = []
-        for i in inputs:
-            typ_anno = get_type_annotation(i[3])
-            type_collector.extend(extract_non_primary_type(typ_anno))
-            inputs_information_list.append(
-                f"{i[0]} ({i[2]}) ({typ_anno}) = {get_object_string(i[3])}"
-            )
-        inputs_information = "\n".join(inputs_information_list)
-
-        output_information = f"{outputs[0]} ({outputs[1]})"
-        type_collector.extend(extract_non_primary_type(outputs[1]))
-
-        type_explanations_list = list(
-            get_all_type_explanations(type_collector, mod_registry).values()
-        )
-        type_explanations = "\n".join(type_explanations_list)
-
-        meaning_in = aott_raise(
-            information,
-            inputs_information,
-            output_information,
-            type_explanations,
-            action,
-            reason,
-        )
-        meaning_out = model.__infer__(meaning_in, **model_params)
-        reasoning, output = get_reasoning_output(meaning_out)
-        return output
-    
-class JacLLM:
-    
 
 
 class JacBuiltin:
