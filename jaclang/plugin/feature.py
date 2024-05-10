@@ -6,6 +6,7 @@ import types
 from typing import Any, Callable, Optional, Type, TypeAlias, Union
 
 from jaclang.compiler.absyntree import Module
+from jaclang.core.aott import LLMInfo, SemInputs
 from jaclang.core.construct import (
     Architype,
     EdgeArchitype,
@@ -240,9 +241,9 @@ class JacFeature:
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
         scope: str,
-        incl_info: list[tuple[str, str]],
-        excl_info: list[tuple[str, str]],
-        inputs: list[tuple[str, str, str, Any]],
+        incl_info: list[LLMInfo],
+        excl_info: list[LLMInfo],
+        inputs: list[SemInputs],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
