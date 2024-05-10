@@ -1,34 +1,10 @@
 # Jac Coding Manual
 
-Jac is all of python's goodness wrapped in a language that gives the coder wings. Lets jump right in!
+Jac is a powerful Python-based language that gives coders wings. Let's dive right in! If you haven't already installed Jaclang, you can find the installation guide [here](../start/installation.md).
 
-## Get Jac
-
-Install Jac.
-
-```bash
-pip install jaclang
-```
-> **Important Note :**
->
-> If you have a previous jaclang installation please bash `jac clean` in order to remove all cached files, before uninstallation.
->
-> If you have already uninstalled the previous jaclang version, bash `source scripts/clean_jac_gen.sh` from source, before installation.
-
-Validate Jac works.
-
-```bash
-echo "with entry { print('hello world'); }" > test.jac;
-jac run test.jac;
-rm test.jac;"
-```
-
-If that command prints `hello world`, Jac is working.
-
-Ok now lets jump into learning Jac!
 ## A Complete Example
 
-We start this journey top down. Lets look at a simple but complete program in Python and two Jac versions. The first implements the module with very close resemblence to Python, and the second is the clean Jactastic way of implemmenting the same functionality. Lets look at the complete examples, then break it down.
+We will begin this journey from the top down. We will examine a simple yet complete program in Python, as well as two Jac versions. The first version closely resembles Python in its module implementation, while the second version showcases the clean and efficient Jactastic way of implementing the same functionality. First, we will take a look at the complete examples, and then break them down into smaller parts."
 
 === "Python (circle.py)"
     ```python linenums="1"
@@ -51,6 +27,8 @@ Now lets break it down!
 
 ### Docstrings, Imports, and Globals
 
+In this segment we observe a docstring, imports, and a global variable. In Jac docstrings look exactly like python docstrings, however docstrings can only be used as docstrings (not as comments). That means there are a limited number of places you can place them, these places are at the top of a module, and *before* the declaration of functions, methods, classes (architypes), global variable statements, module level code blocks (i.e., `with entry {}` style blocks, more on this later), and enumerations.
+
 === "circle.jac"
     ```jac linenums="1"
     --8<-- "examples/manual_code/circle.jac::8"
@@ -59,8 +37,6 @@ Now lets break it down!
     ```python linenums="1"
     --8<-- "examples/manual_code/circle.py::11"
     ```
-
-In this segment we observe a docstring, imports, and a global variable. In Jac docstrings look exactly like python docstrings, however docstrings can only be used as docstrings (not as comments). That means there are a limited number of places you can place them, these places are at the top of a module, and *before* the declaration of functions, methods, classes (architypes), global variable statements, module level code blocks (i.e., `with entry {}` style blocks, more on this later), and enumerations.
 
 Import statements are very similar to python, note that you have to denote if you are importing a python module with `import:py` or jac with `import:jac`. Module paths and such are pretty much identical.
 
