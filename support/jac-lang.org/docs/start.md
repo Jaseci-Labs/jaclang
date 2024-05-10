@@ -48,6 +48,7 @@ While Python is widely regarded for its simplicity and versatility, jac lang off
 
 - Programming with Large Language Models
     - Jac-lang has an up & coming feature which allows programmers to integrate LLMs into their programming pipeline seamlessly without the need for learning extensive libraries and complicated new syntaxes.
+
 <!-- ## Integrating Jac into Python Modules
 
 JacLang also provides a seamless way to import Jac into existing Python modules through library functions. Here's an example:

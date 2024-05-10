@@ -27,9 +27,24 @@ theme:
     logo: 'assets/logo.png'
     name: 'material'
     palette:
-        scheme: 'slate'
-        primary: 'black'
-        accent: 'orange'
+      # Palette toggle for light mode
+      - scheme: default
+        toggle:
+          icon: material/brightness-7
+          name: Switch to dark mode
+        primary: black
+        accent: orange
+
+      # Palette toggle for dark mode
+      - scheme: slate
+        toggle:
+          icon: material/brightness-4
+          name: Switch to light mode
+        primary: black
+        accent: orange
+
+
+
     font:
         text: 'Roboto'
         code: 'Roboto Mono'
