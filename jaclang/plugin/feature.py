@@ -6,7 +6,6 @@ import types
 from typing import Any, Callable, Optional, Type, TypeAlias, Union
 
 from jaclang.compiler.absyntree import Module
-from jaclang.core.aott import LLMInfo, SemInputs
 from jaclang.core.construct import (
     Architype,
     EdgeArchitype,
@@ -233,31 +232,6 @@ class JacFeature:
         """Jac's root getter."""
         return pm.hook.build_edge(
             is_undirected=is_undirected, conn_type=conn_type, conn_assign=conn_assign
-        )
-
-    @staticmethod
-    def with_llm(
-        file_loc: str,
-        model: Any,  # noqa: ANN401
-        model_params: dict[str, Any],
-        scope: str,
-        incl_info: list[LLMInfo],
-        excl_info: list[LLMInfo],
-        inputs: list[SemInputs],
-        outputs: tuple,
-        action: str,
-    ) -> Any:  # noqa: ANN401
-        """Jac's with_llm feature."""
-        return pm.hook.with_llm(
-            file_loc=file_loc,
-            model=model,
-            model_params=model_params,
-            scope=scope,
-            incl_info=incl_info,
-            excl_info=excl_info,
-            inputs=inputs,
-            outputs=outputs,
-            action=action,
         )
 
 

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+
+from jaclang.core.aott import LLMInfo, SemInputs
+
 
 if TYPE_CHECKING:
     from typing import Optional
@@ -10,6 +13,33 @@ if TYPE_CHECKING:
 
 class JacLLM:
     """Jac LLM."""
+
+    @staticmethod
+    def with_llm(
+        file_loc: str,
+        model: Any,  # noqa: ANN401
+        model_params: dict[str, Any],
+        scope: str,
+        incl_info: list[LLMInfo],
+        excl_info: list[LLMInfo],
+        inputs: list[SemInputs],
+        outputs: tuple,
+        action: str,
+    ) -> Any:  # noqa: ANN401
+        """Jac's with_llm feature."""
+        from jaclang.plugin.feature import pm
+
+        return pm.hook.with_llm(
+            file_loc=file_loc,
+            model=model,
+            model_params=model_params,
+            scope=scope,
+            incl_info=incl_info,
+            excl_info=excl_info,
+            inputs=inputs,
+            outputs=outputs,
+            action=action,
+        )
 
     @staticmethod
     def get_semstr_type(

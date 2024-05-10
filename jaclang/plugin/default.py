@@ -456,6 +456,10 @@ class JacFeatureDefaults:
 
         return builder
 
+
+class JacLLM:
+    """Jac LLM."""
+
     @staticmethod
     @hookimpl
     def with_llm(
@@ -519,10 +523,6 @@ class JacFeatureDefaults:
         meaning_out = model.__infer__(meaning_in, **model_params)
         reasoning, output = get_reasoning_output(meaning_out)
         return output
-
-
-class JacLLM:
-    """Jac LLM."""
 
     @staticmethod
     @hookimpl

@@ -213,22 +213,6 @@ class JacFeatureSpec:
         """Jac's root getter."""
         raise NotImplementedError
 
-    @staticmethod
-    @hookspec(firstresult=True)
-    def with_llm(
-        file_loc: str,
-        model: Any,  # noqa: ANN401
-        model_params: dict[str, Any],
-        scope: str,
-        incl_info: list[LLMInfo],
-        excl_info: list[LLMInfo],
-        inputs: list[SemInputs],
-        outputs: tuple,
-        action: str,
-    ) -> Any:  # noqa: ANN401
-        """Jac's with_llm stmt feature."""
-        raise NotImplementedError
-
 
 class JacBuiltin:
     """Jac Builtins."""
@@ -251,6 +235,22 @@ class JacBuiltin:
 
 class JacLLM:
     """Jac LLM."""
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def with_llm(
+        file_loc: str,
+        model: Any,  # noqa: ANN401
+        model_params: dict[str, Any],
+        scope: str,
+        incl_info: list[LLMInfo],
+        excl_info: list[LLMInfo],
+        inputs: list[SemInputs],
+        outputs: tuple,
+        action: str,
+    ) -> Any:  # noqa: ANN401
+        """Jac's with_llm stmt feature."""
+        raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)

@@ -1163,7 +1163,7 @@ class PyastGenPass(Pass):
                     ast3.Attribute(
                         value=self.sync(
                             ast3.Name(
-                                id=Con.JAC_FEATURE.value,
+                                id=Con.JAC_LLM.value,
                                 ctx=ast3.Load(),
                             )
                         ),
