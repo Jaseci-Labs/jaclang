@@ -43,7 +43,7 @@ def jac_importer(
     if lng == "py":
         module = py_import(
             target=target,
-            full_path=full_target,
+            base_path=base_path,
             items=items,
             absorb=absorb,
             mdl_alias=mdl_alias,
@@ -107,7 +107,7 @@ def create_jac_py_module(
 def get_caller_dir(target: str, base_path: str, dir_path: str) -> str:
     """Get the directory of the caller."""
     caller_dir = base_path if os.path.isdir(base_path) else os.path.dirname(base_path)
-    caller_dir = caller_dir if caller_dir else os.getcwd()
+    caller_dir = os.path.abspath(caller_dir) if caller_dir else os.getcwd()
     chomp_target = target
     if chomp_target.startswith("."):
         chomp_target = chomp_target[1:]
@@ -120,7 +120,7 @@ def get_caller_dir(target: str, base_path: str, dir_path: str) -> str:
 
 def py_import(
     target: str,
-    full_path: str,
+    base_path: str,
     items: Optional[dict[str, Union[str, bool]]] = None,
     absorb: bool = False,
     mdl_alias: Optional[str] = None,
@@ -132,11 +132,14 @@ def py_import(
             if not target.startswith(".")
             else len(target) - len(target.lstrip(".")) - 1
         )
-        package_name = find_py_package_name(file_path=full_path, level_up=level_up)
+        package_name = find_py_package_name(file_path=base_path, level_up=0)
         print(f"Level up: {level_up}")
-        print(f"Full path: {full_path}")
+        print(f"Full path: {base_path}")
         print(f"Package name: {package_name}")
+        # before = list(sys.modules.keys())
         imported_module = importlib.import_module(name=target, package=package_name)
+        # after = list(sys.modules.keys())
+        # print([key for key in after if key not in before])
         main_module = __import__("__main__")
         if absorb:
             for name in dir(imported_module):
