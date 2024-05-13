@@ -4,7 +4,7 @@ Jac is a powerful Python-based language that gives coders wings. Let's dive righ
 
 ## A Complete Example
 
-We will begin this journey from the top down. We will examine a simple yet complete program in Python, as well as two Jac versions. The first version closely resembles Python in its module implementation, while the second version showcases the clean and efficient Jactastic way of implementing the same functionality. First, we will take a look at the complete examples, and then break them down into smaller parts."
+We will begin this journey from the top down. We will examine a simple yet complete program in Python, as well as two Jac versions. The first version closely resembles Python in its module implementation, while the second version showcases the clean and efficient Jactastic way of implementing the same functionality. First, we will take a look at the complete examples, and then break them down into smaller parts.
 
 === "Python (circle.py)"
     ```python linenums="1"
@@ -174,27 +174,30 @@ This is an example of a Shape class in Jac. A couple things to note here.
 
 ## Complete list of Differences and Features beyond Python
 
-Jac is a superset of Python 3, all of pythons features and full native compatability is present. However, each of the features  and adjustments described here represents Jac's approach to improve programmer effectiveness in a way that is distinct from Python. These choices were made focusing on type safety, readability, expressiveness, and general code ninja goodness. As the Jac language evolves, these features will be refined and expanded based on user feedback, practical usage, and the evolution of python and coding in general.
+Jac is a programming language that includes all of Python 3's features and full native compatibility. However, each of the features  and adjustments described here represents Jac's approach to improve programmer effectiveness in a way that is distinct from Python. These choices were made focusing on type safety, readability, expressiveness, and general code ninja goodness. As the Jac language evolves, these features will be refined and expanded based on user feedback, practical usage, and the evolution of python and coding in general.
 
 Additionally, Jac is the first language to implement the data spatial object paradigm. After getting used to Jac, we encourage every coder to expand their toolkit with this powerful programming model.
 
 ### Whitespace doesn't matter
 
+In contrast to Python, which relies on indentation to define code blocks, Jac does not use whitespace for this purpose. This gives programmers have more flexibility in formatting their code, but it is still recommended to maintain a consistent style for readability purposes. More beautiful formatting styles are possible with increased flexibility in code layout.
+
+
 ```jac linenums="1"
 --8<-- "examples/micro/whitespace.jac"
 ```
 
-Unlike Python, where indentation is crucial for defining code blocks, Jac does not consider whitespace for this purpose. This gives programmers more flexibility in formatting their code, although maintaining a consistent style is still recommended for readability. With more flexibility in how code can be laid out, more beautiful formatting styles are possible.
-
 ### Types hints are required
+
+In Jac, you are required to use type hints for specific variable declarations and function signatures. This ensures type safety, improves code self-documentation and aids in debugging and maintaining the codebase.
 
 ```jac linenums="1"
 --8<-- "examples/micro/type_hints.jac"
 ```
-In Jac, type hints are mandatory for certain variable declarations and function signatures. This enforces type safety and makes the code more self-documenting, aiding in debugging and maintaining the codebase.
 
 ### Typing library implicitly available
-Jac has a built-in typing system, similar to Python's typing library, but it's implicitly available. This means you don't need to import typing modules explicitly to use features like `List`, `Dict`, `Optional`, etc. You can simply reference them with a backtick as  `` `List ``, `` `Dict ``, and `` `Optional ``.
+
+Jac has an inbuilt typing system that is similar to Python's typing library. However, it's implicitly available, which means you don't need to import any typing modules explicitly to use features such as `List`, `Dict`, `Optional`, etc. You can easily reference them with a backtick as  `` `List ``, `` `Dict ``, and `` `Optional ``.
 
 ### Can separate definitions from declarations
 
@@ -220,6 +223,8 @@ In Jac, separating the declaration of functions or variables from their definiti
 
 ### Can have definitions and implementations span multiple files
 
+Jac offers the option to divide code definitions from their corresponding implementations and store them in different files. This approach improves code modularity and maintainability by allowing developers to organize their codebase more efficiently. The definitions, such as abstract declarations or interfaces, can be placed in one file, while their implementations can be stored in separate files. By separating the definitions from their implementations, it becomes easier to manage the codebase, especially for large-scale projects, and encourages team collaboration. This structure also facilitates concurrent work by different team members on different parts of the implementation without conflicts, as the interface remains consistent and shared across the team. Additionally, this approach results in clear version control and change tracking, making the development process more efficient and less prone to errors.
+
 === "decl_defs_main.jac"
     ```jac linenums="1"
     --8<-- "examples/micro/decl_defs_main.jac"
@@ -229,23 +234,21 @@ In Jac, separating the declaration of functions or variables from their definiti
     --8<-- "examples/micro/decl_defs_impl.jac"
     ```
 
-Jac supports separating definitions from implementations across multiple files. This feature enhances modularity and maintainability, as it allows developers to organize their codebase more effectively. Definitions can be placed in one file (e.g., for interfaces or abstract declarations), while their corresponding implementations can reside in separate files. This separation not only makes the codebase easier to manage, especially for large-scale projects, but also facilitates team collaboration. Different team members can work on different aspects of the implementation concurrently without conflicts, as the interface remains consistent and shared across the team. Moreover, this structure aids in clear version control and change tracking, making the development process more efficient and less error-prone.
-
 ### Proper access control
+
+In Jac, the access control is more precise and explicit, compared to Python. Jac introduces access modifiers that are similar to those found in languages like Java or C#. This allows for defining access levels such as `public`, `private`, and `protected`. This feature enhances encapsulation and helps developers to define the scope of class members more clearly. By controlling access to the internals of a class, programmers can prevent unintended interactions with the class's methods and attributes, leading to more stable and maintainable code.
 
 ```jac linenums="1"
 --8<-- "examples/micro/access_info.jac"
 ```
 
-In Jac, access control is more granular and explicit compared to Python. Jac introduces access modifiers similar to those found in languages like Java or C#, allowing for `public`, `private`, and `protected` access levels. This feature enhances encapsulation and allows developers to define the scope of class members more clearly. By controlling access to the internals of a class, programmers can prevent unintended interactions with the class's methods and attributes, leading to more robust and maintainable code.
-
 ### Proper abstract classes/methods
+
+Jac comes with built-in support for abstract classes and methods, which is implemented through the `abc` module in Python. In Jac, defining an abstract class is more intuitive, and abstract methods can be declared directly. This ensures that derived classes must implement the abstract methods, which promotes consistency and predictability in class hierarchies. The proper implementation of abstract classes and methods in Jac makes it easier to design and work with complex object-oriented systems, as it provides a clear framework for structuring and interacting with classes.
 
 ```jac linenums="1"
 --8<-- "examples/micro/class_multi_inherit.jac"
 ```
-Jac provides built-in support for abstract classes and methods, a feature that is handled through the `abc` module in Python. In Jac, an abstract class can be defined more intuitively, and any methods that are meant to be abstract can be declared as such directly. This enforces a contract for the derived classes to implement the abstract methods, ensuring consistency and predictability in class hierarchies. The introduction of proper abstract classes and methods in Jac makes it easier to design and work with complex object-oriented systems, as it provides a clear framework for how classes should be structured and interacted with.
-
 
 ### Tuples are explicit
 Tuples in Jac must be explicitly declared, which differs from Python's implicit tuple creation. This design choice avoids accidental creation of tuples, enhancing code clarity.
@@ -267,7 +270,9 @@ Assign comprehension is a unique feature in Jac that allows for direct assignmen
 
 ### Dataclass style basis for OOP
 Jac's approach to object-oriented programming is based on a dataclass style, where classes are primarily used to store data. This makes data handling more straightforward and efficient.
+
 ### Abstract Classes, Methods and overrides built in
+
 ### Application Bundling
 
 ### Proper multiline Comments
