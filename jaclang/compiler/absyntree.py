@@ -51,9 +51,9 @@ class AstNode:
     ) -> AstNode:
         """Add kid right."""
         self.kid = [*self.kid, *nodes]
+        for i in nodes:
+            i.parent = self
         if pos_update:
-            for i in nodes:
-                i.parent = self
             self.loc.update_last_token(self.kid[-1].loc.last_tok)
         return self
 

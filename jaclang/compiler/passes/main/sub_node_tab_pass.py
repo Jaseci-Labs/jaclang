@@ -18,6 +18,9 @@ class SubNodeTabPass(Pass):
     def before_pass(self) -> None:
         """Initialize pass."""
         self.cur_module: Optional[ast.Module] = None
+    
+    def after_pass(self) -> None:
+        return super().after_pass()
 
     def enter_node(self, node: ast.AstNode) -> None:
         """Table builder."""

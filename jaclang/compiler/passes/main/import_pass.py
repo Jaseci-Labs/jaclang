@@ -13,18 +13,23 @@ from typing import Optional
 
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes import Pass
+from jaclang.compiler.passes import Pass, CacheablePass
 from jaclang.compiler.passes.main import SubNodeTabPass
 from jaclang.settings import settings
 from jaclang.utils.helpers import import_target_to_relative_path
 
 
-class ImportPass(Pass):
+class ImportPass(Pass, CacheablePass):
     """Jac statically imports all modules."""
 
     def before_pass(self) -> None:
         """Run once before pass."""
         self.import_table: dict[str, ast.Module] = {}
+        self.load_cache(self.ir)
+    
+    def after_pass(self) -> None:
+        self.cache()
+        return super().after_pass()
 
     def enter_module(self, node: ast.Module) -> None:
         """Run Importer."""
