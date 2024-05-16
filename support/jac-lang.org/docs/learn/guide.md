@@ -4,7 +4,7 @@ Jac is a powerful Python-based language that gives coders wings. Let's dive righ
 
 ## A Complete Example
 
-We will begin this journey from the top down. We will examine a simple yet complete program in Python, as well as two Jac versions. The first version closely resembles Python in its module implementation, while the second version showcases the clean and efficient Jactastic way of implementing the same functionality. First, we will take a look at the complete examples, and then break them down into smaller parts.
+We will begin this journey from the top down. Let's look at a simple yet complete program in Python and two Jac versions. The first version closely resembles Python in its module implementation, while the second version showcases the clean and efficient Jactastic way of implementing the same functionality. First, let's take a look at the complete examples, and then break them down into smaller parts.
 
 === "Python (circle.py)"
     ```python linenums="1"
@@ -27,7 +27,7 @@ Now lets break it down!
 
 ### Docstrings
 
-Jac docstrings have the same syntax as Python docstrings. However, it's important to note that Jac docstrings can only be used as docstrings and not as comments. This means that there are only a few places where you can use them. You can place them at the **top of a module, before the declaration of functions, methods, classes (archetypes), global variable statements, and module level code blocks** (for example, `with entry {}` style blocks). It's also important to note that the docstring should be placed **before the function call**. This is done to improve code readability, especially when a large docstring is used.
+Jac docstrings have the same syntax as Python docstrings. However, Jac docstrings can only be used as docstrings and not as comments. This means that there are only a few places where you can use them. You can place them at the **top of a module, before the declaration of functions, methods, classes (archetypes), global variable statements, and module level code blocks** (for example, `with entry {}` style blocks). Docstring should be placed **before the function call**. This is done to improve code readability, especially when a large docstring is used.
 
 
 === "Jac"
@@ -41,7 +41,7 @@ Jac docstrings have the same syntax as Python docstrings. However, it's importan
 
 ### Multiline Comments
 
-Jac does not allow docstrings to be used as comments. However, it provides an elegant way to specify multiline comments. Any text between `#*` and `*#` is treated as a multi-line comment. This is delightfully Pythontic.
+Jac provides an elegant way to specify multiline comments. Any text between `#*` and `*#` is treated as a multi-line comment. This is delightfully Pythontic.
 
 === "Jac"
     ```jac linenums="15"
@@ -75,7 +75,7 @@ The reason for this change is purely aesthetic - when reading a file with many i
 
 ### Abilities (Functions)
 
-In Jac, a new naming convention has been introduced to refer to functions and data spatial code blocks as "abilities." While we will discuss data spatial programming in more detail later on, for now, it's worth noting that the functions in Python and Jac are quite similar, except that the `def` keyword is replaced with `can`. Additionally, Jac requires that type hints be included in function signatures (both for parameters and return values). Any function that doesn't include a return signature (i.e., `-> TYPE`) is assumed to be `-> None` by default.
+In Jac, a new naming convention has been introduced to refer to functions and data spatial code blocks as "abilities." While we will discuss data spatial programming in more detail later on, for now, it's worth noting that the functions in Python and Jac are quite similar, except that the `def` keyword is replaced with `can`. Additionally, Jac requires that type hints are mandotory in function signatures (both for parameters and return values). Any function that doesn't include a return signature (i.e., `-> TYPE`) is assumed to be `-> None` by default.
 
 === "circle.jac"
     ```jac linenums="10"
