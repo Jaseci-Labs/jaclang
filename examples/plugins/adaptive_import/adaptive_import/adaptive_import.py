@@ -11,16 +11,14 @@ from jaclang.compiler.absyntree import Module
 import pluggy
 from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec
 import logging
+import subprocess
 import marshal
+import os
 from os import getcwd, path
 from jaclang.compiler.constant import Constants as Con
 from jaclang.compiler.compile import compile_jac
 import importlib
 from jaclang.core.utils import sys_path_context
-
-
-logging.basicConfig(level=logging.DEBUG)  # Set logging to debug level
-logger = logging.getLogger(__name__)
 
 pm = pluggy.PluginManager("jac")
 pm.add_hookspecs(JacFeatureSpec)
@@ -28,22 +26,75 @@ pm.add_hookspecs(JacCmdSpec)
 pm.add_hookspecs(JacBuiltin)
 
 
+def simulate_remote_execution(codeobj, global_context):
+    """
+    Simulate the remote execution of Python bytecode by running it in a separate Python process.
+    This can simulate the isolation of a remote environment.
+
+    Args:
+    - codeobj: Compiled Python bytecode to execute.
+    - global_context: A dictionary representing global variables to include in the execution.
+    """
+    # Serialize the bytecode and context to strings that can be passed to another process
+    serialized_code = marshal.dumps(codeobj)
+    context_file_path = "/tmp/simulated_context.py"
+
+    # Prepare a file that sets up the context and deserialize the code to execute
+    with open(context_file_path, "w") as context_file:
+        # Dumping the context into a Python file
+        for key, value in global_context.items():
+            context_file.write(f"{key} = {repr(value)}\n")
+        context_file.write("\nimport marshal\n")
+        context_file.write("exec(marshal.loads({}))\n".format(repr(serialized_code)))
+
+    result = subprocess.run(
+        [sys.executable, context_file_path], capture_output=True, text=True
+    )
+
+    # Clean up the context file
+    os.remove(context_file_path)
+
+    # Output the result or handle errors
+    if result.returncode == 0:
+        print("Execution Output:", result.stdout)
+    else:
+        print("Error during simulated remote execution:", result.stderr)
+
+
 def load_module_remotely(target, remote_address: str = "auto"):
-    """Load a module using Ray in a remote setting."""
-    print(f"Loading module {target} remotely...")
+    # logging.info(f"Attempting to load module {target} remotely...")
     if not ray.is_initialized():
         ray.init(address=remote_address)
+        logging.info(f"Ray initialized with address {remote_address}")
+    else:
+        logging.info("Ray already initialized.")
 
     async def async_load_module():
+        # Assuming your custom classes here...
         library_monitor = LibraryMonitor()
         policy_manager = PolicyManager(library_monitor)
         module_loader = ModuleLoader(policy_manager, use_ray_object_store=True)
-        return await module_loader.load_module(target)
+
+        # logger.info("Starting async module loading")
+        # # Verify numpy availability
+        # try:
+        #     numpy_check = await module_loader.load_module("numpy")
+        #     if numpy_check:
+        #         logger.info("Numpy is available in the remote environment")
+        #         logger.info(
+        #             f"numpy_check {numpy_check}, numpy_check array:{numpy_check.array([1])}"
+        #         )
+        #     else:
+        #         logger.error("Numpy is not available in the remote environment")
+        # except Exception as e:
+        #     logger.error(f"Error checking numpy availability: {e}")
+
+        loaded_module = await module_loader.load_module(target)
+        # logging.info(f"Module loaded remotely: {loaded_module}")
+        return loaded_module
 
     loop = asyncio.get_event_loop()
     module = loop.run_until_complete(async_load_module())
-    # if module:
-    #     sys.modules[module.__name__] = module
     return module
 
 
@@ -113,6 +164,9 @@ def jac_importer(
 
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, file_name))
+    # logging.info(
+    #     f"Caller directory set to {caller_dir}, full target path {full_target}"
+    # )
     if lng == "py":
         module = py_import(
             target=target,
@@ -153,10 +207,11 @@ def jac_importer(
                     codeobj = marshal.loads(result.ir.gen.py_bytecode)
         if not codeobj:
             raise ImportError(f"No bytecode found for {full_target}")
-        print(f"Compiling module {full_target}, module dict is {module.__dict__}")
+        # logging.info(f"Executing bytecode for {module_name} at {full_target}")
         with sys_path_context(caller_dir):
             exec(codeobj, module.__dict__)
-
+            # simulate_remote_execution(codeobj, module.__dict__)
+    # logging.info(f"Module {module_name} loaded with dictionary: {module.__dict__}")
     return module
 
 
@@ -171,16 +226,23 @@ def py_import(
 ) -> types.ModuleType:
     """Import a Python module, optionally using the ModuleLoader for remote modules."""
     try:
-        # print(f"Importing module {target}")
+        # logging.info(f"Importing module {target}")
         if use_remote and module_loader:
-            # print(f"Loading module {target} remotely")
+            # logging.info(f"Loading module {target} remotely")
             imported_module = load_module_remotely(
                 target=target, remote_address=remote_address
             )
         else:
             target = target.lstrip(".") if target.startswith("..") else target
             imported_module = importlib.import_module(target)
+
+        # logging.info(f"Module {target} loaded: {imported_module}")
+
+        # Print module contents for verification
+        # logging.info(f"Contents of {target}: {dir(imported_module)}")
+
         main_module = __import__("__main__")
+
         if absorb:
             for name in dir(imported_module):
                 if not name.startswith("_"):
@@ -203,18 +265,22 @@ def py_import(
                         )
                     else:
                         raise e
-
         else:
-            print(f"main_module module {main_module}")
+            # logging.info(f"Setting module {target} in __main__ and sys.modules")
             setattr(
-                __import__("__main__"),
+                main_module,
                 mdl_alias if isinstance(mdl_alias, str) else target,
                 imported_module,
             )
-            print(f"main_module module {main_module.__dict__}")
+            sys.modules[target] = imported_module
+
+        # Verify module in sys.modules
+        # logging.info(f"Module {target} in sys.modules: {sys.modules.get(target)}")
+        # logging.info(f"Current sys.path: {sys.path}")
+
         return imported_module
     except ImportError as e:
-        print(f"Failed to import module {target}")
+        logging.error(f"Failed to import module {target}: {e}")
         raise e
 
 
@@ -267,5 +333,5 @@ class JacFeature:
                 )
                 return module
             except Exception as e:
-                logger.error(f"Error while loading module '{target}' locally: {e}")
+                logging.error(f"Error while loading module '{target}' locally: {e}")
                 return None

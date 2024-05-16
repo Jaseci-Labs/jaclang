@@ -40,6 +40,9 @@ class PolicyManager:
         if strategy == "remote":
             remote_load_type = module_data.get("remote_load_type", "shared")
         self.current_placement[module_name] = strategy
+        print(
+            f"Placement for {module_name}: {strategy}, remote_load_type: {remote_load_type}"
+        )
         return strategy, remote_load_type
 
     async def adapt_module_placement(self, module_name: str):
