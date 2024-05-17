@@ -1,7 +1,4 @@
 import ray
-
-# from transformers import PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerFast
-# import numpy as np
 import importlib
 import uuid
 import logging
@@ -21,12 +18,6 @@ class ModuleActor:
 
     async def execute_method(self, attribute_path, *args, **kwargs):
         try:
-            # print(
-            #     f"Executing method {attribute_path} of module {self.module.__name__} with args: {args}, kwargs: {kwargs}"
-            # )
-            # logger.info(
-            #     f"Executing method {attribute_path} of module {self.module.__name__} with args: {args}, kwargs: {kwargs}"
-            # )
             attribute = self.module
             path_parts = attribute_path.split(".")
             for attr in path_parts[:-1]:
