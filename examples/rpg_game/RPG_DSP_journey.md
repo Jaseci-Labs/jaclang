@@ -228,7 +228,11 @@ The implementation of the above game class can be done as below in any of the im
 >
 >      ```:obj:<obj_name>:can:<func_name>(params){body}```
 >
-> - Therefore, the entire codebase implementation can be written in different files and the program will work as long as the files are imported in the file that will run.
+> - Therefore, the entire codebase implementation can be written in different files and the program will work as long as the files are imported in the module that will ```jac run```. To include the relevent file to the module, we can
+>
+>      ```:obj:<obj_name>:can:<func_name>(params){body}```
+>
+>   before using the imported implementations.
 
 ```python
 # Start a new game
@@ -369,7 +373,9 @@ The implementation of these objects can be found in [sprites.jac](<.//jac_impl/j
 
 ## Data Spatial Implementation
 
-The implementation we discussed so far is how a conventional programmer would use Jaclang to program a relatively complex object-oriented program. However, Jaclang is super-setting the conventional programming paradigm, meaning that the language supports another programming paradigm.
+The previously discussed implementations are how a conventional programmer would use Jaclang to program a relatively complex program using object-oriented programming paradigm.
+
+In this section we will discuss on how to code the above program using a novel inbuilt prgaramming paradigm in jac-lang, which is **Data-spatial Programming**.
 
 ### Data Spatial architecture
 
@@ -381,15 +387,15 @@ There are two main constructs in graphs: **nodes** and **edges**. Taking our RPG
 
 There is another construct that needs to be discussed which is **walkers**. In the RPG, the player must play through the levels in order to progress. This graph traversal is done by an agent who is the player. This graph traversal agent is known as a "walker". Walkers can walk on the graph in any specified manner and can perform different abilities upon entry or exit from a node.
 
-When programming the RPG in the conventional method, after a level has been won or lost, the immediately previous game level data will be lost unless saved separately on a global variable.
+When programming the RPG using OOP, after a level has been won or lost, the immediately previous game level data will be lost unless saved separately on a global variable.
 
 In a data-spatial implementation of the game architecture, after a level has been won it will create a new level node on the graph and when a game is lost it will go back on the graph and branch off to create a new instance of the game level, leaving all previous level data untouched.
 
-This ability is important when the program is required to procedurally generate some data, when reinforcement learning is required or when integrating large language models into programs where chain-of-thought, graph-of-though inference methodologies are inherently supported.
+This ability is important when the program is required to fetch pevious playthrough data to procedurally generate maps using the playing patterns on the player.
 
 ## Converting RPG into Data-spatial Architecture
 
-The game built in the conventional program can be converted into the data spatial architecture with some additional changes. The brilliance of data-spatial implementation is that it is not required to convert the entire program into data-spatial architecture for it to work as a data-spatial program. The graph traversal architecture described above can be run without needing to reprogram the entire codebase.
+The game built in the conventional program can be converted into the data spatial architecture with some additional changes. The advantage in using jac-lang for data-spatial programming is that it is not required to convert the entire program into data-spatial architecture for it to work as a data-spatial program. Conventional OOP code segments can run within nodes or walkers which makes this a hibrid programming model.
 
 The fully implemented Data-spatial version can be found at [jac_impl_4](.//jac_impl/jac_impl_4/) if you want to jump in straight.
 
@@ -399,7 +405,7 @@ The only difference in this file is the runtime logic has been removed from here
 
 ### sprite.jac, config.jac & map.jac
 
-No changes are required on the file as well.
+No changes are required on these files as well.
 
 ### Runtime Logic of the program : [DSP.jac](.//jac_impl/jac_impl_4/DSP.jac)
 
