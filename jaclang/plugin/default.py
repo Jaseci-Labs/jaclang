@@ -587,9 +587,12 @@ class JacFeatureDefaults:
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
-        reason = False
-        if "reason" in model_params:
-            reason = model_params.pop("reason")
+        reason = model_params.pop("reason") if "reason" in model_params else False
+        context = (
+            ",".join(model_params.pop("context"))
+            if "context" in model_params
+            else "None"
+        )
 
         type_collector: list = []
         information, collected_types = get_info_types(_scope, mod_registry, incl_info)
@@ -617,6 +620,7 @@ class JacFeatureDefaults:
             output_information,
             type_explanations,
             action,
+            context,
             reason,
         )
         meaning_out = model.__infer__(meaning_in, **model_params)

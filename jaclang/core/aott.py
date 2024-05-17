@@ -19,6 +19,9 @@ Input/Type formatting: Explanation of the Input (variable_name) (type) = value
 [Information]
 {information}
 
+[Context]
+{context}
+
 [Inputs Information]
 {inputs_information}
 
@@ -53,6 +56,7 @@ def aott_raise(
     output_information: str,
     type_explanations: str,
     action: str,
+    context: str,
     reason: bool,
 ) -> str:
     """AOTT Raise uses the information (Meanings types values) provided to generate a prompt(meaning in)."""
@@ -62,6 +66,7 @@ def aott_raise(
         output_information=output_information,
         type_explanations=type_explanations,
         action=action,
+        context=context,
         reason_suffix=WITH_REASON_SUFFIX if reason else WITHOUT_REASON_SUFFIX,
     )
 
