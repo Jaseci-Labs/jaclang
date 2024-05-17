@@ -589,9 +589,7 @@ class JacFeatureDefaults:
 
         reason = model_params.pop("reason") if "reason" in model_params else False
         context = (
-            ",".join(model_params.pop("context"))
-            if "context" in model_params
-            else "None"
+            ",".join(model_params.pop("context")) if "context" in model_params else ""
         )
 
         type_collector: list = []
