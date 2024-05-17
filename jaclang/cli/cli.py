@@ -1,5 +1,6 @@
 """Command line interface tool for the Jac language."""
 
+import ast as ast3
 import importlib
 import marshal
 import os
@@ -8,10 +9,12 @@ import shutil
 import types
 from typing import Optional
 
+import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
 from jaclang.cli.cmdreg import CommandShell, cmd_registry
 from jaclang.compiler.compile import jac_file_to_pass
 from jaclang.compiler.constant import Constants
+from jaclang.compiler.passes.main.pyast_load_pass import PyastBuildPass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.builtin import dotgen
@@ -235,7 +238,7 @@ def debug(filename: str, main: bool = True, cache: bool = False) -> None:
 
 
 @cmd_registry.register
-def graph(
+def dot(
     filename: str,
     initial: str = "",
     depth: int = -1,
@@ -288,6 +291,23 @@ def graph(
         print(f">>> Graph content saved to {os.path.join(os.getcwd(), file_name)}")
     else:
         print("Not a .jac file.")
+
+
+@cmd_registry.register
+def py_to_jac(filename: str, tree: bool = False) -> None:
+    """Convert a Python file to Jac.
+
+    :param filename: The path to the .py file.
+    :param tree: Flag to show the AST tree.(Default-False).
+    """
+    if filename.endswith(".py"):
+        with open(filename, "r") as f:
+            mod = PyastBuildPass(
+                input_ir=ast.PythonModuleAst(ast3.parse(f.read()), mod_path=filename),
+            ).ir.unparse()
+        print(mod)
+    else:
+        print("Not a .py file.")
 
 
 def start_cli() -> None:

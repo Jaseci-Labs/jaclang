@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Callable, Optional, Type, TypeAlias
+from typing import Any, Callable, Optional, Type, TypeAlias, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.core.construct import (
@@ -77,17 +77,25 @@ class JacFeature:
     def jac_import(
         target: str,
         base_path: str,
+        absorb: bool = False,
         cachable: bool = True,
+        mdl_alias: Optional[str] = None,
         override_name: Optional[str] = None,
         mod_bundle: Optional[Module] = None,
+        lng: Optional[str] = "jac",
+        items: Optional[dict[str, Union[str, bool]]] = None,
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
         return pm.hook.jac_import(
             target=target,
             base_path=base_path,
+            absorb=absorb,
             cachable=cachable,
+            mdl_alias=mdl_alias,
             override_name=override_name,
             mod_bundle=mod_bundle,
+            lng=lng,
+            items=items,
         )
 
     @staticmethod
@@ -226,6 +234,25 @@ class JacFeature:
         )
 
     @staticmethod
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool
+    ) -> Optional[str]:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.get_semstr_type(
+            file_loc=file_loc, scope=scope, attr=attr, return_semstr=return_semstr
+        )
+
+    @staticmethod
+    def obj_scope(file_loc: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.obj_scope(file_loc=file_loc, attr=attr)
+
+    @staticmethod
+    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.get_sem_type(file_loc=file_loc, attr=attr)
+
+    @staticmethod
     def with_llm(
         file_loc: str,
         model: Any,  # noqa: ANN401
@@ -233,7 +260,7 @@ class JacFeature:
         scope: str,
         incl_info: list[tuple[str, str]],
         excl_info: list[tuple[str, str]],
-        inputs: tuple,
+        inputs: list[tuple[str, str, str, Any]],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401

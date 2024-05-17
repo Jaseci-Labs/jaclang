@@ -38,12 +38,15 @@ class JacCliTests(TestCase):
     def test_circle_jac_test(self) -> None:
         """Basic test for pass."""
         captured_output = io.StringIO()
+        stdout_block = io.StringIO()
         sys.stderr = captured_output
+        sys.stdout = stdout_block
 
         # Execute the function
         cli.test(self.fixture_abs_path("../../../examples/manual_code/circle.jac"))  # type: ignore
 
         sys.stderr = sys.__stderr__
+        sys.stdout = sys.__stdout__
         stderr_value = captured_output.getvalue()
         # Assertions or verifications
         self.assertIn("Ran 3 tests", stderr_value)
@@ -84,15 +87,37 @@ class JacCliTests(TestCase):
             stdout_value,
         )
 
+    def test_pure_circle_impl(self) -> None:
+        """Basic test for pass."""
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+
+        cli.tool(
+            "ir",
+            [
+                "py",
+                f"{self.fixture_abs_path('../../../examples/manual_code/circle_pure.jac')}",
+            ],
+        )
+
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+
+        # Assertions or verifications
+        self.assertNotIn("\ndef __init__(self", stdout_value)
+
     def test_clean_circle_jac_test(self) -> None:
         """Basic test for pass."""
         captured_output = io.StringIO()
+        stdio_block = io.StringIO()
         sys.stderr = captured_output
+        sys.stdout = stdio_block
 
         # Execute the function
         cli.test(self.fixture_abs_path("../../../examples/manual_code/circle_clean_tests.jac"))  # type: ignore
 
         sys.stderr = sys.__stderr__
+        sys.stdout = sys.__stdout__
         stderr_value = captured_output.getvalue()
         # Assertions or verifications
         self.assertIn("Ran 3 tests", stderr_value)

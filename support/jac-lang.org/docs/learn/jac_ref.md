@@ -5,7 +5,7 @@
 ## Base Module structure
 **Grammar Snippet**
 ```yaml linenums="2"
---8<-- "jaclang/compiler/jac.lark:2:17"
+--8<-- "jaclang/compiler/jac.lark:2:16"
 ```
 **Code Example**
 === "Jac"
@@ -22,8 +22,8 @@
 
 ## Import/Include Statements
 **Grammar Snippet**
-```yaml linenums="20"
---8<-- "jaclang/compiler/jac.lark:20:30"
+```yaml linenums="19"
+--8<-- "jaclang/compiler/jac.lark:19:30"
 ```
 **Code Example**
 === "Jac"
@@ -1175,7 +1175,7 @@
 ## Lexer Tokens
 **Grammar Snippet**
 ```yaml linenums="470"
---8<-- "jaclang/compiler/jac.lark:470:645"
+--8<-- "jaclang/compiler/jac.lark:470:641"
 ```
 **Code Example**
 === "Jac"
@@ -1192,8 +1192,8 @@
 
 ## f-string tokens
 **Grammar Snippet**
-```yaml linenums="648"
---8<-- "jaclang/compiler/jac.lark:648:659"
+```yaml linenums="644"
+--8<-- "jaclang/compiler/jac.lark:644:655"
 ```
 **Code Example**
 === "Jac"

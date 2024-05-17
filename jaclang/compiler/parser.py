@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-
+import keyword
 import logging
 import os
 from typing import Callable, TypeAlias
@@ -167,7 +167,6 @@ class JacParser(Pass):
             """Grammar rule.
 
             element: py_code_block
-                | include_stmt
                 | import_stmt
                 | ability
                 | architype
@@ -283,19 +282,27 @@ class JacParser(Pass):
 
             import_stmt: KW_IMPORT sub_name KW_FROM from_path COMMA import_items SEMI
                     | KW_IMPORT sub_name import_path (COMMA import_path)* SEMI
+                    | include_stmt
             """
+            if len(kid) == 1 and isinstance(kid[0], ast.Import):
+                return self.nu(kid[0])
             lang = kid[1]
-            paths = [i for i in kid if isinstance(i, ast.ModulePath)]
+            from_path = kid[3] if isinstance(kid[3], ast.ModulePath) else None
+            if from_path:
+                items = kid[-2] if isinstance(kid[-2], ast.SubNodeList) else None
+            else:
+                paths = [i for i in kid if isinstance(i, ast.ModulePath)]
+                items = ast.SubNodeList[ast.ModulePath](
+                    items=paths, delim=Tok.COMMA, kid=kid[2:-1]
+                )
+                kid = kid[:2] + [items] + kid[-1:]
 
-            items = kid[-2] if isinstance(kid[-2], ast.SubNodeList) else None
             is_absorb = False
-            if isinstance(lang, ast.SubTag) and (
-                isinstance(items, ast.SubNodeList) or items is None
-            ):
+            if isinstance(lang, ast.SubTag) and (isinstance(items, ast.SubNodeList)):
                 return self.nu(
                     ast.Import(
-                        lang=lang,
-                        paths=paths,
+                        hint=lang,
+                        from_loc=from_path,
                         items=items,
                         is_absorb=is_absorb,
                         kid=kid,
@@ -340,14 +347,20 @@ class JacParser(Pass):
             include_stmt: KW_INCLUDE sub_name import_path SEMI
             """
             lang = kid[1]
-            paths = [i for i in kid if isinstance(i, ast.ModulePath)]
+            from_path = kid[2]
+            if not isinstance(from_path, ast.ModulePath):
+                raise self.ice()
+            items = ast.SubNodeList[ast.ModulePath](
+                items=[from_path], delim=Tok.COMMA, kid=[from_path]
+            )
+            kid = kid[:2] + [items] + kid[3:]
             is_absorb = True
             if isinstance(lang, ast.SubTag):
                 return self.nu(
                     ast.Import(
-                        lang=lang,
-                        paths=paths,
-                        items=None,
+                        hint=lang,
+                        from_loc=None,
+                        items=items,
                         is_absorb=is_absorb,
                         kid=kid,
                     )
@@ -1917,13 +1930,17 @@ class JacParser(Pass):
                 sig_kid.append(params)
             if return_type:
                 sig_kid.append(return_type)
-            signature = ast.FuncSignature(
-                params=params,
-                return_type=return_type,
-                kid=sig_kid,
+            signature = (
+                ast.FuncSignature(
+                    params=params,
+                    return_type=return_type,
+                    kid=sig_kid,
+                )
+                if params or return_type
+                else None
             )
             new_kid = [i for i in kid if i != params and i != return_type]
-            new_kid.insert(1, signature)
+            new_kid.insert(1, signature) if signature else None
             if isinstance(chomp[0], ast.Expr):
                 return self.nu(
                     ast.LambdaExpr(
@@ -2321,16 +2338,34 @@ class JacParser(Pass):
         def atomic_call(self, kid: list[ast.AstNode]) -> ast.FuncCall:
             """Grammar rule.
 
-            atomic_call: atomic_chain LPAREN param_list? RPAREN
+            atomic_call: atomic_chain LPAREN param_list? (KW_BY atomic_call)? RPAREN
             """
+            if (
+                len(kid) > 4
+                and isinstance(kid[0], ast.Expr)
+                and kid[-2]
+                and isinstance(kid[-2], ast.FuncCall)
+            ):
+                return self.nu(
+                    ast.FuncCall(
+                        target=kid[0],
+                        params=kid[2] if isinstance(kid[2], ast.SubNodeList) else None,
+                        genai_call=kid[-2],
+                        kid=kid,
+                    )
+                )
             if (
                 len(kid) == 4
                 and isinstance(kid[0], ast.Expr)
                 and isinstance(kid[2], ast.SubNodeList)
             ):
-                return self.nu(ast.FuncCall(target=kid[0], params=kid[2], kid=kid))
+                return self.nu(
+                    ast.FuncCall(target=kid[0], params=kid[2], genai_call=None, kid=kid)
+                )
             elif len(kid) == 3 and isinstance(kid[0], ast.Expr):
-                return self.nu(ast.FuncCall(target=kid[0], params=None, kid=kid))
+                return self.nu(
+                    ast.FuncCall(target=kid[0], params=None, genai_call=None, kid=kid)
+                )
             else:
                 raise self.ice()
 
@@ -3814,21 +3849,7 @@ class JacParser(Pass):
         def __default_token__(self, token: jl.Token) -> ast.Token:
             """Token handler."""
             ret_type = ast.Token
-            if token.type == Tok.KWESC_NAME:
-                return self.nu(
-                    ast.Name(
-                        file_path=self.parse_ref.mod_path,
-                        name=token.type,
-                        value=token.value[2:],
-                        line=token.line if token.line is not None else 0,
-                        col_start=token.column if token.column is not None else 0,
-                        col_end=token.end_column if token.end_column is not None else 0,
-                        pos_start=token.start_pos if token.start_pos is not None else 0,
-                        pos_end=token.end_pos if token.end_pos is not None else 0,
-                        is_kwesc=True,
-                    )
-                )
-            elif token.type == Tok.NAME:
+            if token.type in [Tok.NAME, Tok.KWESC_NAME]:
                 ret_type = ast.Name
             elif token.type == Tok.SEMI:
                 ret_type = ast.Semi
@@ -3854,15 +3875,22 @@ class JacParser(Pass):
                 ret_type = ast.Bool
             elif token.type == Tok.PYNLINE and isinstance(token.value, str):
                 token.value = token.value.replace("::py::", "")
-            return self.nu(
-                ret_type(
-                    file_path=self.parse_ref.mod_path,
-                    name=token.type,
-                    value=token.value,
-                    line=token.line if token.line is not None else 0,
-                    col_start=token.column if token.column is not None else 0,
-                    col_end=token.end_column if token.end_column is not None else 0,
-                    pos_start=token.start_pos if token.start_pos is not None else 0,
-                    pos_end=token.end_pos if token.end_pos is not None else 0,
-                )
+            ret = ret_type(
+                file_path=self.parse_ref.mod_path,
+                name=token.type,
+                value=token.value[2:] if token.type == Tok.KWESC_NAME else token.value,
+                line=token.line if token.line is not None else 0,
+                col_start=token.column if token.column is not None else 0,
+                col_end=token.end_column if token.end_column is not None else 0,
+                pos_start=token.start_pos if token.start_pos is not None else 0,
+                pos_end=token.end_pos if token.end_pos is not None else 0,
             )
+            if isinstance(ret, ast.Name):
+                if token.type == Tok.KWESC_NAME:
+                    ret.is_kwesc = True
+                if ret.value in keyword.kwlist:
+                    err = jl.UnexpectedInput(f"Python keyword {ret.value} used as name")
+                    err.line = ret.loc.first_line
+                    err.column = ret.loc.col_start
+                    raise err
+            return self.nu(ret)

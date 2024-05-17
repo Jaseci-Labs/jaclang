@@ -15,6 +15,7 @@ from typing import Optional
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
 from jaclang.compiler.passes.main import SubNodeTabPass
+from jaclang.settings import settings
 from jaclang.utils.helpers import import_target_to_relative_path
 
 
@@ -28,6 +29,7 @@ class ImportPass(Pass):
     def enter_module(self, node: ast.Module) -> None:
         """Run Importer."""
         self.cur_node = node
+        self.import_table[node.loc.mod_path] = node
         self.annex_impl(node)
         self.terminate()  # Turns off auto traversal for deliberate traversal
         self.run_again = True
@@ -35,22 +37,23 @@ class ImportPass(Pass):
             self.run_again = False
             all_imports = self.get_all_sub_nodes(node, ast.ModulePath)
             for i in all_imports:
-                if i.parent.lang.tag.value == "jac" and not i.sub_module:
-                    self.run_again = True
+                lang = i.parent_of_type(ast.Import).hint.tag.value
+                if lang == "jac" and not i.sub_module:
                     mod = self.import_module(
                         node=i,
                         mod_path=node.loc.mod_path,
                     )
-                    if not mod:
-                        self.run_again = False
-                        continue
-                    self.annex_impl(mod)
-                    i.sub_module = mod
-                    i.add_kids_right([mod], pos_update=False)
-                # elif i.parent.lang.tag.value == "py":
-                #     mod = self.import_py_module(node=i, mod_path=node.loc.mod_path)
-                #     i.sub_module = mod
-                #     i.add_kids_right([mod], pos_update=False)
+                    if mod:
+                        self.run_again = True
+                        self.annex_impl(mod)
+                        i.sub_module = mod
+                        i.add_kids_right([mod], pos_update=False)
+                elif lang == "py" and settings.py_raise:
+                    mod = self.import_py_module(node=i, mod_path=node.loc.mod_path)
+                    if mod:
+                        # self.run_again = True
+                        i.sub_module = mod
+                        i.add_kids_right([mod], pos_update=False)
                 self.enter_module_path(i)
             SubNodeTabPass(prior=self, input_ir=node)
         self.annex_impl(node)
@@ -95,7 +98,7 @@ class ImportPass(Pass):
         """Import a module."""
         self.cur_node = node  # impacts error reporting
         target = import_target_to_relative_path(
-            node.path_str, path.dirname(node.loc.mod_path)
+            node.level, node.path_str, path.dirname(node.loc.mod_path)
         )
         return self.import_mod_from_file(target)
 
@@ -120,6 +123,7 @@ class ImportPass(Pass):
         if isinstance(mod, ast.Module):
             self.import_table[target] = mod
             mod.is_imported = True
+            mod.body = [x for x in mod.body if not isinstance(x, ast.AstImplOnlyNode)]
             return mod
         else:
             self.error(f"Module {target} is not a valid Jac module.")
