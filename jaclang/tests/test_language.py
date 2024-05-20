@@ -3,8 +3,8 @@
 import io
 import os
 import pickle
+import subprocess
 import sys
-import subprocess   
 from unittest.mock import patch
 
 from jaclang import jac_import
@@ -782,9 +782,13 @@ class JacLanguageTests(TestCase):
         settings.py_raise = False
 
     def test_access_modifier(self) -> None:
-        """Test for access tags working.""" 
+        """Test for access tags working."""
         process = subprocess.Popen(
-            ["jac", "check", f"{self.fixture_abs_path("../../tests/fixtures/access_modifier.jac")}"],
+            [
+                "jac",
+                "check",
+                f"{self.fixture_abs_path('../../tests/fixtures/access_modifier.jac')}",
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
