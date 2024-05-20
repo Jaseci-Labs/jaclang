@@ -4,6 +4,7 @@ import io
 import os
 import pickle
 import sys
+import subprocess   
 from unittest.mock import patch
 
 from jaclang import jac_import
@@ -781,16 +782,16 @@ class JacLanguageTests(TestCase):
         settings.py_raise = False
 
     def test_access_modifier(self) -> None:
-        """Test for access tags working."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        cli.check(
-            self.fixture_abs_path("../../tests/fixtures/access_modifier.jac"),
-            print_errs=True,
+        """Test for access tags working.""" 
+        process = subprocess.Popen(
+            ["jac", "check", f"{self.fixture_abs_path("../../tests/fixtures/access_modifier.jac")}"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
-        sys.stdout = sys.__stdout__
-        stdout_value = captured_output.getvalue()
-        self.assertIn('Can not access private variable "p"', stdout_value)
-        self.assertIn('Can not access private variable "privmethod"', stdout_value)
-        self.assertIn('Can not access private variable "BankAccount"', stdout_value)
-        self.assertNotIn(" Name: ", stdout_value)
+        stdout, stderr = process.communicate()
+        self.assertIn('Can not access private variable "p"', stderr)
+        self.assertIn('Can not access private variable "privmethod"', stderr)
+        self.assertIn('Can not access private variable "BankAccount"', stderr)
+        self.assertNotIn(" Name: ", stdout)
