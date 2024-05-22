@@ -23,6 +23,7 @@ from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
 
+from ..core.machine import machine
 
 Cmd.create_cmd()
 
@@ -103,6 +104,38 @@ def build(filename: str) -> None:
             pickle.dump(out.ir, f)
     else:
         print("Not a .jac file.")
+
+
+@cmd_registry.register
+def mrun(filename: str, main: bool = True, cache: bool = True) -> None:
+    """Run the specified .jac or .jir file using the mrun command."""
+    base, mod = os.path.split(filename)
+    base = base if base else "./"
+    mod = mod[:-4]
+
+    # machine = JacMachine()  # Initialize JacMachine
+
+    if filename.endswith(".jac"):
+        machine.import_and_load(
+            filename=filename,
+            base_path=base,
+            cachable=cache,
+            override_name="__main__" if main else None,
+        )
+    elif filename.endswith(".jir"):
+        with open(filename, "rb") as f:
+            ir = pickle.load(f)
+            machine.import_and_load(
+                filename=filename,
+                base_path=base,
+                cachable=cache,
+                override_name="__main__" if main else None,
+                mod_bundle=ir,
+            )
+    else:
+        print("Not a .jac or .jir file.")
+        return
+    machine.run_program(mod)
 
 
 @cmd_registry.register
