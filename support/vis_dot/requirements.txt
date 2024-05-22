@@ -1,0 +1,3 @@
+pydot
+streamlit
+streamlit-agraph
