@@ -1,7 +1,12 @@
-import streamlit as st
+"""Example of visualizing DOT file using streamlit-agraph and pygraphviz."""
+
 import os
 
+import streamlit as st
+
+
 def get_nodes_edges(dot_file: str) -> tuple[dict, list]:
+    """Parse DOT file and return nodes and edges as a tuple of dict and list respectively."""
     import pydot
     from streamlit_agraph import Node, Edge
 
@@ -10,23 +15,37 @@ def get_nodes_edges(dot_file: str) -> tuple[dict, list]:
     nodes: list[pydot.Node] = graph.get_node_list()
     _nodes = {}
     for node in nodes:
-        _nodes[node.get_name()] = (Node(id=node.get_name(), label=node.get_label(), color="#DBEBC2"))
+        _nodes[node.get_name()] = Node(
+            id=node.get_name(), label=node.get_label(), color="#DBEBC2"
+        )
 
     edges = graph.get_edge_list()
     _edges = []
     for edge in edges:
-        _edges.append(Edge(source=edge.get_source(), target=edge.get_destination(), label=edge.get_label()))
+        _edges.append(
+            Edge(
+                source=edge.get_source(),
+                target=edge.get_destination(),
+                label=edge.get_label(),
+            )
+        )
     return _nodes, _edges
+
 
 st.title("Visualize DOT file")
 
-selected_dot_file = st.selectbox("Select a DOT file", [x for x in os.listdir() if x.endswith(".dot")])
-vis_opt = st.radio("Visualization options", ["Use pygraphviz (Static)", "Use streamlit-agraph (Interactive)"])
+selected_dot_file = st.selectbox(
+    "Select a DOT file", [x for x in os.listdir() if x.endswith(".dot")]
+)
+vis_opt = st.radio(
+    "Visualization options",
+    ["Use pygraphviz (Static)", "Use streamlit-agraph (Interactive)"],
+)
 
 if selected_dot_file:
     if vis_opt == "Use pygraphviz (Static)":
-        dot_graph_str = open(selected_dot_file).read()
-        st.graphviz_chart(dot_graph_str)
+        with open(selected_dot_file) as f:
+            st.graphviz_chart(f.read())
     elif vis_opt == "Use streamlit-agraph (Interactive)":
         from streamlit_agraph import agraph, ConfigBuilder
 
@@ -41,4 +60,3 @@ if selected_dot_file:
                 st.write(f"Node Id: {selected_node.id}")
                 st.write(f"Node Label: {selected_node.label}")
                 st.write(f"Node Color: {selected_node.color}")
-
