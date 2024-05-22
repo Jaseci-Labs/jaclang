@@ -4,10 +4,9 @@ This pass checks for access to attributes in the Jac language.
 """
 
 import os
-from typing import Optional
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass, SymbolAccess
+from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass, SymbolAccess as Sym
 
 
 class AccessCheckPass(SymTabPass):
@@ -19,11 +18,6 @@ class AccessCheckPass(SymTabPass):
 
     def access_check(self, node: ast.Name) -> None:
         """Access check."""
-        node_info = (
-            node.sym_tab.lookup(node.sym_name)
-            if isinstance(node.sym_tab, ast.SymbolTable)
-            else None
-        )
 
         if node.sym_link:
             decl_package_path = os.path.dirname(
@@ -33,10 +27,7 @@ class AccessCheckPass(SymTabPass):
         else:
             decl_package_path = use_package_path = ""
 
-        if (
-            node_info
-            and node.sym_link
-            and node_info.access == SymbolAccess.PROTECTED
+        if (node.sym_info.acc_tag == Sym.PROTECTED
             and decl_package_path != use_package_path
         ):
             return self.error(
@@ -44,22 +35,14 @@ class AccessCheckPass(SymTabPass):
                 f" to {use_package_path}."
             )
 
-        if (
-            node_info
-            and node.sym_link
-            and node_info.access == SymbolAccess.PRIVATE
+        if (node.sym_link
+            and node.sym_info.acc_tag == Sym.PRIVATE
             and node.sym_link.defn[-1].loc.mod_path != node.loc.mod_path
         ):
             return self.error(
                 f'Can not access private variable "{node.sym_name}" from {node.sym_link.defn[-1].loc.mod_path}'
                 f" to {node.loc.mod_path}."
             )
-
-    def access_register(
-        self, node: ast.AstSymbolNode, acc_tag: Optional[SymbolAccess] = None
-    ) -> None:
-        """Access register."""
-        node.sym_info.acc_tag = acc_tag
 
     def enter_global_vars(self, node: ast.GlobalVars) -> None:
         """Sub objects.
@@ -151,6 +134,16 @@ class AccessCheckPass(SymTabPass):
         kid: Sequence[AstNode],
         """
         pass
+    def enter_has_var(self, node: ast.HasVar) -> None:
+        """Sub objects.
+
+        name: Name,
+        type_tag: SubTag[SubNodeList[TypeSpec]],
+        value: Optional[ExprType],
+        """
+        # if node.parent.parent.access:
+        #     self.access_register(node.kid[0], node.parent.parent.access.tag.value) 
+        #     self.access_register(node, node.parent.parent.access.tag.value)
 
     def enter_name(self, node: ast.Name) -> None:
         """Sub objects.
@@ -164,6 +157,19 @@ class AccessCheckPass(SymTabPass):
         """
         from jaclang.compiler.passes import Pass
 
+        node_info = (
+            node.sym_tab.lookup(node.sym_name)
+            if isinstance(node.sym_tab, ast.SymbolTable)
+            else None
+        )
+        if node_info and node_info.access == Sym.PROTECTED :
+            node.sym_info.acc_tag = Sym.PROTECTED
+        elif node_info and node_info.access == Sym.PRIVATE:
+            node.sym_info.acc_tag = Sym.PRIVATE
+        else:
+            node.sym_info.acc_tag = Sym.PUBLIC
+
+
         if isinstance(node.parent, ast.FuncCall):
             self.access_check(node)
 
@@ -171,3 +177,4 @@ class AccessCheckPass(SymTabPass):
             node=node.sym_link.defn[-1], typ=ast.GlobalVars
         ):
             self.access_check(node)
+        
