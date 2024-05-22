@@ -6,7 +6,10 @@ This pass checks for access to attributes in the Jac language.
 import os
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass, SymbolAccess as Sym
+from jaclang.compiler.passes.main.sym_tab_build_pass import (
+    SymTabPass,
+    SymbolAccess as Sym,
+)
 
 
 class AccessCheckPass(SymTabPass):
@@ -18,7 +21,6 @@ class AccessCheckPass(SymTabPass):
 
     def access_check(self, node: ast.Name) -> None:
         """Access check."""
-
         if node.sym_link:
             decl_package_path = os.path.dirname(
                 os.path.abspath(node.sym_link.defn[-1].loc.mod_path)
@@ -27,7 +29,8 @@ class AccessCheckPass(SymTabPass):
         else:
             decl_package_path = use_package_path = ""
 
-        if (node.sym_info.acc_tag == Sym.PROTECTED
+        if (
+            node.sym_info.acc_tag == Sym.PROTECTED
             and decl_package_path != use_package_path
         ):
             return self.error(
@@ -35,7 +38,8 @@ class AccessCheckPass(SymTabPass):
                 f" to {use_package_path}."
             )
 
-        if (node.sym_link
+        if (
+            node.sym_link
             and node.sym_info.acc_tag == Sym.PRIVATE
             and node.sym_link.defn[-1].loc.mod_path != node.loc.mod_path
         ):
@@ -134,6 +138,7 @@ class AccessCheckPass(SymTabPass):
         kid: Sequence[AstNode],
         """
         pass
+
     def enter_has_var(self, node: ast.HasVar) -> None:
         """Sub objects.
 
@@ -142,7 +147,7 @@ class AccessCheckPass(SymTabPass):
         value: Optional[ExprType],
         """
         # if node.parent.parent.access:
-        #     self.access_register(node.kid[0], node.parent.parent.access.tag.value) 
+        #     self.access_register(node.kid[0], node.parent.parent.access.tag.value)
         #     self.access_register(node, node.parent.parent.access.tag.value)
 
     def enter_name(self, node: ast.Name) -> None:
@@ -162,13 +167,14 @@ class AccessCheckPass(SymTabPass):
             if isinstance(node.sym_tab, ast.SymbolTable)
             else None
         )
-        if node_info and node_info.access == Sym.PROTECTED :
+        if node_info and node_info.access == Sym.PROTECTED:
             node.sym_info.acc_tag = Sym.PROTECTED
         elif node_info and node_info.access == Sym.PRIVATE:
             node.sym_info.acc_tag = Sym.PRIVATE
-        else:
+        elif node_info and node_info.access:
             node.sym_info.acc_tag = Sym.PUBLIC
-
+        else:
+            node.sym_info.acc_tag = None
 
         if isinstance(node.parent, ast.FuncCall):
             self.access_check(node)
@@ -177,4 +183,3 @@ class AccessCheckPass(SymTabPass):
             node=node.sym_link.defn[-1], typ=ast.GlobalVars
         ):
             self.access_check(node)
-        
