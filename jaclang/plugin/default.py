@@ -14,8 +14,6 @@ from typing import Any, Callable, Optional, Type, Union
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
 from jaclang.core.aott import (
-    LLMInfo,
-    SemInputs,
     aott_raise,
     extract_non_primary_type,
     get_all_type_explanations,
@@ -40,7 +38,7 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.registry import SemInfo, SemRegistry, SemScope
+from jaclang.core.registry import LLMInfo, SemInfo, SemInputs, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -497,10 +495,10 @@ class JacLLM:
         type_collector.extend(collected_types)
         inputs_information_list = []
         for i in inputs:
-            typ_anno = get_type_annotation(i[3])
+            typ_anno = get_type_annotation(i.value)
             type_collector.extend(extract_non_primary_type(typ_anno))
             inputs_information_list.append(
-                f"{i[0]} ({i[2]}) ({typ_anno}) = {get_object_string(i[3])}"
+                f"{i.semstr} ({i.param_name}) ({typ_anno}) = {get_object_string(i.value)}"
             )
         inputs_information = "\n".join(inputs_information_list)
 

@@ -6,7 +6,7 @@ import types
 from typing import Any, Callable, Optional, Type, TypeVar, Union
 
 from jaclang.compiler.absyntree import Module
-from jaclang.core.aott import LLMInfo, SemInputs
+from jaclang.core.registry import LLMInfo, SemInputs
 from jaclang.plugin.default import (
     Architype,
     DSFunc,

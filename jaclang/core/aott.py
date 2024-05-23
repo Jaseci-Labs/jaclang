@@ -8,7 +8,7 @@ import re
 from enum import Enum
 from typing import Any
 
-from jaclang.core.registry import LLMInfo, SemInfo, SemInputs, SemRegistry, SemScope
+from jaclang.core.registry import LLMInfo, SemInfo, SemRegistry, SemScope
 
 
 PROMPT_TEMPLATE = """
@@ -101,8 +101,7 @@ def get_info_types(
 
     info_str = []
     for incl in incl_info:
-        _, sem_info = filtered_registry.lookup(name=incl[0])
-        # _, sem_info = filtered_registry.lookup(name=incl.name)
+        _, sem_info = filtered_registry.lookup(name=incl.name)
         if sem_info and isinstance(sem_info, SemInfo):
             (
                 collected_types.extend(extract_non_primary_type(sem_info.type))
@@ -110,7 +109,7 @@ def get_info_types(
                 else None
             )
             info_str.append(
-                f"{sem_info.semstr} ({sem_info.name}) ({sem_info.type}) = {get_object_string(incl[1])}"
+                f"{sem_info.semstr} ({sem_info.name}) ({sem_info.type}) = {get_object_string(incl.value)}"
             )
     return ("\n".join(info_str), collected_types)
 
@@ -233,7 +232,3 @@ def get_type_annotation(data: Any) -> str:  # noqa: ANN401
             return "dict[str, Any]"
     else:
         return str(type(data).__name__)
-
-
-# LLMInfo = tuple[str, str]
-# SemInputs = tuple[str, str, str, Any]

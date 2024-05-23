@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
 
-from jaclang.core.aott import LLMInfo, SemInputs
+from jaclang.core.registry import LLMInfo, SemInputs
 
 
 if TYPE_CHECKING:

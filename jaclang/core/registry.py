@@ -140,22 +140,31 @@ class SemRegistry:
 class LLMInfo:
     """LLMInfo class to store the name and value of the LLM include information."""
 
-    def __init__(self, name: str, value: str):
+    def __init__(self, name: str, value: str) -> None:
+        """Initialize the class."""
         self.name = name
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return the string representation of the class."""
         return f"LLMInfo(name={self.name}, value={self.value})"
 
 
 class SemInputs:
     """SemInputs class to store the name, input type, parameter name and value of the input information."""
 
-    def __init__(self, name: str, input_type: Type, param_name: str, value: Any):
-        self.name = name
+    def __init__(
+        self, semstr: str, input_type: Type, param_name: str, value: Any  # noqa: ANN401
+    ) -> None:
+        """Initialize the class."""
+        self.semstr = semstr
         self.input_type = input_type
         self.param_name = param_name
         self.value = value
 
-    def __repr__(self):
-        return f"SemInputs(name={self.name}, input_type={self.input_type}, param_name={self.param_name}, value={self.value})"
+    def __repr__(self) -> str:
+        """Return the string representation of the class."""
+        return (
+            f"SemInputs(name={self.semstr}, input_type={self.input_type}, "
+            f"param_name={self.param_name}, value={self.value})"
+        )

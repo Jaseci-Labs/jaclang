@@ -156,6 +156,23 @@ class PyastGenPass(Pass):
         self.preamble.append(
             self.sync(
                 ast3.ImportFrom(
+                    module="jaclang.core.registry",
+                    names=[
+                        self.sync(
+                            ast3.alias(name="LLMInfo", asname=Con.LLM_INFO.value)
+                        ),
+                        self.sync(
+                            ast3.alias(name="SemInputs", asname=Con.SEM_INPUTS.value)
+                        ),
+                    ],
+                    level=0,
+                ),
+                jac_node=self.ir,
+            )
+        )
+        self.preamble.append(
+            self.sync(
+                ast3.ImportFrom(
                     module="jaclang.plugin.builtin",
                     names=[self.sync(ast3.alias(name="*", asname=None))],
                     level=0,
@@ -1025,33 +1042,54 @@ class PyastGenPass(Pass):
             inputs = (
                 [
                     self.sync(
-                        ast3.Tuple(
-                            elts=[
-                                (
-                                    self.sync(
-                                        ast3.Constant(
-                                            value=(
-                                                param.semstr.lit_value
-                                                if param.semstr
-                                                else None
-                                            )
-                                        )
+                        ast3.Call(
+                            func=self.sync(ast3.Name(id="SemInputs", ctx=ast3.Load())),
+                            args=[],
+                            keywords=[
+                                self.sync(
+                                    ast3.keyword(
+                                        arg="semstr",
+                                        value=self.sync(
+                                            ast3.Constant(
+                                                value=(
+                                                    param.semstr.lit_value
+                                                    if param.semstr
+                                                    else None
+                                                )
+                                            ),
+                                        ),
                                     )
                                 ),
-                                (
-                                    param.type_tag.tag.gen.py_ast[0]
-                                    if param.type_tag
-                                    else None
-                                ),
-                                self.sync(ast3.Constant(value=param.name.value)),
                                 self.sync(
-                                    ast3.Name(
-                                        id=param.name.value,
-                                        ctx=ast3.Load(),
+                                    ast3.keyword(
+                                        arg="input_type",
+                                        value=(
+                                            param.type_tag.tag.gen.py_ast[0]
+                                            if param.type_tag
+                                            else None
+                                        ),
+                                    )
+                                ),
+                                self.sync(
+                                    ast3.keyword(
+                                        arg="param_name",
+                                        value=self.sync(
+                                            ast3.Constant(value=param.name.value)
+                                        ),
+                                    )
+                                ),
+                                self.sync(
+                                    ast3.keyword(
+                                        arg="value",
+                                        value=self.sync(
+                                            ast3.Name(
+                                                id=param.name.value,
+                                                ctx=ast3.Load(),
+                                            )
+                                        ),
                                     )
                                 ),
                             ],
-                            ctx=ast3.Load(),
                         )
                     )
                     for param in node.signature.params.items
@@ -1215,44 +1253,31 @@ class PyastGenPass(Pass):
                                 ast3.List(
                                     elts=[
                                         self.sync(
-                                            ast3.Tuple(
-                                                elts=[
-                                                    self.sync(ast3.Constant(value=key)),
-                                                    value,
+                                            ast3.Call(
+                                                func=self.sync(
+                                                    ast3.Name(
+                                                        id="LLMInfo", ctx=ast3.Load()
+                                                    )
+                                                ),
+                                                args=[],
+                                                keywords=[
+                                                    self.sync(
+                                                        ast3.keyword(
+                                                            arg="name",
+                                                            value=self.sync(
+                                                                ast3.Constant(
+                                                                    value=key
+                                                                ),
+                                                            ),
+                                                        )
+                                                    ),
+                                                    self.sync(
+                                                        ast3.keyword(
+                                                            arg="value", value=value
+                                                        )
+                                                    ),
                                                 ],
-                                                ctx=ast3.Load(),
                                             )
-                                            # ast3.Call(
-                                            #     func=self.sync(
-                                            #         ast3.Name(
-                                            #             id="LLMInfo", ctx=ast3.Load()
-                                            #         )
-                                            #     ),
-                                                # args=[],
-                                                # keywords=[
-                                                    # self.sync(
-                                                    #     ast3.keyword(
-                                                    #         arg="name",
-                                                    #         value=self.sync(
-                                                    #             ast3.Constant(
-                                                    #                 value=key
-                                                    #             ),
-                                                    #         ),
-                                                    #     )
-                                                    # ),
-                                                    # self.sync(
-                                                    #     ast3.keyword(
-                                                    #         arg="value",
-                                                    #         value=self.sync(
-                                                    #             ast3.Name(
-                                                    #                 id=value,
-                                                    #                 ctx=ast3.Load(),
-                                                    #             )
-                                                    #         ),
-                                                    #     )
-                                                    # ),
-                                                # ],
-                                            # )
                                         )
                                         for key, value in include_info
                                     ],
