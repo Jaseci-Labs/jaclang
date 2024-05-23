@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Callable, Optional, Type, TypeAlias
+from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.core.construct import (
@@ -30,8 +30,6 @@ class JacFeature:
     import abc
     from jaclang.plugin.spec import DSFunc
     from jaclang.compiler.constant import EdgeDir
-
-    RootType: TypeAlias = Root
 
     @staticmethod
     def make_architype(
@@ -77,17 +75,25 @@ class JacFeature:
     def jac_import(
         target: str,
         base_path: str,
+        absorb: bool = False,
         cachable: bool = True,
+        mdl_alias: Optional[str] = None,
         override_name: Optional[str] = None,
         mod_bundle: Optional[Module] = None,
+        lng: Optional[str] = "jac",
+        items: Optional[dict[str, Union[str, bool]]] = None,
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
         return pm.hook.jac_import(
             target=target,
             base_path=base_path,
+            absorb=absorb,
             cachable=cachable,
+            mdl_alias=mdl_alias,
             override_name=override_name,
             mod_bundle=mod_bundle,
+            lng=lng,
+            items=items,
         )
 
     @staticmethod
@@ -210,9 +216,14 @@ class JacFeature:
         return pm.hook.assign_compr(target=target, attr_val=attr_val)
 
     @staticmethod
-    def get_root() -> Architype:
-        """Jac's assign comprehension feature."""
+    def get_root() -> Root:
+        """Jac's root getter."""
         return pm.hook.get_root()
+
+    @staticmethod
+    def get_root_type() -> Type[Root]:
+        """Jac's root type getter."""
+        return pm.hook.get_root_type()
 
     @staticmethod
     def build_edge(
@@ -226,19 +237,42 @@ class JacFeature:
         )
 
     @staticmethod
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool
+    ) -> Optional[str]:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.get_semstr_type(
+            file_loc=file_loc, scope=scope, attr=attr, return_semstr=return_semstr
+        )
+
+    @staticmethod
+    def obj_scope(file_loc: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.obj_scope(file_loc=file_loc, attr=attr)
+
+    @staticmethod
+    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
+        """Jac's get_semstr_type feature."""
+        return pm.hook.get_sem_type(file_loc=file_loc, attr=attr)
+
+    @staticmethod
     def with_llm(
+        file_loc: str,
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
-        incl_info: tuple,
-        excl_info: tuple,
-        inputs: tuple,
+        scope: str,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
+        inputs: list[tuple[str, str, str, Any]],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
         return pm.hook.with_llm(
+            file_loc=file_loc,
             model=model,
             model_params=model_params,
+            scope=scope,
             incl_info=incl_info,
             excl_info=excl_info,
             inputs=inputs,

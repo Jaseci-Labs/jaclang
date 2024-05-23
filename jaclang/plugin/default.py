@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import fnmatch
+import html
 import os
+import pickle
 import types
 from dataclasses import field
 from functools import wraps
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
-from jaclang.core.aott import aott_lower, aott_raise
+from jaclang.core.aott import (
+    aott_raise,
+    extract_non_primary_type,
+    get_all_type_explanations,
+    get_info_types,
+    get_object_string,
+    get_type_annotation,
+)
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -28,6 +37,7 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
+from jaclang.core.registry import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -75,9 +85,20 @@ class JacFeatureDefaults:
         for i in on_entry + on_exit:
             i.resolve(cls)
         if not issubclass(cls, arch_base):
+            # Saving the module path and reassign it after creating cls
+            # So the jac modules are part of the correct module
+            cur_module = cls.__module__
             cls = type(cls.__name__, (cls, arch_base), {})
-        cls._jac_entry_funcs_ = on_entry  # type: ignore
-        cls._jac_exit_funcs_ = on_exit  # type: ignore
+            cls.__module__ = cur_module
+            cls._jac_entry_funcs_ = on_entry  # type: ignore
+            cls._jac_exit_funcs_ = on_exit  # type: ignore
+        else:
+            cls._jac_entry_funcs_ = cls._jac_entry_funcs_ + [
+                x for x in on_entry if x not in cls._jac_entry_funcs_
+            ]
+            cls._jac_exit_funcs_ = cls._jac_exit_funcs_ + [
+                x for x in on_exit if x not in cls._jac_exit_funcs_
+            ]
         inner_init = cls.__init__  # type: ignore
 
         @wraps(inner_init)
@@ -157,17 +178,25 @@ class JacFeatureDefaults:
     def jac_import(
         target: str,
         base_path: str,
+        absorb: bool,
         cachable: bool,
+        mdl_alias: Optional[str],
         override_name: Optional[str],
         mod_bundle: Optional[Module],
+        lng: Optional[str],
+        items: Optional[dict[str, Union[str, bool]]],
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
         result = jac_importer(
             target=target,
             base_path=base_path,
+            absorb=absorb,
             cachable=cachable,
+            mdl_alias=mdl_alias,
             override_name=override_name,
             mod_bundle=mod_bundle,
+            lng=lng,
+            items=items,
         )
         return result
 
@@ -235,6 +264,7 @@ class JacFeatureDefaults:
                 if JacTestCheck.breaker and (xit or maxfail):
                     break
             JacTestCheck.breaker = False
+            JacTestCheck.failcount = 0
             print("No test files found.") if not test_file else None
 
         return True
@@ -397,9 +427,15 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_root() -> Architype:
+    def get_root() -> Root:
         """Jac's assign comprehension feature."""
         return root
+
+    @staticmethod
+    @hookimpl
+    def get_root_type() -> Type[Root]:
+        """Jac's root getter."""
+        return Root
 
     @staticmethod
     @hookimpl
@@ -426,34 +462,174 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool
+    ) -> Optional[str]:
+        """Jac's get_semstr_type feature."""
+        _scope = SemScope.get_scope_from_str(scope)
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
+            ),
+            "rb",
+        ) as f:
+            mod_registry: SemRegistry = pickle.load(f)
+        _, attr_seminfo = mod_registry.lookup(_scope, attr)
+        if attr_seminfo and isinstance(attr_seminfo, SemInfo):
+            return attr_seminfo.semstr if return_semstr else attr_seminfo.type
+        return None
+
+    @staticmethod
+    @hookimpl
+    def obj_scope(file_loc: str, attr: str) -> str:
+        """Jac's gather_scope feature."""
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
+            ),
+            "rb",
+        ) as f:
+            mod_registry: SemRegistry = pickle.load(f)
+
+        attr_scope = None
+        for x in attr.split("."):
+            attr_scope, attr_sem_info = mod_registry.lookup(attr_scope, x)
+            if isinstance(attr_sem_info, SemInfo) and attr_sem_info.type not in [
+                "class",
+                "obj",
+                "node",
+                "edge",
+            ]:
+                attr_scope, attr_sem_info = mod_registry.lookup(
+                    None, attr_sem_info.type
+                )
+                if isinstance(attr_sem_info, SemInfo) and isinstance(
+                    attr_sem_info.type, str
+                ):
+                    attr_scope = SemScope(
+                        attr_sem_info.name, attr_sem_info.type, attr_scope
+                    )
+            else:
+                if isinstance(attr_sem_info, SemInfo) and isinstance(
+                    attr_sem_info.type, str
+                ):
+                    attr_scope = SemScope(
+                        attr_sem_info.name, attr_sem_info.type, attr_scope
+                    )
+        return str(attr_scope)
+
+    @staticmethod
+    @hookimpl
+    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
+            ),
+            "rb",
+        ) as f:
+            mod_registry: SemRegistry = pickle.load(f)
+
+        attr_scope = None
+        for x in attr.split("."):
+            attr_scope, attr_sem_info = mod_registry.lookup(attr_scope, x)
+            if isinstance(attr_sem_info, SemInfo) and attr_sem_info.type not in [
+                "class",
+                "obj",
+                "node",
+                "edge",
+            ]:
+                attr_scope, attr_sem_info = mod_registry.lookup(
+                    None, attr_sem_info.type
+                )
+                if isinstance(attr_sem_info, SemInfo) and isinstance(
+                    attr_sem_info.type, str
+                ):
+                    attr_scope = SemScope(
+                        attr_sem_info.name, attr_sem_info.type, attr_scope
+                    )
+            else:
+                if isinstance(attr_sem_info, SemInfo) and isinstance(
+                    attr_sem_info.type, str
+                ):
+                    attr_scope = SemScope(
+                        attr_sem_info.name, attr_sem_info.type, attr_scope
+                    )
+        if isinstance(attr_sem_info, SemInfo) and isinstance(attr_scope, SemScope):
+            return attr_sem_info.semstr, attr_scope.as_type_str
+        return "", ""  #
+
+    @staticmethod
+    @hookimpl
     def with_llm(
+        file_loc: str,
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
-        incl_info: tuple,
-        excl_info: tuple,
-        inputs: tuple,
+        scope: str,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
+        inputs: list[tuple[str, str, str, Any]],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
-        reason = False
-        if "reason" in model_params:
-            reason = model_params.pop("reason")
-        input_types_n_information_str = ""  # TODO: We have to generate this
-        output_type_str = ""  # TODO: We have to generate this
-        output_type_info_str = ""  # TODO: We have to generate this
-        information_str = ""  # TODO: We have to generate this
+        with open(
+            os.path.join(
+                os.path.dirname(file_loc),
+                "__jac_gen__",
+                os.path.basename(file_loc).replace(".jac", ".registry.pkl"),
+            ),
+            "rb",
+        ) as f:
+            mod_registry = pickle.load(f)
+
+        outputs = outputs[0] if isinstance(outputs, list) else outputs
+        _scope = SemScope.get_scope_from_str(scope)
+        assert _scope is not None
+
+        reason = model_params.pop("reason") if "reason" in model_params else False
+        context = (
+            ",".join(model_params.pop("context")) if "context" in model_params else ""
+        )
+
+        type_collector: list = []
+        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
+        type_collector.extend(collected_types)
+        inputs_information_list = []
+        for i in inputs:
+            typ_anno = get_type_annotation(i[3])
+            type_collector.extend(extract_non_primary_type(typ_anno))
+            inputs_information_list.append(
+                f"{i[0]} ({i[2]}) ({typ_anno}) = {get_object_string(i[3])}"
+            )
+        inputs_information = "\n".join(inputs_information_list)
+
+        output_information = f"{outputs[0]} ({outputs[1]})"
+        type_collector.extend(extract_non_primary_type(outputs[1]))
+
+        type_explanations_list = list(
+            get_all_type_explanations(type_collector, mod_registry).values()
+        )
+        type_explanations = "\n".join(type_explanations_list)
+
         meaning_in = aott_raise(
-            information_str,
-            input_types_n_information_str,
-            output_type_str,
-            output_type_info_str,
+            model,
+            information,
+            inputs_information,
+            output_information,
+            type_explanations,
             action,
+            context,
             reason,
         )
         meaning_out = model.__infer__(meaning_in, **model_params)
-        output_type_info = (None, None)  # TODO: We have to generate this
-        return aott_lower(meaning_out, output_type_info)
+        output = model.resolve_output(meaning_out, reason)
+        return output["output"]
 
 
 class JacBuiltin:
@@ -528,13 +704,16 @@ class JacBuiltin:
         for source, target, edge in connections:
             dot_content += (
                 f"{visited_nodes.index(source)} -> {visited_nodes.index(target)} "
-                f' [label="{edge._jac_.obj.__class__.__name__} "];\n'
+                f' [label="{html.escape(str(edge._jac_.obj.__class__.__name__))} "];\n'
             )
         for node_ in visited_nodes:
             color = (
                 colors[node_depths[node_]] if node_depths[node_] < 25 else colors[24]
             )
-            dot_content += f'{visited_nodes.index(node_)} [label="{node_._jac_.obj}" fillcolor="{color}"];\n'
+            dot_content += (
+                f'{visited_nodes.index(node_)} [label="{html.escape(str(node_._jac_.obj))}"'
+                f'fillcolor="{color}"];\n'
+            )
         if dot_file:
             with open(dot_file, "w") as f:
                 f.write(dot_content + "}")

@@ -16,7 +16,9 @@ from jaclang.core.construct import (
     root as root,
 )
 from jaclang.core.importer import jac_importer as jac_importer
-from typing import Any, Callable, Optional, Type, TypeVar
+from typing import Any, Callable, Optional, Type, Union, TypeVar
+
+from jaclang.compiler.absyntree import Module
 import pluggy
 
 __all__ = [
@@ -61,7 +63,15 @@ class JacFeatureDefaults:
     ) -> Callable[[type], type]: ...
     @staticmethod
     def jac_import(
-        target: str, base_path: str, cachable: bool, override_name: Optional[str]
+        target: str,
+        base_path: str,
+        absorb: bool,
+        cachable: bool,
+        mdl_alias: Optional[str],
+        override_name: Optional[str],
+        mod_bundle: Optional[Module],
+        lng: Optional[str],
+        items: Optional[dict[str, Union[str, bool]]],
     ) -> Optional[types.ModuleType]: ...
     @staticmethod
     def create_test(test_fun: Callable) -> Callable: ...
@@ -115,7 +125,9 @@ class JacFeatureDefaults:
         target: list[T], attr_val: tuple[tuple[str], tuple[Any]]
     ) -> list[T]: ...
     @staticmethod
-    def get_root() -> Architype: ...
+    def get_root() -> Root: ...
+    @staticmethod
+    def get_root_type() -> Type[Root]: ...
     @staticmethod
     def build_edge(
         is_undirected: bool,

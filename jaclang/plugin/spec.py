@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Callable, Optional, Type, TypeVar
+from typing import Any, Callable, Optional, Type, TypeVar, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.plugin.default import (
@@ -12,6 +12,7 @@ from jaclang.plugin.default import (
     EdgeArchitype,
     EdgeDir,
     NodeArchitype,
+    Root,
     WalkerArchitype,
 )
 
@@ -73,9 +74,13 @@ class JacFeatureSpec:
     def jac_import(
         target: str,
         base_path: str,
+        absorb: bool,
         cachable: bool,
+        mdl_alias: Optional[str],
         override_name: Optional[str],
         mod_bundle: Optional[Module],
+        lng: Optional[str],
+        items: Optional[dict[str, Union[str, bool]]],
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
         raise NotImplementedError
@@ -194,7 +199,13 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def get_root() -> Architype:
+    def get_root() -> Root:
+        """Jac's root getter."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def get_root_type() -> Type[Root]:
         """Jac's root getter."""
         raise NotImplementedError
 
@@ -210,12 +221,33 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool
+    ) -> Optional[str]:
+        """Jac's get_semstr_type stmt feature."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def obj_scope(file_loc: str, attr: str) -> str:
+        """Jac's get_semstr_type feature."""
+        raise NotImplementedError
+
+    @staticmethod
+    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
+        """Jac's get_semstr_type feature."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
     def with_llm(
+        file_loc: str,
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
-        incl_info: tuple,
-        excl_info: tuple,
-        inputs: tuple,
+        scope: str,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
+        inputs: list[tuple[str, str, str, Any]],
         outputs: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401

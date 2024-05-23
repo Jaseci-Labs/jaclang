@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from jaclang.compiler import generate_static_parser
+
 from setuptools import find_packages, setup  # type: ignore
 
 
-VERSION = "0.5.8"
+generate_static_parser(force=True)
+
+
+VERSION = "0.5.18"
 
 setup(
     name="jaclang",
@@ -13,8 +18,9 @@ setup(
     packages=find_packages(include=["jaclang", "jaclang.*"]),
     install_requires=[],
     package_data={
-        "": ["*.ini"],
+        "": ["*.ini", "*.lark"],
     },
+    extras_require={"llms": ["transformers", "torch", "ollama", "anthropic", "groq"]},
     entry_points={
         "console_scripts": [
             "jac = jaclang.cli.cli:start_cli",

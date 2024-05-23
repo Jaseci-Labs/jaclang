@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import ast as py_ast
 import os
-from typing import Optional, TypeAlias, TypeVar
+from typing import Optional, Sequence, TypeAlias, TypeVar
+
+# from icecream import ic
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import Tokens as Tok
@@ -29,9 +31,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def pp(self, node: py_ast.AST) -> None:
         """Print python node."""
-        print(
-            f"{node.__class__.__name__} - {[(k, type(v)) for k, v in vars(node).items()]}"
-        )
+        # print(
+        #     f"{node.__class__.__name__} - {[(k, type(v)) for k, v in vars(node).items()]}"
+        # )
 
     def convert(self, node: py_ast.AST) -> ast.AstNode:
         """Get python node type."""
@@ -44,7 +46,9 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             raise self.ice(f"Unknown node type {type(node).__name__}")
         # print(f"finshed {type(node).__name__} ---------------------")
         # print("normalizing", ret.__class__.__name__)
+        # ic("normalizing", ret.__class__.__name__)
         # print(ret.unparse())
+        # ret.unparse()
         return ret
 
     def transform(self, ir: ast.PythonModuleAst) -> ast.Module:
@@ -59,12 +63,16 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
         def gen_mod_code(with_entry_body: list[ast.CodeBlockStmt]) -> ast.ModuleCode:
             with_entry_subnodelist = ast.SubNodeList[ast.CodeBlockStmt](
-                items=with_entry_body, delim=Tok.WS, kid=with_entry_body
+                items=with_entry_body,
+                delim=Tok.WS,
+                kid=with_entry_body,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
             return ast.ModuleCode(
                 name=None,
                 body=with_entry_subnodelist,
-                kid=with_entry_body,
+                kid=[with_entry_subnodelist],
                 doc=None,
             )
 
@@ -72,12 +80,16 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         with_entry_body: list[ast.CodeBlockStmt] = []
         for i in body:
             if isinstance(i, exclude_types):
+                if len(with_entry_body):
+                    extracted.append(gen_mod_code(with_entry_body))
+                    with_entry_body = []
                 extracted.append(i)
             elif isinstance(i, ast.CodeBlockStmt):
+                if isinstance(i, ast.ExprStmt) and isinstance(i.expr, ast.String):
+                    self.convert_to_doc(i.expr)
                 with_entry_body.append(i)
             else:
                 self.ice("Invalid type for with entry body")
-
         if len(with_entry_body):
             extracted.append(gen_mod_code(with_entry_body))
         return extracted
@@ -97,14 +109,20 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             and isinstance(elements[0].expr, ast.String)
             else elements[0]
         )
+        doc_str_list = [elements[0]] if isinstance(elements[0], ast.String) else []
         valid = (
-            [elements[0]] if isinstance(elements[0], ast.String) else []
-        ) + self.extract_with_entry(elements[1:], (ast.ElementStmt, ast.EmptyToken))
+            (doc_str_list)
+            + self.extract_with_entry(elements[1:], (ast.ElementStmt, ast.EmptyToken))
+            if doc_str_list
+            else self.extract_with_entry(elements[:], (ast.ElementStmt, ast.EmptyToken))
+        )
+        doc_str = elements[0] if isinstance(elements[0], ast.String) else None
+        self.convert_to_doc(doc_str) if doc_str else None
         ret = ast.Module(
             name=self.mod_path.split(os.path.sep)[-1].split(".")[0],
             source=ast.JacSource("", mod_path=self.mod_path),
-            doc=(elements[0] if isinstance(elements[0], ast.String) else None),
-            body=valid[1:] if isinstance(valid[0], ast.String) else valid,
+            doc=doc_str,
+            body=valid[1:] if valid and isinstance(valid[0], ast.String) else valid,
             is_imported=False,
             kid=valid,
         )
@@ -125,10 +143,13 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if sys.version_info >= (3, 12):
             type_params: list[type_param]
         """
+        # ic("----")
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.name,
+            value=(
+                node.name if node.name != "root" else "root_"
+            ),  # root is a reserved keyword
             line=node.lineno,
             col_start=node.col_offset,
             col_end=node.col_offset + len(node.name),
@@ -145,14 +166,23 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             and isinstance(valid[0], ast.ExprStmt)
             and isinstance(valid[0].expr, ast.String)
         ):
-            doc = valid[0].expr
+            self.convert_to_doc(valid[0].expr)
+            doc = valid[0]
             valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-                items=valid[1:], delim=Tok.WS, kid=valid[1:]
+                items=[doc] + valid[1:],
+                delim=Tok.WS,
+                kid=valid[1:] + [doc],
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
         else:
             doc = None
             valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-                items=valid, delim=Tok.WS, kid=valid
+                items=valid,
+                delim=Tok.WS,
+                kid=valid,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
         decorators = [self.convert(i) for i in node.decorator_list]
         valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
@@ -189,7 +219,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             signature=sig,
             body=valid_body,
             decorators=valid_decorators,
-            doc=doc,
+            doc=None,
             kid=kid,
         )
         return ret
@@ -212,7 +242,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         ability.is_async = True
         return ability
 
-    def proc_class_def(self, node: py_ast.ClassDef) -> ast.Architype:
+    def proc_class_def(self, node: py_ast.ClassDef) -> ast.Architype | ast.Enum:
         """Process python node.
 
         class ClassDef(stmt):
@@ -238,8 +268,8 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         )
         arch_type = ast.Token(
             file_path=self.mod_path,
-            name=Tok.KW_OBJECT,
-            value="object",
+            name=Tok.KW_CLASS,
+            value="class",
             line=node.lineno,
             col_start=0,
             col_end=0,
@@ -247,37 +277,139 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         body = [self.convert(i) for i in node.body]
-        valid: list[ast.ArchBlockStmt] = self.extract_with_entry(
-            body, ast.ArchBlockStmt
-        )
-        valid_body = ast.SubNodeList[ast.ArchBlockStmt](
-            items=valid, delim=Tok.WS, kid=body
-        )
-
-        base_classes = [self.convert(base) for base in node.bases]
-        valid2: list[ast.Expr] = [
-            base for base in base_classes if isinstance(base, ast.Expr)
-        ]
-        if len(valid2) != len(base_classes):
-            raise self.ice("Length mismatch in base classes")
-        valid_bases = (
-            ast.SubNodeList[ast.Expr](items=valid2, delim=Tok.COMMA, kid=base_classes)
-            if len(valid2)
+        for body_stmt in body:
+            if (
+                isinstance(body_stmt, ast.Ability)
+                and isinstance(body_stmt.name_ref, ast.Name)
+                and body_stmt.name_ref.value == "__init__"
+            ):
+                tok = ast.Token(
+                    file_path=self.mod_path,
+                    name=Tok.KW_INIT,
+                    value="init",
+                    line=node.lineno,
+                    col_start=node.col_offset,
+                    col_end=node.col_offset + len("init"),
+                    pos_start=0,
+                    pos_end=0,
+                )
+                body_stmt.name_ref = ast.SpecialVarRef(var=tok, kid=[tok])
+            if (
+                isinstance(body_stmt, ast.Ability)
+                and body_stmt.signature
+                and isinstance(body_stmt.signature, ast.FuncSignature)
+                and body_stmt.signature.params
+            ):
+                body_stmt.signature.params.items = [
+                    param
+                    for param in body_stmt.signature.params.items
+                    if param.name.value != "self"
+                ]
+        doc = (
+            body[0].expr
+            if isinstance(body[0], ast.ExprStmt)
+            and isinstance(body[0].expr, ast.String)
             else None
         )
-        doc = None
-        decorators = [self.convert(i) for i in node.decorator_list]
-        valid_dec = [i for i in decorators if isinstance(i, ast.Expr)]
-        if len(valid_dec) != len(decorators):
-            raise self.ice("Length mismatch in decorators in class")
+        self.convert_to_doc(doc) if doc else None
+        body = body[1:] if doc else body
+        valid: list[ast.ArchBlockStmt] = (
+            self.extract_with_entry(body, ast.ArchBlockStmt)
+            if body and not (isinstance(body[0], ast.Semi) and len(body) == 1)
+            else []
+        )
+        empty_block: Sequence[ast.AstNode] = [
+            self.operator(Tok.LBRACE, "{"),
+            self.operator(Tok.RBRACE, "}"),
+        ]
+        valid_body = ast.SubNodeList[ast.ArchBlockStmt](
+            items=valid,
+            delim=Tok.WS,
+            kid=(valid if valid else empty_block),
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
+        )
+        converted_base_classes = [self.convert(base) for base in node.bases]
+        base_classes: list[ast.Expr] = [
+            base for base in converted_base_classes if isinstance(base, ast.Expr)
+        ]
+        valid_bases = (
+            ast.SubNodeList[ast.Expr](
+                items=base_classes, delim=Tok.COMMA, kid=base_classes
+            )
+            if base_classes
+            else None
+        )
+        converted_decorators_list = [self.convert(i) for i in node.decorator_list]
+        decorators = [i for i in converted_decorators_list if isinstance(i, ast.Expr)]
         valid_decorators = (
             ast.SubNodeList[ast.Expr](
-                items=valid_dec, delim=Tok.DECOR_OP, kid=decorators
+                items=decorators, delim=Tok.DECOR_OP, kid=decorators
             )
-            if len(valid_dec)
+            if decorators
             else None
         )
-        kid = [name, valid_bases, valid_body] if valid_bases else [name, valid_body]
+        if (
+            base_classes
+            and isinstance(base_classes[0], ast.Name)
+            and base_classes[0].value == "Enum"
+        ):
+            if len(base_classes) > 1:
+                raise ValueError(
+                    "Python's Enum class cannot be used with multiple inheritance."
+                )
+            arch_type.name = Tok.KW_ENUM
+            arch_type.value = "enum"
+            valid_enum_body: list[ast.EnumBlockStmt] = []
+            for class_body_stmt in node.body:
+                converted_stmt = self.convert(class_body_stmt)
+                if isinstance(converted_stmt, ast.EnumBlockStmt):
+                    if isinstance(converted_stmt, ast.Assignment):
+                        converted_stmt.is_enum_stmt = True
+                    valid_enum_body.append(converted_stmt)
+                else:
+                    if isinstance(converted_stmt, ast.ExprStmt) and isinstance(
+                        converted_stmt.expr, ast.String
+                    ):
+                        continue
+                    tok = ast.Token(
+                        file_path=self.mod_path,
+                        name=Tok.PYNLINE,
+                        value=py_ast.unparse(class_body_stmt),
+                        line=node.lineno,
+                        col_start=node.col_offset,
+                        col_end=node.col_offset + len(py_ast.unparse(class_body_stmt)),
+                        pos_start=0,
+                        pos_end=0,
+                    )
+                    valid_enum_body.append(ast.PyInlineCode(code=tok, kid=[tok]))
+
+            valid_enum_body2: list[ast.EnumBlockStmt] = [
+                i for i in valid_enum_body if isinstance(i, ast.EnumBlockStmt)
+            ]
+            enum_body = ast.SubNodeList[ast.EnumBlockStmt](
+                items=valid_enum_body2, delim=Tok.COMMA, kid=valid_enum_body2
+            )
+            if doc:
+                doc.line_no = name.line_no
+            return ast.Enum(
+                name=name,
+                access=None,
+                base_classes=None,
+                body=enum_body,
+                kid=[doc, name, enum_body] if doc else [name, enum_body],
+                doc=doc,
+                decorators=valid_decorators,
+            )
+        kid = (
+            [name, valid_bases, valid_body, doc]
+            if doc and valid_bases
+            else (
+                [name, valid_bases, valid_body]
+                if valid_bases
+                else [name, valid_body, doc] if doc else [name, valid_body]
+            )
+        )
         return ast.Architype(
             arch_type=arch_type,
             name=name,
@@ -320,13 +452,14 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         target = ast.SubNodeList[ast.Expr | ast.KWPair](
             items=[*valid_exprs], delim=Tok.COMMA, kid=exprs
         )
+        target_1 = (
+            valid_exprs[0]
+            if len(valid_exprs) > 1
+            else ast.TupleVal(values=target, kid=[target])
+        )
         return ast.DeleteStmt(
-            target=(
-                valid_exprs[0]
-                if len(valid_exprs) > 1
-                else ast.TupleVal(values=target, kid=[target])
-            ),
-            kid=exprs,
+            target=target_1,
+            kid=[target],
         )
 
     def proc_assign(self, node: py_ast.Assign) -> ast.Assignment:
@@ -364,8 +497,12 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             op: operator
             value: expr
         """
+        from jaclang.compiler import TOKEN_MAP
+
         target = self.convert(node.target)
         op = self.convert(node.op)
+        if isinstance(op, ast.Token):
+            op.name = self.aug_op_map(TOKEN_MAP, op)
         value = self.convert(node.value)
         if (
             isinstance(value, ast.Expr)
@@ -408,10 +545,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             and isinstance(annotation, ast.Expr)
             and isinstance(target, ast.Expr)
         ):
+            target = ast.SubNodeList[ast.Expr](
+                items=[target], delim=Tok.EQ, kid=[target]
+            )
             return ast.Assignment(
-                target=ast.SubNodeList[ast.Expr](
-                    items=[target], delim=Tok.EQ, kid=[target]
-                ),
+                target=target,
                 value=value if isinstance(value, (ast.Expr, ast.YieldExpr)) else None,
                 type_tag=annotation_subtag,
                 kid=(
@@ -441,7 +579,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             raise self.ice("Length mismatch in for body")
 
         valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-            items=val_body, delim=Tok.WS, kid=val_body
+            items=val_body,
+            delim=Tok.WS,
+            kid=val_body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         orelse = [self.convert(i) for i in node.orelse]
         val_orelse = [i for i in orelse if isinstance(i, ast.CodeBlockStmt)]
@@ -449,7 +591,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             raise self.ice("Length mismatch in for orelse")
         if orelse:
             valid_orelse = ast.SubNodeList[ast.CodeBlockStmt](
-                items=val_orelse, delim=Tok.WS, kid=orelse
+                items=val_orelse,
+                delim=Tok.WS,
+                kid=orelse,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
         else:
             valid_orelse = None
@@ -492,7 +638,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             raise self.ice("Length mismatch in for body")
 
         valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-            items=val_body, delim=Tok.WS, kid=val_body
+            items=val_body,
+            delim=Tok.WS,
+            kid=val_body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         orelse = [self.convert(i) for i in node.orelse]
         val_orelse = [i for i in orelse if isinstance(i, ast.CodeBlockStmt)]
@@ -500,7 +650,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             raise self.ice("Length mismatch in for orelse")
         if orelse:
             valid_orelse = ast.SubNodeList[ast.CodeBlockStmt](
-                items=val_orelse, delim=Tok.WS, kid=orelse
+                items=val_orelse,
+                delim=Tok.WS,
+                kid=orelse,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
         else:
             valid_orelse = None
@@ -540,7 +694,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if len(valid_body) != len(body):
             raise self.ice("Length mismatch in while body")
         fin_body = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid_body, delim=Tok.WS, kid=valid_body
+            items=valid_body,
+            delim=Tok.WS,
+            kid=valid_body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         if isinstance(test, ast.Expr):
             return ast.WhileStmt(
@@ -566,7 +724,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if len(valid_body) != len(body):
             self.error("Length mismatch in async for body")
         body2 = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid_body, delim=Tok.WS, kid=body
+            items=valid_body,
+            delim=Tok.WS,
+            kid=body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
 
         orelse = [self.convert(stmt) for stmt in node.orelse]
@@ -584,7 +746,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 )
             else:
                 orelse2 = ast.SubNodeList[ast.CodeBlockStmt](
-                    items=valid_orelse, delim=Tok.WS, kid=orelse
+                    items=valid_orelse,
+                    delim=Tok.WS,
+                    kid=orelse,
+                    left_enc=self.operator(Tok.LBRACE, "{"),
+                    right_enc=self.operator(Tok.RBRACE, "}"),
                 )
                 else_body = ast.ElseStmt(body=orelse2, kid=[orelse2])
         else:
@@ -594,9 +760,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 condition=test,
                 body=body2,
                 else_body=else_body,
-                kid=(
-                    [test, body2, else_body] if else_body is not None else [test, body2]
-                ),
+                kid=([test, body2, else_body] if else_body else [test, body2]),
             )
         else:
             raise self.ice()
@@ -622,7 +786,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if len(valid_body) != len(body):
             raise self.ice("Length mismatch in async for body")
         body_sub = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid_body, delim=Tok.WS, kid=body
+            items=valid_body,
+            delim=Tok.WS,
+            kid=body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         return ast.WithStmt(
             is_async=False, exprs=items_sub, body=body_sub, kid=[items_sub, body_sub]
@@ -648,7 +816,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if len(valid_body) != len(body):
             raise self.ice("Length mismatch in async for body")
         body_sub = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid_body, delim=Tok.WS, kid=body
+            items=valid_body,
+            delim=Tok.WS,
+            kid=body,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         return ast.WithStmt(
             is_async=True, exprs=items_sub, body=body_sub, kid=[items_sub, body_sub]
@@ -673,11 +845,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if (isinstance(cause, ast.Expr) or cause is None) and (
             isinstance(exc, ast.Expr) or exc is None
         ):
-            if node.exc and not node.cause:
+            if exc and not node.cause:
                 return ast.RaiseStmt(
-                    cause=None,
+                    cause=exc,
                     from_target=None,
-                    kid=[self.operator(Tok.KW_RAISE, "raise")],
+                    kid=[self.operator(Tok.KW_RAISE, "raise"), exc],
                 )
             else:
                 return ast.RaiseStmt(cause=cause, from_target=exc, kid=kid)
@@ -692,12 +864,12 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             msg: expr | None
         """
         test = self.convert(node.test)
-        msg = self.convert(node.msg) if node.msg is not None else None
+        msg = self.convert(node.msg) if node.msg else None
         if isinstance(test, ast.Expr) and (isinstance(msg, ast.Expr) or msg is None):
             return ast.AssertStmt(
                 condition=test,
                 error_msg=msg,
-                kid=[test, msg] if msg is not None else [test],
+                kid=[test, msg] if msg else [test],
             )
         else:
             raise self.ice()
@@ -713,11 +885,31 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         ctx: expr_context
         """
         value = self.convert(node.value)
-
+        if (
+            isinstance(value, ast.FuncCall)
+            and isinstance(value.target, ast.Name)
+            and value.target.value == "super"
+        ):
+            tok = ast.Token(
+                file_path=self.mod_path,
+                name=Tok.KW_SUPER,
+                value="super",
+                line=node.lineno,
+                col_start=node.col_offset,
+                col_end=node.col_offset + len("super"),
+                pos_start=0,
+                pos_end=0,
+            )
+            value = ast.SpecialVarRef(var=tok, kid=[tok])
+            # exit()
         attribute = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.attr,
+            value=(
+                ("<>" + node.attr)
+                if node.attr == "init"
+                else "init" if node.attr == "__init__" else node.attr
+            ),
             line=node.lineno,
             col_start=node.col_offset,
             col_end=node.col_offset + len(node.attr),
@@ -747,7 +939,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         else:
             raise self.ice()
 
-    def proc_bin_op(self, node: py_ast.BinOp) -> ast.BinaryExpr:
+    def proc_bin_op(self, node: py_ast.BinOp) -> ast.AtomUnit:
         """Process python node.
 
         class BinOp(expr):
@@ -765,11 +957,19 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             and isinstance(op, ast.Token)
             and isinstance(right, ast.Expr)
         ):
-            return ast.BinaryExpr(
+            value = ast.BinaryExpr(
                 left=left,
                 op=op,
                 right=right,
                 kid=[left, op, right],
+            )
+            return ast.AtomUnit(
+                value=value,
+                kid=[
+                    self.operator(Tok.RPAREN, "("),
+                    value,
+                    self.operator(Tok.LPAREN, ")"),
+                ],
             )
         else:
             raise self.ice()
@@ -855,6 +1055,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             return ast.FuncCall(
                 target=func,
                 params=params_in2,
+                genai_call=None,
                 kid=[func, params_in2] if params_in2 else [func],
             )
         else:
@@ -924,7 +1125,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             return type_mapping[value_type](
                 file_path=self.mod_path,
                 name=token_type,
-                value=str(node.value),
+                value=(
+                    f'"{repr(node.value)[1:-1]}"'
+                    if value_type == str
+                    else str(node.value)
+                ),
                 line=node.lineno,
                 col_start=node.col_offset,
                 col_end=node.col_offset + len(str(node.value)),
@@ -965,11 +1170,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             kvp = ast.KVPair(
                 key=key_pluck,
                 value=valid_values[i],
-                kid=(
-                    [key_pluck, valid_values[i]]
-                    if key_pluck is not None
-                    else [valid_values[i]]
-                ),
+                kid=([key_pluck, valid_values[i]] if key_pluck else [valid_values[i]]),
             )
             kvpair.append(kvp)
         return ast.DictVal(
@@ -1013,35 +1214,67 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             name: _Identifier | None
             body: list[stmt]
         """
-        type = self.convert(node.type) if node.type is not None else None
-        name = (
-            ast.Name(
+        type = self.convert(node.type) if node.type else None
+        name: ast.Name | None = None
+        if not type and not node.name:
+            type = ast.Name(
                 file_path=self.mod_path,
                 name=Tok.NAME,
-                value=node.name,
+                value="Exception",
                 line=node.lineno,
                 col_start=node.col_offset,
-                col_end=node.col_offset + len(node.name),
+                col_end=node.col_offset + 9,
                 pos_start=0,
                 pos_end=0,
             )
-            if node.name is not None
-            else None
-        )
+            name = ast.Name(
+                file_path=self.mod_path,
+                name=Tok.NAME,
+                value="e",
+                line=node.lineno,
+                col_start=node.col_offset,
+                col_end=node.col_offset + 1,
+                pos_start=0,
+                pos_end=0,
+            )
+        else:
+            # type = ast.Name(
+            #     file_path=self.mod_path,
+            #     name=Tok.NAME,
+            #     value=no,
+            #     line=node.lineno,
+            #     col_start=node.col_offset,
+            #     col_end=node.col_offset + 9,
+            #     pos_start=0,
+            #     pos_end=0,
+            # )
+            name = (
+                ast.Name(
+                    file_path=self.mod_path,
+                    name=Tok.NAME,
+                    value=node.name,
+                    line=node.lineno,
+                    col_start=node.col_offset,
+                    col_end=node.col_offset + len(node.name),
+                    pos_start=0,
+                    pos_end=0,
+                )
+                if node.name
+                else None
+            )
 
         body = [self.convert(i) for i in node.body]
         valid = [i for i in body if isinstance(i, (ast.CodeBlockStmt))]
         if len(valid) != len(body):
             raise self.ice("Length mismatch in except handler body")
         valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid, delim=Tok.WS, kid=valid
+            items=valid,
+            delim=Tok.WS,
+            kid=valid,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
-        kid = []
-        if type:
-            kid.append(type)
-        if name:
-            kid.append(name)
-        kid.append(valid_body)
+        kid = [item for item in [type, name, valid_body] if item]
         if isinstance(type, ast.Expr) and (isinstance(name, ast.Name) or not name):
             return ast.Except(
                 ex_type=type,
@@ -1188,12 +1421,13 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             pos_end=0,
         )
         pytag = ast.SubTag[ast.Name](tag=lang, kid=[lang])
+        items = ast.SubNodeList[ast.ModulePath](items=paths, delim=Tok.COMMA, kid=paths)
         ret = ast.Import(
-            lang=pytag,
-            paths=paths,
-            items=None,
+            hint=pytag,
+            from_loc=None,
+            items=items,
             is_absorb=False,
-            kid=[pytag, *paths],
+            kid=[pytag, items],
         )
         return ret
 
@@ -1247,7 +1481,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 valid_names.append(
                     ast.ModuleItem(
                         name=name.expr,
-                        alias=name.alias if name.alias is not None else None,
+                        alias=name.alias if name.alias else None,
                         kid=[i for i in name.kid if i],
                     )
                 )
@@ -1263,9 +1497,21 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if not items:
             raise self.ice("No valid names in import from")
         pytag = ast.SubTag[ast.Name](tag=lang, kid=[lang])
+        if len(node.names) == 1 and node.names[0].name == "*":
+            path_in = ast.SubNodeList[ast.ModulePath](
+                items=[path], delim=Tok.COMMA, kid=[path]
+            )
+            ret = ast.Import(
+                hint=pytag,
+                from_loc=None,
+                items=path_in,
+                is_absorb=True,
+                kid=[pytag, path_in],
+            )
+            return ret
         ret = ast.Import(
-            lang=pytag,
-            paths=[path],
+            hint=pytag,
+            from_loc=path,
             items=items,
             is_absorb=False,
             kid=[pytag, path, items],
@@ -1360,32 +1606,37 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         else:
             raise self.ice()
 
-    def proc_match_as(self, node: py_ast.MatchAs) -> ast.MatchAs:
+    def proc_match_as(self, node: py_ast.MatchAs) -> ast.MatchAs | ast.MatchWild:
         """Process python node.
 
         class MatchAs(pattern):
             pattern: _Pattern | None
             name: _Identifier | None
         """
-        pattern = self.convert(node.pattern) if node.pattern is not None else None
+        pattern = self.convert(node.pattern) if node.pattern else None
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.name if node.name is not None else "_",
+            value=node.name if node.name else "_",
             line=node.lineno,
             col_start=node.col_offset,
-            col_end=node.col_offset + len(node.name if node.name is not None else "_"),
+            col_end=(
+                (node.col_offset + len(node.name))
+                if node.name
+                else (node.col_offset + 1)
+            ),
             pos_start=0,
             pos_end=0,
         )
-        if isinstance(pattern, ast.MatchPattern) or pattern is None:
+
+        if isinstance(pattern, ast.MatchPattern):
             return ast.MatchAs(
                 name=name,
                 pattern=pattern,
-                kid=[name, pattern] if pattern is not None else [name],
+                kid=[name, pattern] if pattern else [name],
             )
         else:
-            raise self.ice()
+            return ast.MatchWild(kid=[name])
 
     def proc_match_class(self, node: py_ast.MatchClass) -> ast.MatchArch:
         """Process python node.
@@ -1443,6 +1694,8 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 items=kv_pairs, delim=Tok.COMMA, kid=kv_pairs
             )
             kid.append(kw_patterns)
+        else:
+            kw_patterns = None
         if isinstance(cls, ast.NameSpec):
             return ast.MatchArch(
                 name=cls, arg_patterns=patterns_sub, kw_patterns=kw_patterns, kid=kid
@@ -1541,10 +1794,10 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.name if node.name is not None else "_",
+            value=node.name if node.name else "_",
             line=node.lineno,
             col_start=node.col_offset,
-            col_end=node.col_offset + len(node.name if node.name is not None else "_"),
+            col_end=node.col_offset + len(node.name if node.name else "_"),
             pos_start=0,
             pos_end=0,
         )
@@ -1574,7 +1827,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         ret = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.id,
+            value=node.id if node.id != "root" else "root_",  # reserved word
             line=node.lineno,
             col_start=node.col_offset,
             col_end=node.col_offset + len(node.id),
@@ -1764,7 +2017,11 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if len(valid) != len(body):
             raise self.ice("Length mismatch in try body")
         valid_body = ast.SubNodeList[ast.CodeBlockStmt](
-            items=valid, delim=Tok.WS, kid=valid
+            items=valid,
+            delim=Tok.WS,
+            kid=valid,
+            left_enc=self.operator(Tok.LBRACE, "{"),
+            right_enc=self.operator(Tok.RBRACE, "}"),
         )
         kid: list[ast.AstNode] = [valid_body]
 
@@ -1786,8 +2043,13 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(orelse) != len(valid_orelse):
                 raise self.ice("Length mismatch in try orelse")
             else_body = ast.SubNodeList[ast.CodeBlockStmt](
-                items=valid_orelse, delim=Tok.WS, kid=valid_orelse
+                items=valid_orelse,
+                delim=Tok.WS,
+                kid=valid_orelse,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
+            elsestmt = ast.ElseStmt(body=else_body, kid=[else_body])
             kid.append(else_body)
         else:
             else_body = None
@@ -1800,25 +2062,25 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if len(finalbody) != len(valid_finalbody):
                 raise self.ice("Length mismatch in try finalbody")
             finally_body = ast.SubNodeList[ast.CodeBlockStmt](
-                items=valid_finalbody, delim=Tok.WS, kid=valid_finalbody
+                items=valid_finalbody,
+                delim=Tok.WS,
+                kid=valid_finalbody,
+                left_enc=self.operator(Tok.LBRACE, "{"),
+                right_enc=self.operator(Tok.RBRACE, "}"),
             )
-            kid.append(finally_body)
+            finally_stmt = ast.FinallyStmt(body=finally_body, kid=[finally_body])
+
+            kid.append(finally_stmt)
         else:
             finally_body = None
-
-        return ast.TryStmt(
+        ret = ast.TryStmt(
             body=valid_body,
             excepts=excepts,
-            else_body=(
-                ast.ElseStmt(body=else_body, kid=[else_body]) if else_body else None
-            ),
-            finally_body=(
-                ast.FinallyStmt(body=finally_body, kid=[finally_body])
-                if finally_body
-                else None
-            ),
+            else_body=elsestmt if else_body else None,
+            finally_body=finally_stmt if finally_body else None,
             kid=kid,
         )
+        return ret
 
     def proc_try_star(self, node: py_ast.TryStar) -> ast.TryStmt:
         """Process python node.
@@ -1919,7 +2181,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         name = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.arg,
+            value=node.arg if node.arg != "root" else "root_",  # reserved word
             line=node.lineno,
             col_start=node.col_offset,
             col_end=node.col_offset + len(node.arg),
@@ -1998,9 +2260,12 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 pos_end=0,
             )
             kwarg.add_kids_left([kwarg.unpack])
-        defaults = [self.convert(expr) for expr in node.defaults if type(expr) is None]
-
+        defaults = [self.convert(expr) for expr in node.defaults]
         params = [*args]
+        for param, default in zip(params[::-1], defaults[::-1]):
+            if isinstance(default, ast.Expr) and isinstance(param, ast.ParamVar):
+                param.value = default
+                param.add_kids_right([default])
         if vararg:
             params.append(vararg)
         params += kwonlyargs
@@ -2009,8 +2274,6 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         params += defaults
 
         valid_params = [param for param in params if isinstance(param, ast.ParamVar)]
-        if len(valid_params) != len(params):
-            raise self.ice("Length mismatch in arguments")
         if valid_params:
             fs_params = ast.SubNodeList[ast.ParamVar](
                 items=valid_params, delim=Tok.COMMA, kid=valid_params
@@ -2198,10 +2461,10 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         arg = ast.Name(
             file_path=self.mod_path,
             name=Tok.NAME,
-            value=node.arg if node.arg is not None else "_",
+            value=node.arg if node.arg else "_",
             line=node.lineno,
             col_start=node.col_offset,
-            col_end=node.col_offset + len(node.arg if node.arg is not None else "_"),
+            col_end=node.col_offset + len(node.arg if node.arg else "_"),
             pos_start=0,
             pos_end=0,
         )
@@ -2220,7 +2483,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             body: list[stmt]
         """
         pattern = self.convert(node.pattern)
-        guard = self.convert(node.guard) if node.guard is not None else None
+        guard = self.convert(node.guard) if node.guard else None
         body = [self.convert(i) for i in node.body]
         valid = [i for i in body if isinstance(i, ast.CodeBlockStmt)]
         if isinstance(pattern, ast.MatchPattern) and (
@@ -2230,9 +2493,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 pattern=pattern,
                 guard=guard,
                 body=valid,
-                kid=(
-                    [pattern, guard, *valid] if guard is not None else [pattern, *valid]
-                ),
+                kid=([pattern, guard, *valid] if guard else [pattern, *valid]),
             )
         else:
             raise self.ice()
@@ -2245,9 +2506,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             optional_vars: expr | None
         """
         context_expr = self.convert(node.context_expr)
-        optional_vars = (
-            self.convert(node.optional_vars) if node.optional_vars is not None else None
-        )
+        optional_vars = self.convert(node.optional_vars) if node.optional_vars else None
         if isinstance(context_expr, ast.Expr) and (
             isinstance(optional_vars, ast.Expr) or optional_vars is None
         ):
@@ -2270,3 +2529,15 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def proc_type_var_tuple(self, node: py_ast.TypeVarTuple) -> None:
         """Process python node."""
+
+    def convert_to_doc(self, string: ast.String) -> None:
+        """Convert a string to a docstring."""
+        string.value = f'""{string.value}""'
+
+    def aug_op_map(self, tok_dict: dict, op: ast.Token) -> str:
+        """aug_mapper."""
+        op.value += "="
+        for _key, value in tok_dict.items():
+            if value == op.value:
+                break
+        return _key
