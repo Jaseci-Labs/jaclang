@@ -793,5 +793,7 @@ class JacLanguageTests(TestCase):
         self.assertIn('Can not access private variable "p"', stdout_value)
         self.assertIn('Can not access private variable "privmethod"', stdout_value)
         self.assertIn('Can not access private variable "BankAccount"', stdout_value)
-        self.assertNotIn('Can not access private variable "overide_check"',stdout_value)
+        self.assertNotIn(
+            'Can not access private variable "overide_check"', stdout_value
+        )
         self.assertNotIn(" Name: ", stdout_value)
