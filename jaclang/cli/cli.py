@@ -7,6 +7,7 @@ import os
 import pickle
 import shutil
 import types
+from os import path
 from typing import Optional
 
 import jaclang.compiler.absyntree as ast
@@ -109,15 +110,14 @@ def build(filename: str) -> None:
 @cmd_registry.register
 def mrun(filename: str, main: bool = True, cache: bool = True) -> None:
     """Run the specified .jac or .jir file using the mrun command."""
-    base, mod = os.path.split(filename)
-    base = base if base else "./"
-    mod = mod[:-4]
-
-    # machine = JacMachine()  # Initialize JacMachine
+    # Normalize base path and filename
+    filename = path.normpath(filename)
+    base = path.dirname(filename)
+    mod = path.splitext(path.basename(filename))[0]
 
     if filename.endswith(".jac"):
         machine.import_and_load(
-            filename=filename,
+            filename=path.basename(filename),  # Use only the basename for loading
             base_path=base,
             cachable=cache,
             override_name="__main__" if main else None,
@@ -126,7 +126,7 @@ def mrun(filename: str, main: bool = True, cache: bool = True) -> None:
         with open(filename, "rb") as f:
             ir = pickle.load(f)
             machine.import_and_load(
-                filename=filename,
+                filename=path.basename(filename),  # Use only the basename for loading
                 base_path=base,
                 cachable=cache,
                 override_name="__main__" if main else None,
