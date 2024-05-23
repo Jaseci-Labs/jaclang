@@ -146,9 +146,7 @@ class AccessCheckPass(SymTabPass):
         type_tag: SubTag[SubNodeList[TypeSpec]],
         value: Optional[ExprType],
         """
-        # if node.parent.parent.access:
-        #     self.access_register(node.kid[0], node.parent.parent.access.tag.value)
-        #     self.access_register(node, node.parent.parent.access.tag.value)
+        pass
 
     def enter_name(self, node: ast.Name) -> None:
         """Sub objects.
@@ -167,14 +165,11 @@ class AccessCheckPass(SymTabPass):
             if isinstance(node.sym_tab, ast.SymbolTable)
             else None
         )
-        if node_info and node_info.access == Sym.PROTECTED:
-            node.sym_info.acc_tag = Sym.PROTECTED
-        elif node_info and node_info.access == Sym.PRIVATE:
-            node.sym_info.acc_tag = Sym.PRIVATE
-        elif node_info and node_info.access:
-            node.sym_info.acc_tag = Sym.PUBLIC
-        else:
-            node.sym_info.acc_tag = None
+
+        if node_info:
+            node.sym_info.acc_tag = node_info.access
+            if isinstance(node.parent, ast.AstSymbolNode):
+                node.parent.sym_info.acc_tag = node_info.access
 
         if isinstance(node.parent, ast.FuncCall):
             self.access_check(node)
