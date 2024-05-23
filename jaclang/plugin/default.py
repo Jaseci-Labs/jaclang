@@ -19,7 +19,6 @@ from jaclang.core.aott import (
     get_all_type_explanations,
     get_info_types,
     get_object_string,
-    get_reasoning_output,
     get_type_annotation,
 )
 from jaclang.core.construct import (
@@ -427,9 +426,15 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_root() -> Architype:
+    def get_root() -> Root:
         """Jac's assign comprehension feature."""
         return root
+
+    @staticmethod
+    @hookimpl
+    def get_root_type() -> Type[Root]:
+        """Jac's root getter."""
+        return Root
 
     @staticmethod
     @hookimpl
@@ -486,9 +491,10 @@ class JacLLM:
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
-        reason = False
-        if "reason" in model_params:
-            reason = model_params.pop("reason")
+        reason = model_params.pop("reason") if "reason" in model_params else False
+        context = (
+            ",".join(model_params.pop("context")) if "context" in model_params else ""
+        )
 
         type_collector: list = []
         information, collected_types = get_info_types(_scope, mod_registry, incl_info)
@@ -511,16 +517,18 @@ class JacLLM:
         type_explanations = "\n".join(type_explanations_list)
 
         meaning_in = aott_raise(
+            model,
             information,
             inputs_information,
             output_information,
             type_explanations,
             action,
+            context,
             reason,
         )
         meaning_out = model.__infer__(meaning_in, **model_params)
-        reasoning, output = get_reasoning_output(meaning_out)
-        return output
+        output = model.resolve_output(meaning_out, reason)
+        return output["output"]
 
     @staticmethod
     @hookimpl

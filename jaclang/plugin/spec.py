@@ -13,6 +13,7 @@ from jaclang.plugin.default import (
     EdgeArchitype,
     EdgeDir,
     NodeArchitype,
+    Root,
     WalkerArchitype,
 )
 
@@ -199,7 +200,13 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def get_root() -> Architype:
+    def get_root() -> Root:
+        """Jac's root getter."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def get_root_type() -> Type[Root]:
         """Jac's root getter."""
         raise NotImplementedError
 
