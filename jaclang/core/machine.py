@@ -2,6 +2,7 @@
 
 import importlib
 import marshal
+import threading
 import types
 from os import getcwd, path
 from typing import Dict, Optional
@@ -11,6 +12,8 @@ from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
 from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
+
+_execution_context = threading.local()
 
 
 class JacProgram:
@@ -156,6 +159,7 @@ class JacMachine:
         if program := self.loaded_programs.get(module_name):
             bytecode = program.get_bytecode()
             execution_context = program.get_execution_context()
+            _execution_context.value = execution_context
 
             # Handle Jac module imports
             def jac_import(

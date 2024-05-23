@@ -2,7 +2,7 @@
 
 # import importlib
 # import marshal
-import sys
+# import sys
 import types
 from os import path
 from typing import Optional, Union
@@ -13,7 +13,7 @@ from jaclang.compiler.absyntree import Module
 # from jaclang.compiler.constant import Constants as Con
 # from jaclang.core.utils import sys_path_context
 # from jaclang.utils.log import logging
-from .machine import machine
+from .machine import _execution_context, machine
 
 
 def jac_importer(
@@ -42,10 +42,11 @@ def jac_importer(
     program = machine.loaded_programs.get(module_name)
     if program:
         module = program.module
-        if items:
+        execution_context = getattr(_execution_context, "value", None)
+        if items and execution_context:
             for item, alias in items.items():
                 if isinstance(alias, str) or alias is None:
-                    setattr(sys.modules[__name__], alias or item, getattr(module, item))
+                    execution_context[alias or item] = getattr(module, item)
         return module
     return None
     # dir_path, file_name = path.split(
