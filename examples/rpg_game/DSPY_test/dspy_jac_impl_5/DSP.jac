@@ -17,12 +17,12 @@ include:jac sprites;
 include:jac config;
 include:jac map;
 include:jac main;
-# include:jac _secrets;
+
 
 import:py os;
 import:py dspy;
 
-import:py pydantic as pyd;
+import:py from pydantic, BaseModel;
 
 
 glob Map_object_desc_info:str =  "This is a sample of a map class object description."
@@ -58,13 +58,13 @@ glob context_info:str =  "The game is a simple RPG game where the player is the 
                 "The game is designed to be simple and fun to play, with each level getting more challenging as the player progresses through the game."
                 "Each newly generated map should be different from the previous one.";
 
-# obj Input:pyd.BaseModel: {
+# obj Input:BaseModel: {
 #     static has map_directory:str = pyd.Field(description = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
 #     # static has Map_object_desc:Any = dspy.InputField(desc = "Map object description");
 #     static has context:str = pyd.Field(description = "Context for the model");
 # }
 
-# obj Output:pyd.BaseModel: {
+# obj Output:BaseModel: {
 #     static has map_type: str = pyd.Field(description=   "A list of strings representing the map of the level. Each string corresponds to the row of the map."
 #                                                         "example -> :list[str] = ["
 #                                                         "                            'BBBBBBBBBBBBBBBBBBBB',"
