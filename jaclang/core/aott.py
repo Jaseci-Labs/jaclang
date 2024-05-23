@@ -8,7 +8,7 @@ import re
 from enum import Enum
 from typing import Any
 
-from jaclang.core.registry import SemInfo, SemRegistry, SemScope
+from jaclang.core.registry import LLMInfo, SemInfo, SemInputs, SemRegistry, SemScope
 
 
 PROMPT_TEMPLATE = """
@@ -83,7 +83,7 @@ def get_reasoning_output(s: str) -> tuple:
 
 
 def get_info_types(
-    scope: SemScope, mod_registry: SemRegistry, incl_info: list[tuple[str, str]]
+    scope: SemScope, mod_registry: SemRegistry, incl_info: list[LLMInfo]
 ) -> tuple[str, list[str]]:
     """Filter the registry data based on the scope and return the info string."""
     collected_types = []
@@ -102,6 +102,7 @@ def get_info_types(
     info_str = []
     for incl in incl_info:
         _, sem_info = filtered_registry.lookup(name=incl[0])
+        # _, sem_info = filtered_registry.lookup(name=incl.name)
         if sem_info and isinstance(sem_info, SemInfo):
             (
                 collected_types.extend(extract_non_primary_type(sem_info.type))
@@ -234,5 +235,5 @@ def get_type_annotation(data: Any) -> str:  # noqa: ANN401
         return str(type(data).__name__)
 
 
-LLMInfo = tuple[str, str]
-SemInputs = tuple[str, str, str, Any]
+# LLMInfo = tuple[str, str]
+# SemInputs = tuple[str, str, str, Any]

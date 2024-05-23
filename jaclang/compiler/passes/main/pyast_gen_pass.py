@@ -1222,6 +1222,37 @@ class PyastGenPass(Pass):
                                                 ],
                                                 ctx=ast3.Load(),
                                             )
+                                            # ast3.Call(
+                                            #     func=self.sync(
+                                            #         ast3.Name(
+                                            #             id="LLMInfo", ctx=ast3.Load()
+                                            #         )
+                                            #     ),
+                                                # args=[],
+                                                # keywords=[
+                                                    # self.sync(
+                                                    #     ast3.keyword(
+                                                    #         arg="name",
+                                                    #         value=self.sync(
+                                                    #             ast3.Constant(
+                                                    #                 value=key
+                                                    #             ),
+                                                    #         ),
+                                                    #     )
+                                                    # ),
+                                                    # self.sync(
+                                                    #     ast3.keyword(
+                                                    #         arg="value",
+                                                    #         value=self.sync(
+                                                    #             ast3.Name(
+                                                    #                 id=value,
+                                                    #                 ctx=ast3.Load(),
+                                                    #             )
+                                                    #         ),
+                                                    #     )
+                                                    # ),
+                                                # ],
+                                            # )
                                         )
                                         for key, value in include_info
                                     ],

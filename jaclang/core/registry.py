@@ -6,7 +6,7 @@ semantic information.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional, Type
 
 
 class SemInfo:
@@ -135,3 +135,27 @@ class SemRegistry:
             print(k)
             for i in v:
                 print(f"  {i.name} {i.type} {i.semstr}")
+
+
+class LLMInfo:
+    """LLMInfo class to store the name and value of the LLM include information."""
+
+    def __init__(self, name: str, value: str):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return f"LLMInfo(name={self.name}, value={self.value})"
+
+
+class SemInputs:
+    """SemInputs class to store the name, input type, parameter name and value of the input information."""
+
+    def __init__(self, name: str, input_type: Type, param_name: str, value: Any):
+        self.name = name
+        self.input_type = input_type
+        self.param_name = param_name
+        self.value = value
+
+    def __repr__(self):
+        return f"SemInputs(name={self.name}, input_type={self.input_type}, param_name={self.param_name}, value={self.value})"
