@@ -19,7 +19,7 @@ def aott_raise(
     type_explanations: str,
     action: str,
     context: str,
-    reason: bool,
+    method: str = 'normal'
 ) -> str:
     """AOTT Raise uses the information (Meanings types values) provided to generate a prompt(meaning in)."""
     meaning_in = model.MTLLM_PROMPT.format(
@@ -29,9 +29,7 @@ def aott_raise(
         type_explanations=type_explanations,
         action=action,
         context=context,
-        reason_suffix=(
-            model.MTLLM_REASON_SUFFIX if reason else model.MTLLM_WO_REASON_SUFFIX
-        ),
+        prompting_method=model.MTLLM__PROMPTING_METHODS[method]
     )
     return meaning_in
 

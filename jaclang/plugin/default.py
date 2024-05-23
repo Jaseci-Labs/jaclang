@@ -491,7 +491,7 @@ class JacLLM:
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
-        reason = model_params.pop("reason") if "reason" in model_params else False
+        method = model_params.pop("method") if "method" in model_params else 'normal'
         context = (
             ",".join(model_params.pop("context")) if "context" in model_params else ""
         )
@@ -524,10 +524,10 @@ class JacLLM:
             type_explanations,
             action,
             context,
-            reason,
+            method
         )
         meaning_out = model.__infer__(meaning_in, **model_params)
-        output = model.resolve_output(meaning_out, reason)
+        output = model.resolve_output(meaning_out, method)
         return output["output"]
 
     @staticmethod
