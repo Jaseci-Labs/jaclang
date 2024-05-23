@@ -24,8 +24,10 @@ def jac_importer(
     mod_bundle: Optional[Module] = None,
     lng: Optional[str] = "jac",
     items: Optional[dict[str, Union[str, bool]]] = None,
-) -> Optional[types.ModuleType]:
+) -> Optional[tuple[types.ModuleType, ...]]:
     """Core Import Process."""
+    print("pure")
+    loaded_items: tuple = tuple()
     dir_path, file_name = path.split(
         path.join(*(target.split("."))) + (".jac" if lng == "jac" else ".py")
     )
@@ -33,17 +35,19 @@ def jac_importer(
     package_path = dir_path.replace(path.sep, ".")
 
     if package_path and f"{package_path}.{module_name}" in sys.modules:
-        return sys.modules[f"{package_path}.{module_name}"]
+        return (sys.modules[f"{package_path}.{module_name}"],)
     elif not package_path and module_name in sys.modules:
-        return sys.modules[module_name]
+        return (sys.modules[module_name],)
 
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, file_name))
 
     if lng == "py":
-        module = py_import(
+        print("PReimport items", items)
+        module, *loaded_items = py_import(
             target=target, items=items, absorb=absorb, mdl_alias=mdl_alias
         )
+
     else:
         module_name = override_name if override_name else module_name
         module = create_jac_py_module(
@@ -76,7 +80,8 @@ def jac_importer(
         with sys_path_context(caller_dir):
             exec(codeobj, module.__dict__)
 
-    return module
+    print("Import tuple:", (module, *loaded_items))
+    return (module, *loaded_items)
 
 
 def create_jac_py_module(
@@ -119,12 +124,13 @@ def py_import(
     items: Optional[dict[str, Union[str, bool]]] = None,
     absorb: bool = False,
     mdl_alias: Optional[str] = None,
-) -> types.ModuleType:
+) -> tuple[types.ModuleType, ...]:
     """Import a Python module."""
     try:
         target = target.lstrip(".") if target.startswith("..") else target
         imported_module = importlib.import_module(name=target)
         main_module = __import__("__main__")
+        loaded_items: tuple = tuple()
         if absorb:
             for name in dir(imported_module):
                 if not name.startswith("_"):
@@ -136,15 +142,17 @@ def py_import(
                     setattr(
                         main_module,
                         alias if isinstance(alias, str) else name,
-                        getattr(imported_module, name),
+                        this_item := getattr(imported_module, name),
                     )
+                    loaded_items += (this_item,)
                 except AttributeError as e:
                     if hasattr(imported_module, "__path__"):
                         setattr(
                             main_module,
                             alias if isinstance(alias, str) else name,
-                            importlib.import_module(f"{target}.{name}"),
+                            this_item := importlib.import_module(f"{target}.{name}"),
                         )
+                        loaded_items += (this_item,)
                     else:
                         raise e
 
@@ -154,7 +162,8 @@ def py_import(
                 mdl_alias if isinstance(mdl_alias, str) else target,
                 imported_module,
             )
-        return imported_module
+        print("Import py tuple:", (imported_module, *loaded_items, items))
+        return (imported_module, *loaded_items)
     except ImportError as e:
         print(f"Failed to import module {target}")
         raise e

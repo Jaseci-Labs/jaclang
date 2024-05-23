@@ -478,7 +478,7 @@ class PyastGenPass(Pass):
     def exit_import(self, node: ast.Import) -> None:
         """Sub objects.
 
-        lang: SubTag[Name],
+        hint: SubTag[Name],
         paths: list[ModulePath],
         alias: Optional[Name],
         items: Optional[SubNodeList[ModuleItem]],
@@ -509,16 +509,36 @@ class PyastGenPass(Pass):
 
         keys = []
         values = []
-        for k in imp_from.keys():
+        for k, v in imp_from.items():
             keys.append(self.sync(ast3.Constant(value=k)))
-        for v in imp_from.values():
             values.append(self.sync(ast3.Constant(value=v)))
-
         self.needs_jac_import()
-        for p, a in path_alias.items():
+        for path, alias in path_alias.items():
             py_nodes.append(
                 self.sync(
-                    ast3.Expr(
+                    ast3.Assign(
+                        targets=(
+                            [self.sync(ast3.Name(id=path, ctx=ast3.Store()))]
+                            if not len(keys)
+                            else [
+                                self.sync(
+                                    ast3.Tuple(
+                                        elts=[
+                                            self.sync(
+                                                ast3.Name(id=path, ctx=ast3.Store())
+                                            )
+                                        ]
+                                        + [
+                                            self.sync(
+                                                ast3.Name(id=k.value, ctx=ast3.Store())
+                                            )
+                                            for k in keys
+                                        ],
+                                        ctx=ast3.Store(),
+                                    )
+                                )
+                            ]
+                        ),
                         value=self.sync(
                             ast3.Call(
                                 func=self.sync(
@@ -530,7 +550,7 @@ class PyastGenPass(Pass):
                                         ast3.keyword(
                                             arg="target",
                                             value=self.sync(
-                                                ast3.Constant(value=p),
+                                                ast3.Constant(value=path),
                                             ),
                                         )
                                     ),
@@ -539,7 +559,8 @@ class PyastGenPass(Pass):
                                             arg="base_path",
                                             value=self.sync(
                                                 ast3.Name(
-                                                    id="__file__", ctx=ast3.Load()
+                                                    id="__file__",
+                                                    ctx=ast3.Load(),
                                                 )
                                             ),
                                         )
@@ -578,7 +599,7 @@ class PyastGenPass(Pass):
                                         ast3.keyword(
                                             arg="mdl_alias",
                                             value=self.sync(
-                                                ast3.Constant(value=a),
+                                                ast3.Constant(value=alias),
                                             ),
                                         )
                                     ),
@@ -592,44 +613,86 @@ class PyastGenPass(Pass):
                                     ),
                                 ],
                             )
-                        )
+                        ),
                     ),
-                )
+                ),
             )
         if node.is_absorb:
-            source = node.items.items[0]
-            if not isinstance(source, ast.ModulePath):
-                raise self.ice()
             py_nodes.append(
                 self.sync(
-                    py_node=ast3.ImportFrom(
-                        module=(source.path_str.lstrip(".") if source else None),
-                        names=[self.sync(ast3.alias(name="*"), node)],
-                        level=0,
-                    ),
-                    jac_node=node,
-                )
-            )
-            if node.items:
-                self.warning(
-                    "Includes import * in target module into current namespace."
-                )
-        if not node.from_loc:
-            py_nodes.append(self.sync(ast3.Import(names=node.items.gen.py_ast)))
-        else:
-            py_nodes.append(
-                self.sync(
-                    ast3.ImportFrom(
-                        module=(
-                            node.from_loc.path_str.lstrip(".")
-                            if node.from_loc
-                            else None
-                        ),
-                        names=node.items.gen.py_ast,
-                        level=0,
+                    ast3.Expr(
+                        value=self.sync(
+                            ast3.Call(
+                                func=self.sync(
+                                    ast3.Attribute(
+                                        value=self.sync(
+                                            ast3.Call(
+                                                func=self.sync(
+                                                    ast3.Attribute(
+                                                        value=self.sync(
+                                                            ast3.List(
+                                                                elts=[
+                                                                    self.sync(
+                                                                        ast3.Constant(
+                                                                            value=path
+                                                                        )
+                                                                    )
+                                                                ],
+                                                                ctx=ast3.Load(),
+                                                            )
+                                                        ),
+                                                        attr="__dict__",
+                                                        ctx=ast3.Load(),
+                                                    )
+                                                ),
+                                                args=[],
+                                                keywords=[],
+                                            )
+                                        ),
+                                        attr="update",
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                                args=[],
+                                keywords=[],
+                            )
+                        )
                     )
                 )
             )
+            # source = node.items.items[0]
+            # if not isinstance(source, ast.ModulePath):
+            #     raise self.ice()
+            # py_nodes.append(
+            #     self.sync(
+            #         py_node=ast3.ImportFrom(
+            #             module=(source.path_str.lstrip(".") if source else None),
+            #             names=[self.sync(ast3.alias(name="*"), node)],
+            #             level=0,
+            #         ),
+            #         jac_node=node,
+            #     )
+            # )
+            # if node.items:
+            #     self.warning(
+            #         "Includes import * in target module into current namespace."
+            #     )
+        # if not node.from_loc:
+        #     py_nodes.append(self.sync(ast3.Import(names=node.items.gen.py_ast)))
+        # else:
+        #     py_nodes.append(
+        #         self.sync(
+        #             ast3.ImportFrom(
+        #                 module=(
+        #                     node.from_loc.path_str.lstrip(".")
+        #                     if node.from_loc
+        #                     else None
+        #                 ),
+        #                 names=node.items.gen.py_ast,
+        #                 level=0,
+        #             )
+        #         )
+        #     )
         node.gen.py_ast = py_nodes
 
     def exit_module_path(self, node: ast.ModulePath) -> None:
