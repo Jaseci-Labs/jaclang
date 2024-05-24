@@ -36,7 +36,8 @@ outer{
     inner {
         has diary_entries :'Diary Entries': list[str];
         can 'Get Personality of the Person'
-        get_personality (person: 'Person Object': list[Person]) -> 'Personality of the Person': dict[Personality, PersonalityIndex] by llm(reason=True, incl_info=(personality_examples, self.diary_entries));
+        get_personality (person: 'Person Object': list[Person])
+        -> 'Personality of the Person': dict[Personality, PersonalityIndex] by llm(method='reason-first', incl_info=(personality_examples, self.diary_entries));
     }
 }
 

@@ -84,7 +84,7 @@ class Anthropic:
         """Infer a response from the input text."""
         return self.__infer__(input_text, **kwargs)
 
-    def resolve_output(self, meaning_out: str, method:str) -> dict:
+    def resolve_output(self, meaning_out: str, method: str) -> dict:
         """Resolve the output string to return the reasoning and output."""
         if self.verbose:
             print(f"Meaning Out:\n{meaning_out}")
@@ -92,11 +92,17 @@ class Anthropic:
         output = output_match.group(1).strip() if output_match else None
 
         if method == "chain-of-thought":
-            method_results_match = re.search(r"\[Chain of Thought\](.*)\[Output\]", meaning_out)
+            method_results_match = re.search(
+                r"\[Chain of Thought\](.*)\[Output\]", meaning_out
+            )
         elif method == "reason-first":
-            method_results_match = re.search(r"\[Reasoning\](.*)\[Output\]", meaning_out)
+            method_results_match = re.search(
+                r"\[Reasoning\](.*)\[Output\]", meaning_out
+            )
         else:
             method_results_match = None
-        method_results = method_results_match.group(1).strip() if method_results_match else None
-        
+        method_results = (
+            method_results_match.group(1).strip() if method_results_match else None
+        )
+
         return {"method_results": method_results, "output": output}

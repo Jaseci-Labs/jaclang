@@ -6,7 +6,7 @@ glob llm = Groq();
 
 
 can 'Finds the best professional to answer the given question'
-get_expert(question: 'Question': str)-> 'Expert Profession': str by llm(reason=True);
+get_expert(question: 'Question': str)-> 'Expert Profession': str by llm(method='reason-first');
 can "Get the answer for the question from expert's perspective"
 get_answer(question:'Question': str, expert: 'Expert': str)-> "Expert's Answer": str by llm(temperature=1.0);
 

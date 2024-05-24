@@ -25,7 +25,7 @@ glob personality_examples: 'Personality Information of Famous People': dict[str,
 };
 
 can 'Get Personality of the Person'
-get_personality (person: 'Person Object': Person) -> 'Personality of the Person': Personality by llm(reason=True, incl_info=(personality_examples));
+get_personality (person: 'Person Object': Person) -> 'Personality of the Person': Personality by llm(method='reason-first', incl_info=(personality_examples));
 
 with entry {
     einstein_age: int = 75;

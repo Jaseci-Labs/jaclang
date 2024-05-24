@@ -22,7 +22,7 @@ glob personality_examples: 'Personality Information of Famous People': dict[str,
 
 can 'Get Person Information use common knowledge'
 get_person_info(name: 'Name of the Person': str) -> 'Person': Person by llm(
-    reason=True,
+    method='reason-first',
     temperature=0.0,
     incl_info=(personality_examples)
 );

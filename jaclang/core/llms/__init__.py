@@ -4,6 +4,7 @@ import re
 
 from .anthropic import (
     Anthropic,
+    CHAIN_OF_THOUGHT,
     PROMPT_TEMPLATE,
     WITHOUT_REASON_SUFFIX,
     WITH_REASON_SUFFIX,
@@ -17,8 +18,11 @@ class BaseLLM:
     """Base Large Language Model (LLM) class."""
 
     MTLLM_PROMPT: str = PROMPT_TEMPLATE
-    MTLLM_REASON_SUFFIX: str = WITH_REASON_SUFFIX
-    MTLLM_WO_REASON_SUFFIX: str = WITHOUT_REASON_SUFFIX
+    MTLLM__PROMPTING_METHODS = {
+        "normal": WITHOUT_REASON_SUFFIX,
+        "reason-first": WITH_REASON_SUFFIX,
+        "chain-of-thought": CHAIN_OF_THOUGHT,
+    }
 
     def __init__(self, **kwargs: dict) -> None:
         """Initialize the Large Language Model (LLM) client."""

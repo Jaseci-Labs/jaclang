@@ -3001,100 +3001,128 @@ class PyastGenPass(Pass):
             if node.params and node.params.items:
                 inputs = [
                     self.sync(
-                        ast3.Tuple(
-                            elts=[
+                        ast3.Call(
+                            func=self.sync(ast3.Name(id="SemInputs", ctx=ast3.Load())),
+                            args=[],
+                            keywords=[
                                 self.sync(
-                                    ast3.Call(
-                                        func=self.sync(
-                                            ast3.Attribute(
-                                                value=self.sync(
-                                                    ast3.Name(
-                                                        id=Con.JAC_LLM.value,
+                                    ast3.keyword(
+                                        arg="semstr",
+                                        value=self.sync(
+                                            ast3.Call(
+                                                func=self.sync(
+                                                    ast3.Attribute(
+                                                        value=self.sync(
+                                                            ast3.Name(
+                                                                id=Con.JAC_LLM.value,
+                                                                ctx=ast3.Load(),
+                                                            )
+                                                        ),
+                                                        attr="get_semstr_type",
                                                         ctx=ast3.Load(),
                                                     )
                                                 ),
-                                                attr="get_semstr_type",
-                                                ctx=ast3.Load(),
+                                                args=[
+                                                    self.sync(
+                                                        ast3.Name(
+                                                            id="__file__",
+                                                            ctx=ast3.Load(),
+                                                        )
+                                                    ),
+                                                    scope,
+                                                    self.sync(
+                                                        ast3.Constant(
+                                                            value=(
+                                                                kw_pair.key.value
+                                                                if isinstance(
+                                                                    kw_pair.key,
+                                                                    ast.Name,
+                                                                )
+                                                                else None
+                                                            )
+                                                        )
+                                                    ),
+                                                    self.sync(
+                                                        ast3.Constant(value=True)
+                                                    ),
+                                                ],
+                                                keywords=[],
                                             )
                                         ),
-                                        args=[
-                                            self.sync(
-                                                ast3.Name(
-                                                    id="__file__", ctx=ast3.Load()
-                                                )
-                                            ),
-                                            scope,
-                                            self.sync(
-                                                ast3.Constant(
-                                                    value=(
-                                                        kw_pair.key.value
-                                                        if isinstance(
-                                                            kw_pair.key, ast.Name
-                                                        )
-                                                        else None
-                                                    )
-                                                )
-                                            ),
-                                            self.sync(ast3.Constant(value=True)),
-                                        ],
-                                        keywords=[],
                                     )
                                 ),
                                 self.sync(
-                                    ast3.Call(
-                                        func=self.sync(
-                                            ast3.Attribute(
-                                                value=self.sync(
-                                                    ast3.Name(
-                                                        id=Con.JAC_LLM.value,
+                                    ast3.keyword(
+                                        arg="input_type",
+                                        value=self.sync(
+                                            ast3.Call(
+                                                func=self.sync(
+                                                    ast3.Attribute(
+                                                        value=self.sync(
+                                                            ast3.Name(
+                                                                id=Con.JAC_LLM.value,
+                                                                ctx=ast3.Load(),
+                                                            )
+                                                        ),
+                                                        attr="get_semstr_type",
                                                         ctx=ast3.Load(),
                                                     )
                                                 ),
-                                                attr="get_semstr_type",
-                                                ctx=ast3.Load(),
+                                                args=[
+                                                    self.sync(
+                                                        ast3.Name(
+                                                            id="__file__",
+                                                            ctx=ast3.Load(),
+                                                        )
+                                                    ),
+                                                    scope,
+                                                    self.sync(
+                                                        ast3.Constant(
+                                                            value=(
+                                                                kw_pair.key.value
+                                                                if isinstance(
+                                                                    kw_pair.key,
+                                                                    ast.Name,
+                                                                )
+                                                                else None
+                                                            )
+                                                        )
+                                                    ),
+                                                    self.sync(
+                                                        ast3.Constant(value=False)
+                                                    ),
+                                                ],
+                                                keywords=[],
                                             )
                                         ),
-                                        args=[
-                                            self.sync(
-                                                ast3.Name(
-                                                    id="__file__", ctx=ast3.Load()
-                                                )
-                                            ),
-                                            scope,
-                                            self.sync(
-                                                ast3.Constant(
-                                                    value=(
-                                                        kw_pair.key.value
-                                                        if isinstance(
-                                                            kw_pair.key, ast.Name
-                                                        )
-                                                        else None
-                                                    )
-                                                )
-                                            ),
-                                            self.sync(ast3.Constant(value=False)),
-                                        ],
-                                        keywords=[],
                                     )
                                 ),
                                 self.sync(
-                                    ast3.Constant(
-                                        value=(
-                                            kw_pair.key.value
-                                            if isinstance(kw_pair.key, ast.Name)
-                                            else None
-                                        )
+                                    ast3.keyword(
+                                        arg="param_name",
+                                        value=self.sync(
+                                            ast3.Constant(
+                                                value=(
+                                                    kw_pair.key.value
+                                                    if isinstance(kw_pair.key, ast.Name)
+                                                    else None
+                                                )
+                                            )
+                                        ),
                                     )
                                 ),
-                                kw_pair.value.gen.py_ast[0],
+                                self.sync(
+                                    ast3.keyword(
+                                        arg="value",
+                                        value=kw_pair.value.gen.py_ast[0],
+                                    )
+                                ),
                             ],
-                            ctx=ast3.Load(),
                         )
                     )
                     for kw_pair in node.params.items
                     if isinstance(kw_pair, ast.KWPair)
                 ]
-                self.cout += 1
             else:
                 inputs = []
 

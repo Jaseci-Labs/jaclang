@@ -27,7 +27,7 @@ This approach allows for the initialization of the desired model as a model code
 ```
 can 'Summarize the Life of the Individual'
 summarize(name: 'Name of the Person': str, age: 'Age of the Person': int)
-    -> 'Summary': str by llm(temperature=0.7, reason=True);
+    -> 'Summary': str by llm(temperature=0.7, method='reason-first');
 with entry {
     print(summarize('Albert Einstein', 89));
 }
@@ -78,7 +78,7 @@ Automatic Attribute Population: GenAI Ability streamlines object creation by aut
 When using `by <model>` in code, we have the ability to provide additional parameters for fine-tuning the interaction and to customize the interaction.
 
 ```
-by <model>(temperature=0.7, top_k = 3, reason=true, incl_info=(xxx), context=[])
+by <model>(temperature=0.7, top_k = 3, method='reason-first', incl_info=(xxx), context=[])
 ```
 
 Here,
@@ -93,7 +93,7 @@ Here,
 
 - `context`: List of information to give external information to llm for our use cases
 
-`by <model>(temperature=0.7, top_k = 3, top_p =0.51, incl_info=(xxx), context=[""],reason=true) ` <!--TODO : This line needs to be modified  with a working example code snippet later  -->
+`by <model>(temperature=0.7, top_k = 3, top_p =0.51, incl_info=(xxx), context=[""],method='reason-first') ` <!--TODO : This line needs to be modified  with a working example code snippet later  -->
 
 |    Parameters    |          Type              |
 |    --------      |         -------            |
@@ -173,7 +173,7 @@ In this instance, the semstring <span style="color:orange;">'Translate English t
  Semstrings shine prominently in method signatures, serving as guides to define parameters with explicit meanings. By providing meaningful labels, developers ensure that LLM comprehends the purpose and expected inputs clearly. These semstrings also contribute to explaining the input with meaningful context.
 ```
 can 'Provide the Answer for the Given Question (A-F)'
-get_answer(question: 'Question' str, choices: 'Answer Choices': dict) -> 'Answer (A-F)' str by llm(reason=True);
+get_answer(question: 'Question' str, choices: 'Answer Choices': dict) -> 'Answer (A-F)' str by llm(method='reason-first');
 ```
 In this instance, the semstrings for parameters (<span style="color:orange;">'Question'</span> and <span style="color:orange;">'Answer Choices'</span>) act as informative labels, offering a clear understanding of what each parameter represents. The labels provide context to LLM, guiding it to interpret and respond to the function's inputs appropriately.
 
