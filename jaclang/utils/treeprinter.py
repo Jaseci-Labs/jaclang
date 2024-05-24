@@ -93,6 +93,11 @@ def print_ast_tree(
             if isinstance(node, AstSymbolNode)
             else ""
         )
+        sym_info += (
+            f", SymbolTable: {node.sym_info.typ_sym_table.name}"
+            if isinstance(node, AstSymbolNode) and node.sym_info.typ_sym_table
+            else ", SymbolTable: None" if isinstance(node, AstSymbolNode) else ""
+        )
         if isinstance(node, Token) and isinstance(node, AstSymbolNode):
             return f"{node.__class__.__name__} - {node.value} - {sym_info}"
         elif isinstance(node, Token):
