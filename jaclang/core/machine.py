@@ -2,10 +2,9 @@
 
 import importlib
 import marshal
-import threading
 import types
 from os import getcwd, path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.compile import compile_jac
@@ -13,72 +12,62 @@ from jaclang.compiler.constant import Constants as Con
 from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
 
-_execution_context = threading.local()
-
 
 class JacProgram:
     """Represents a Jac program containing bytecode and its associated module."""
 
-    def __init__(self, bytecode: bytes, module: types.ModuleType) -> None:
-        """Initialize a JacProgram instance.
-
-        Args:
-            bytecode (bytes): The bytecode of the Jac program.
-            module (types.ModuleType): The module associated with the bytecode.
-        """
-        self.bytecode = bytecode
-        self.module = module
-
-    def get_bytecode(self) -> bytes:
-        """Retrieve the bytecode of the Jac program.
-
-        Returns:
-            bytes: The bytecode of the Jac program.
-        """
-        return self.bytecode
-
-    def get_execution_context(self) -> dict:
-        """Get the execution context for the Jac program.
-
-        Returns:
-            dict: A dictionary representing the execution context.
-        """
-        context = {
-            "__file__": self.module.__file__,
-            "__name__": self.module.__name__,
-            "__package__": self.module.__package__,
-            "__doc__": self.module.__doc__,
-            "__jac_mod_bundle__": self.module.__dict__.get("__jac_mod_bundle__"),
-        }
-        return context
-
-
-class JacMachine:
-    """Manages the loading and execution of Jac programs."""
-
-    def __init__(self) -> None:
-        """Initialize a JacMachine instance."""
-        self.loaded_programs: Dict[str, JacProgram] = {}
-
-    def import_and_load(
+    def __init__(
         self,
         filename: str,
-        base_path: str = "./",
+        base_path: str,
         cachable: bool = True,
         override_name: Optional[str] = None,
         mod_bundle: Optional[Module] = None,
         lng: Optional[str] = "jac",
+        items: Optional[dict[str, Union[str, bool]]] = None,
+        absorb: bool = False,
+        mdl_alias: Optional[str] = None,
     ) -> None:
-        """Import and load a Jac or Python program.
+        """Initialize a JacProgram instance.
 
         Args:
-            filename (str): The filename of the program.
-            base_path (str, optional): The base path to use. Defaults to "./".
-            cachable (bool, optional): Whether the program is cachable. Defaults to True.
-            override_name (Optional[str], optional): An optional name override for the module. Defaults to None.
-            mod_bundle (Optional[Module], optional): An optional module bundle. Defaults to None.
-            lng (Optional[str], optional): The language of the module. Defaults to "jac".
+            filename (str): The filename of the Jac program.
+            base_path (str): The base path to use.
+            cachable (bool): Whether the program is cachable. Defaults to True.
+            override_name (Optional[str]): An optional name override for the module. Defaults to None.
+            mod_bundle (Optional[Module]): An optional module bundle. Defaults to None.
+            lng (Optional[str]): The language of the module. Defaults to "jac".
+            items (Optional[dict[str, Union[str, bool]]]): Optional items to import.
+            absorb (bool): Whether to absorb the imported module into the main module.
+            mdl_alias (Optional[str]): Optional alias for the module.
         """
+        self.bytecode: Optional[bytes] = None
+        self.module: Optional[types.ModuleType] = None
+        self.load_program(
+            filename,
+            base_path,
+            cachable,
+            override_name,
+            mod_bundle,
+            lng,
+            items,
+            absorb,
+            mdl_alias,
+        )
+
+    def load_program(
+        self,
+        filename: str,
+        base_path: str,
+        cachable: bool,
+        override_name: Optional[str],
+        mod_bundle: Optional[Module],
+        lng: Optional[str],
+        items: Optional[dict[str, Union[str, bool]]],
+        absorb: bool,
+        mdl_alias: Optional[str],
+    ) -> None:
+        """Load the Jac program from a file."""
         try:
             module_name = path.splitext(path.basename(filename))[0]
             # print(f"Filename: {filename}")
@@ -94,10 +83,11 @@ class JacMachine:
 
             if lng == "py":
                 # Handle Python module import
-                module = importlib.import_module(module_name)
-                self.loaded_programs[module_name] = JacProgram(
-                    bytecode=b"", module=module
+                module = py_import(
+                    target=module_name, items=items, absorb=absorb, mdl_alias=mdl_alias
                 )
+                self.bytecode = b""
+                self.module = module
             else:
                 # Handle Jac module import
                 if not full_target.endswith(".jac"):
@@ -143,67 +133,59 @@ class JacMachine:
                 with sys_path_context(caller_dir):
                     exec(codeobj, module.__dict__)
 
-                program = JacProgram(bytecode=codeobj, module=module)
-                self.loaded_programs[module_name] = program
+                self.bytecode = codeobj
+                self.module = module
+
                 # print(f"Program {module_name} loaded successfully.")
                 # print(f"Attributes in module {module_name}: {dir(module)}")
         except Exception as e:
             print(f"Failed to load program {module_name}: {e}")
 
-    def run_program(self, module_name: str) -> None:
-        """Run a loaded Jac program.
 
-        Args:
-            module_name (str): The name of the module to run.
-        """
-        if program := self.loaded_programs.get(module_name):
-            bytecode = program.get_bytecode()
-            execution_context = program.get_execution_context()
-            _execution_context.value = execution_context
+def py_import(
+    target: str,
+    items: Optional[dict[str, Union[str, bool]]] = None,
+    absorb: bool = False,
+    mdl_alias: Optional[str] = None,
+) -> types.ModuleType:
+    """Import a Python module."""
+    try:
+        target = target.lstrip(".") if target.startswith("..") else target
+        imported_module = importlib.import_module(name=target)
+        main_module = __import__("__main__")
+        if absorb:
+            for name in dir(imported_module):
+                if not name.startswith("_"):
+                    setattr(main_module, name, getattr(imported_module, name))
 
-            # Handle Jac module imports
-            def jac_import(
-                target: str,
-                base_path: str,
-                mod_bundle: Optional[Module] = None,
-                lng: str = "jac",
-                **kwargs: dict,
-            ) -> types.ModuleType:
-                module_name = path.splitext(path.basename(target))[0]
-                if lng == "py":
-                    module = importlib.import_module(module_name)
-                    for item, alias in kwargs.get("items", {}).items():
-                        execution_context[alias or item] = getattr(module, item)
-                else:
-                    dir_path, file_name = path.split(
-                        path.join(*(target.split("."))) + ".jac"
+        elif items:
+            for name, alias in items.items():
+                try:
+                    setattr(
+                        main_module,
+                        alias if isinstance(alias, str) else name,
+                        getattr(imported_module, name),
                     )
-                    caller_dir = get_caller_dir(base_path)
-                    full_target = path.normpath(path.join(caller_dir, file_name))
-                    self.import_and_load(
-                        filename=full_target,
-                        base_path=base_path,
-                        cachable=True,
-                        override_name=None,
-                        mod_bundle=mod_bundle,
-                        lng=lng,
-                    )
-                    program = self.loaded_programs.get(module_name)
-                    if program:
-                        module = program.module
-                        # print(f"Attributes in Jac module {module_name}: {dir(module)}")
-                        for item, alias in kwargs.get("items", {}).items():
-                            execution_context[alias or item] = getattr(module, item)
-                return module
+                except AttributeError as e:
+                    if hasattr(imported_module, "__path__"):
+                        setattr(
+                            main_module,
+                            alias if isinstance(alias, str) else name,
+                            importlib.import_module(f"{target}.{name}"),
+                        )
+                    else:
+                        raise e
 
-            execution_context["__jac_import__"] = jac_import
-
-            try:
-                exec(bytecode, execution_context)
-            except Exception as e:
-                print(f"Execution failed: {e}")
         else:
-            print(f"Program {module_name} not found.")
+            setattr(
+                __import__("__main__"),
+                mdl_alias if isinstance(mdl_alias, str) else target,
+                imported_module,
+            )
+        return imported_module
+    except ImportError as e:
+        print(f"Failed to import module {target}")
+        raise e
 
 
 def get_caller_dir(base_path: str) -> str:
@@ -220,6 +202,60 @@ def get_caller_dir(base_path: str) -> str:
     if path.isdir(base_path):
         return base_path
     return path.dirname(base_path)
+
+
+class JacMachine:
+    """Manages the loading and execution of Jac programs."""
+
+    def __init__(self) -> None:
+        """Initialize a JacMachine instance."""
+        self.loaded_programs: Dict[str, JacProgram] = {}
+
+    def load_program(
+        self,
+        filename: str,
+        base_path: str = "./",
+        cachable: bool = True,
+        override_name: Optional[str] = None,
+        mod_bundle: Optional[Module] = None,
+        lng: Optional[str] = "jac",
+        items: Optional[dict[str, Union[str, bool]]] = None,
+        absorb: bool = False,
+        mdl_alias: Optional[str] = None,
+    ) -> JacProgram:
+        """Load a Jac program, or return the already loaded instance.
+
+        Args:
+            filename (str): The filename of the program.
+            base_path (str, optional): The base path to use. Defaults to "./".
+            cachable (bool, optional): Whether the program is cachable. Defaults to True.
+            override_name (Optional[str], optional): An optional name override for the module. Defaults to None.
+            mod_bundle (Optional[Module], optional): An optional module bundle. Defaults to None.
+            lng (Optional[str], optional): The language of the module. Defaults to "jac".
+            items (Optional[dict[str, Union[str, bool]]]): Optional items to import.
+            absorb (bool): Whether to absorb the imported module into the main module.
+            mdl_alias (Optional[str]): Optional alias for the module.
+
+        Returns:
+            JacProgram: The loaded Jac program.
+        """
+        module_name = path.splitext(path.basename(filename))[0]
+        if module_name in self.loaded_programs:
+            return self.loaded_programs[module_name]
+
+        program = JacProgram(
+            filename=filename,
+            base_path=base_path,
+            cachable=cachable,
+            override_name=override_name,
+            mod_bundle=mod_bundle,
+            lng=lng,
+            items=items,
+            absorb=absorb,
+            mdl_alias=mdl_alias,
+        )
+        self.loaded_programs[module_name] = program
+        return program
 
 
 machine = JacMachine()
