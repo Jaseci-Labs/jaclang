@@ -495,18 +495,11 @@ class JacLLM:
         )
 
         type_collector: list = []
-        if not isinstance(outputs, list):
-            information, collected_types = get_info_types(
-                _scope, mod_registry, incl_info
-            )
-        else:
-            information, collected_types = get_info_types(
-                _scope, mod_registry, incl_info[:-1]
-            )
-            outputs = outputs[0]
-            collected_types = [incl_info[0].name]
-            information = ""
+        incl_info = [x for x in incl_info if not isinstance(x.value, type)]
+        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
+        outputs = outputs[0] if isinstance(outputs, list) else outputs
         type_collector.extend(collected_types)
+
         inputs_information_list = []
         for i in inputs:
             typ_anno = get_type_annotation(i.value)
