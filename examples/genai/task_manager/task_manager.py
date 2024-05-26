@@ -3,7 +3,7 @@ from enum import Enum
 import dspy
 
 
-llm = dspy.GROQ(model='gemma-7b-it', api_key = "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")
+llm = dspy.OllamaLocal(model="phi3")
 
 dspy.settings.configure(lm = llm)
 
@@ -17,17 +17,10 @@ class TaskFull(Task):
 class PrioritySignature(dspy.Signature):
     """Estimate the priority of each task, score from 0 to 10 where 10 is the most critical"""
 
-    input: list[Task] = dspy.InputField()
-    output: str = dspy.OutputField()
-
-class ETASignature(dspy.Signature):
-    """Estimate the time one is going to spend on each task"""
-
-    input: list[Task] = dspy.InputField()
-    output: str = dspy.OutputField()
+    input: Task = dspy.InputField()
+    output: TaskFull = dspy.OutputField()
 
 priorityPredictor = dspy.TypedPredictor(PrioritySignature)
-etaPredictor = dspy.TypedPredictor(ETASignature)
 
 tasks = [
         Task(description="Have some sleep"),
@@ -37,8 +30,10 @@ tasks = [
         Task(description="Enjoy family time with my parents"),
         ]
 
-priority = priorityPredictor(input = tasks).output
-print(priority)
-eta = etaPredictor(input = tasks).output
-print(eta)
-print(priority, eta)
+priorities = []
+for task in tasks:
+    priority = priorityPredictor(input = task).output
+    priorities.append(priority)
+    print(priority)
+
+print(priorities)
