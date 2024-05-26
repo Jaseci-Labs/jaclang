@@ -22,7 +22,7 @@ include:jac main;
 import:py os;
 import:py dspy;
 
-import:py from pydantic, BaseModel;
+import:py from pydantic, BaseModel, Field;
 
 
 glob Map_object_desc_info:str =  "This is a sample of a map class object description."
@@ -58,43 +58,15 @@ glob context_info:str =  "The game is a simple RPG game where the player is the 
                 "The game is designed to be simple and fun to play, with each level getting more challenging as the player progresses through the game."
                 "Each newly generated map should be different from the previous one.";
 
-# obj Input:BaseModel: {
-#     static has map_directory:str = pyd.Field(description = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
-#     # static has Map_object_desc:Any = dspy.InputField(desc = "Map object description");
-#     static has context:str = pyd.Field(description = "Context for the model");
-# }
+class Input:BaseModel: {
+    has map_directory:dict[str,Map] = Field(description = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
+    has Map_object_desc:str = Field(description = "Map object description");
+    has context:str = Field(description = "Context for the model");
+}
 
-# obj Output:BaseModel: {
-#     static has map_type: str = pyd.Field(description=   "A list of strings representing the map of the level. Each string corresponds to the row of the map."
-#                                                         "example -> :list[str] = ["
-#                                                         "                            'BBBBBBBBBBBBBBBBBBBB',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B....BBBB..........B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B.........P........B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B....E........E....B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B..................B',"
-#                                                         "                            'B.........B........B',"
-#                                                         "                            'B.........B........B',"
-#                                                         "                            'B.........B........B',"
-#                                                         "                            'BBBBBBBBBBBBBBBBBBBB'"
-#                                                         "                        ];");
-
-# }
-
-"""Return the map of the next level which is different and incrementally challenging than previous levels."""
-obj MapGenTask:dspy.Signature:{
-
-    static has map_directory:str = dspy.InputField(desc = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
-    static has Map_object_desc:str = dspy.InputField(desc = "Map object description");
-    static has context:str = dspy.InputField(desc = "Context for the model");
-    # static has input:Input = dspy.InputField();
-    static has map:list = dspy.OutputField(desc =  "A list of strings representing the generated map of the new level. Each string corresponds to the row of the map."
-                                                        "example -> ["
+class Output:BaseModel: {
+    has map: list[str] = Field(description=   "A list of strings representing the map of the level. Each string corresponds to the row of the map."
+                                                        "example -> :list[str] = ["
                                                         "                            'BBBBBBBBBBBBBBBBBBBB',"
                                                         "                            'B..................B',"
                                                         "                            'B..................B',"
@@ -114,21 +86,25 @@ obj MapGenTask:dspy.Signature:{
 
 }
 
+"""Return the map of the next level which is different and incrementally challenging than previous levels."""
+class MapGenTask:dspy.Signature:{
+
+    has input:Input = dspy.InputField();
+    has output:Output = dspy.OutputField();
+
+}
+
 '''The walker that initiates the game and runs an instance of the game'''
 walker game{
 
     has g:Game = None,
         current_level:int = 1,
         fwd_dir:bool = True,
-        map_directory:
-        'Map_directory, dict, Map directory that containes all the levels and their configurations of a game where the player is the character controlled by the person playing the game'
-        :dict={};
+        map_directory:dict={};
 
     can start_game with `root entry;
-    can 'Return the map of the next level which is different and incrementally challenging than previous levels.'
-    generate_level;
-    can 'Return the map of the next level which is different and incrementally challenging than previous levels.'
-    generate_level_dspy;
+    can generate_level;
+    can generate_level_dspy;
 }
 
 edge play{
@@ -161,17 +137,17 @@ node level{
 '''Run the game'''
 with entry {
     llm = model();
-    gpt3_turbo:Any = dspy.OpenAI(model='gpt-4', max_tokens=300);
-    dspy.configure(lm=gpt3_turbo);
+    gpt4:Any = dspy.OpenAI(model='gpt-4', max_tokens=300);
+    dspy.configure(lm=gpt4);
     game() spawn root;
 }
 
 #=Walker=&=Node=Abilities=======================================
 
 :walker:game:can:generate_level_dspy() {
-    gen_map = dspy.Predict(MapGenTask);
-    new_map = gen_map(map_directory=str(self.map_directory), context=context_info, Map_object_desc=Map_object_desc_info);
-    return ast.literal_eval(new_map.map);
+    gen_map = dspy.TypedPredictor(MapGenTask);
+    new_map = gen_map(input=Input(map_directory=self.map_directory, context=context_info, Map_object_desc=Map_object_desc_info));
+    return new_map.output.map;
 }
 
 :walker:game:can:start_game {
@@ -184,9 +160,7 @@ with entry {
 
     if self.map_directory {
         new_map = self.generate_level_dspy();
-        print(new_map);
-        # new_map = llm.generate(self.map_directory);
-        # print(new_map);
+        for row in new_map {print(row, '\n');}
         self.map_directory[str(self.current_level)] = Map(map=new_map);
     } else {
         self.map_directory[str(self.current_level)] = Map();
@@ -213,7 +187,7 @@ with entry {
         if here.g.won == True{
             self.level_time = end_time - start_time;
             here.map_directory[str(self.game_level)].time_to_win_level = self.level_time;
-            print('Time:', self.level_time);
+            # print('Time:', self.level_time);
             here.g.game_won();
             self.played = True;
             here.g.won = False;
