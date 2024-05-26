@@ -473,7 +473,7 @@ class JacLLM:
         incl_info: list[LLMInfo],
         excl_info: list[LLMInfo],
         inputs: list[SemInputs],
-        outputs: tuple,
+        outputs: tuple | list[tuple],
         action: str,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
@@ -486,8 +486,6 @@ class JacLLM:
             "rb",
         ) as f:
             mod_registry = pickle.load(f)
-
-        outputs = outputs[0] if isinstance(outputs, list) else outputs
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
@@ -497,7 +495,17 @@ class JacLLM:
         )
 
         type_collector: list = []
-        information, collected_types = get_info_types(_scope, mod_registry, incl_info)
+        if not isinstance(outputs, list):
+            information, collected_types = get_info_types(
+                _scope, mod_registry, incl_info
+            )
+        else:
+            information, collected_types = get_info_types(
+                _scope, mod_registry, incl_info[:-1]
+            )
+            outputs = outputs[0]
+            collected_types = [incl_info[0].name]
+            information = ""
         type_collector.extend(collected_types)
         inputs_information_list = []
         for i in inputs:
