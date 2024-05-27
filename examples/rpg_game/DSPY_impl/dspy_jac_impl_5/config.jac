@@ -2,6 +2,7 @@ import:py from openai, ChatCompletion;
 import:py openai;
 import:py re;
 import:py ast;
+import:py from pydantic, BaseModel, Field;
 
 # include:jac _secrets;
 
@@ -26,13 +27,38 @@ glob WHITE = (255, 255, 255);
 
 glob GENERAL_FONT = '../fonts/8bitoperator_jve.ttf';
 
-obj 'Consists of level configuration data of a certain level'
-Map {
-    has Level_no:'Level number':int = 1;
-    has time_to_win_level:'time taken to complete the level in seconds':float = 60.0;
-    has map:
-    'the map of the level having (B) as block, (E) as enemy, (P) as player and (.) as empty space.All outer characters are B. Only one single player character can be in the map.'
-    :list[str] = [
+# obj 'Consists of level configuration data of a certain level'
+# Map {
+#     has Level_no:'Level number':int = 1;
+#     has time_to_win_level:'time taken to complete the level in seconds':float = 60.0;
+#     has map:
+#     'the map of the level having (B) as block, (E) as enemy, (P) as player and (.) as empty space.All outer characters are B. Only one single player character can be in the map.'
+#     :list[str] = [
+#                                 'BBBBBBBBBBBBBBBBBBBB',
+#                                 'B..................B',
+#                                 'B..................B',
+#                                 'B....BBBB..........B',
+#                                 'B..................B',
+#                                 'B..................B',
+#                                 'B.........P........B',
+#                                 'B..................B',
+#                                 'B....E........E....B',
+#                                 'B..................B',
+#                                 'B..................B',
+#                                 'B.........B........B',
+#                                 'B.........B........B',
+#                                 'B.........B........B',
+#                                 'BBBBBBBBBBBBBBBBBBBB'
+
+#                             ];
+# }
+
+class Map:BaseModel: {
+    has Level_no:int = Field(description='Level number', default=1);
+    has time_to_win_level:float = Field(description='time taken to complete the level in seconds', default=60.0);
+    has map:list[str] = Field(  description='the map of the level having (B) as block, (E) as enemy, (P) as player and (.) as empty space.'
+                                            'All outer characters are B. Only one single player character can be in the map.', 
+                                default=[
                                 'BBBBBBBBBBBBBBBBBBBB',
                                 'B..................B',
                                 'B..................B',
@@ -49,8 +75,9 @@ Map {
                                 'B.........B........B',
                                 'BBBBBBBBBBBBBBBBBBBB'
 
-                            ];
+                            ]);
 }
+
 
 
 glob LEVEL_NO_smstr = 'Level number';

@@ -25,29 +25,6 @@ import:py dspy;
 import:py from pydantic, BaseModel, Field;
 
 
-glob Map_object_desc_info:str =  "This is a sample of a map class object description."
-                        "has Level_no:'Level number':int = 1;"
-                        "has time_to_win_level:'time taken to complete the level in seconds':float = 60.0;"
-                        "has map:"
-                        "'the map of the level having (B) as block, (E) as enemy, (P) as player and (.) as empty space.All outer characters are B. Only one single player character can be in the map.'"
-                        ":list[str] = ["
-                        "                            'BBBBBBBBBBBBBBBBBBBB',"
-                        "                            'B..................B',"
-                        "                            'B..................B',"
-                        "                            'B....BBBB..........B',"
-                        "                            'B..................B',"
-                        "                            'B..................B',"
-                        "                            'B.........P........B',"
-                        "                            'B..................B',"
-                        "                            'B....E........E....B',"
-                        "                            'B..................B',"
-                        "                            'B..................B',"
-                        "                            'B.........B........B',"
-                        "                            'B.........B........B',"
-                        "                            'B.........B........B',"
-                        "                            'BBBBBBBBBBBBBBBBBBBB'"
-                        "                        ];";
-
 glob context_info:str =  "The game is a simple RPG game where the player is the character controlled by the person playing the game."
                 "The game has multiple levels and each level is different and incrementally challenging than the previous levels."
                 "The player has to complete each level by reaching the end of the level without getting caught by the enemies."
@@ -60,7 +37,6 @@ glob context_info:str =  "The game is a simple RPG game where the player is the 
 
 class Input:BaseModel: {
     has map_directory:dict[str,Map] = Field(description = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
-    has Map_object_desc:str = Field(description = "Map object description");
     has context:str = Field(description = "Context for the model");
 }
 
@@ -146,7 +122,7 @@ with entry {
 
 :walker:game:can:generate_level_dspy() {
     gen_map = dspy.TypedPredictor(MapGenTask);
-    new_map = gen_map(input=Input(map_directory=self.map_directory, context=context_info, Map_object_desc=Map_object_desc_info));
+    new_map = gen_map(input=Input(map_directory=self.map_directory, context=context_info));
     return new_map.output.map;
 }
 
