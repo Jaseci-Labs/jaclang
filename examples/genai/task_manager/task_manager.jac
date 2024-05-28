@@ -8,9 +8,9 @@ Task {
     has description: 'the content of the job to be done': str;
 }
 
-can 'give an estimated time for one to finish the task given' eta_llm(input: 'the task given': Task) -> 'estimated time in minutes': int by llm();
+can 'give an estimated time for one to finish the task given, return an int' eta_llm(input: 'the task given': Task) -> 'estimated time in minutes': int by llm();
 
-can 'give an estimated priority for the task' priority_llm(input: 'the task given': Task) -> 'priority score from 0 to 10, with 10 the most prioritized': int by llm();
+can 'give an estimated priority for the task, return an int' priority_llm(input: 'the task given': Task) -> 'priority score from 0 to 10, with 10 the most prioritized': int by llm();
 
 obj 'A work to be done in the future'
 TaskFull :Task: {
