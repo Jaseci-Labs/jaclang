@@ -12,11 +12,15 @@ can 'give an estimated time for one to finish the task given' eta_llm(input: 'th
 
 can 'give an estimated priority for the task' priority_llm(input: 'the task given': Task) -> 'priority score from 0 to 10, with 10 the most prioritized': int by llm();
 
+
 obj 'A work to be done in the future'
-TaskFull :Task: {
+TaskFull {
+    has description: 'the content of the job to be done': str;
     has time: 'number of minutes for one to finish the job': int;
-    has priority: 'priority score from 0 to 10';
+    has priority: 'priority score from 0 to 10': int;
 }
+
+can 'give an estimated time for one to finish the task given and give an estimated priority for the task' taskfull_llm(input: 'the task given': Task) -> 'all information': TaskFull by llm();
 
 with entry {
     task_contents = [
@@ -29,9 +33,7 @@ with entry {
     tasks = [];
     for task_content in task_contents {
         task = Task(description = task_content);
-        eta = eta_llm(task);
-        priority = priority_llm(task);
-        task_info = TaskFull(description = task_content, time = eta, priority = priority);
+        task_info = taskfull_llm(task);
         print(task_info);
         tasks.append(task_info);
     }
