@@ -36,29 +36,13 @@ glob context_info:str =  "The game is a simple RPG game where the player is the 
                 "Each newly generated map should be different from the previous one.";
 
 class Input:BaseModel: {
-    has map_directory:dict[str,Map] = Field(description = "Contains all the levels and their configurations of a game where the player is the character controlled by the person playing the game");
+    has map_directory:dict[str,Map] = Field(description = "Contains all the levels and their configurations of a game where"
+                                                          "the player is the character controlled by the person playing the game");
     has context:str = Field(description = "Context for the model");
 }
 
 class Output:BaseModel: {
-    has map: list[str] = Field(description=   "A list of strings representing the map of the level. Each string corresponds to the row of the map."
-                                                        "example -> :list[str] = ["
-                                                        "                            'BBBBBBBBBBBBBBBBBBBB',"
-                                                        "                            'B..................B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B....BBBB..........B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B.........P........B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B....E........E....B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B..................B',"
-                                                        "                            'B.........B........B',"
-                                                        "                            'B.........B........B',"
-                                                        "                            'B.........B........B',"
-                                                        "                            'BBBBBBBBBBBBBBBBBBBB'"
-                                                        "                        ];");
+    has map: list[str] = Field(description= "A list of strings representing the map of the level. Each string corresponds to the row of the map.");
 
 }
 
