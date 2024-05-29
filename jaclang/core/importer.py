@@ -1,11 +1,11 @@
 """Special Imports for Jac Code."""
 
 import types
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 from jaclang.compiler.absyntree import Module
 
-from .machine import machine
+from .machine import JacProgram, machine
 
 
 def jac_importer(
@@ -17,8 +17,8 @@ def jac_importer(
     override_name: Optional[str] = None,
     mod_bundle: Optional[Module] = None,
     lng: Optional[str] = "jac",
-    items: Optional[dict[str, Union[str, bool]]] = None,
-) -> Optional[types.ModuleType]:
+    items: Optional[Dict[str, Union[str, bool]]] = None,
+) -> Optional[Union[types.ModuleType, JacProgram]]:
     """Core Import Process."""
     program = machine.load_program(
         filename=target,
@@ -31,4 +31,4 @@ def jac_importer(
         absorb=absorb,
         mdl_alias=mdl_alias,
     )
-    return program.module
+    return program
