@@ -17,6 +17,7 @@ from jaclang.core.aott import (
     aott_raise,
     extract_non_primary_type,
     get_all_type_explanations,
+    # get_class_string,
     get_info_types,
     get_object_string,
     get_type_annotation,
@@ -587,8 +588,11 @@ class JacFeatureDefaults:
             "rb",
         ) as f:
             mod_registry = pickle.load(f)
-
-        outputs = outputs[0] if isinstance(outputs, list) else outputs
+        outputs = (
+            (outputs[0][0][0], outputs[0][0][1], outputs[1])
+            if isinstance(outputs[0], list)
+            else outputs
+        )
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 

@@ -1064,6 +1064,12 @@ class PyastGenPass(Pass):
                         )
                     ),
                     (self.sync(ast3.Constant(value=(extracted_type)))),
+                    (
+                        node.signature.return_type.gen.py_ast[0]
+                        if isinstance(node.signature, ast.FuncSignature)
+                        and node.signature.return_type
+                        else None
+                    ),
                 ]
                 if isinstance(node.signature, ast.FuncSignature)
                 else []
@@ -1267,8 +1273,6 @@ class PyastGenPass(Pass):
                                         ctx=ast3.Load(),
                                     )
                                 )
-                                if not isinstance(outputs, ast3.Call)
-                                else outputs
                             ),
                         )
                     ),
@@ -2903,32 +2907,39 @@ class PyastGenPass(Pass):
                     keywords=[],
                 )
             )
-            outputs = self.sync(
-                ast3.Call(
-                    func=self.sync(
-                        ast3.Attribute(
-                            value=self.sync(
-                                ast3.Name(
-                                    id=Con.JAC_FEATURE.value,
-                                    ctx=ast3.Load(),
-                                )
-                            ),
-                            attr="get_sem_type",
-                            ctx=ast3.Load(),
-                        )
-                    ),
-                    args=[
-                        self.sync(
-                            ast3.Name(
-                                id="__file__",
+            outputs = [
+                self.sync(
+                    ast3.Call(
+                        func=self.sync(
+                            ast3.Attribute(
+                                value=self.sync(
+                                    ast3.Name(
+                                        id=Con.JAC_FEATURE.value,
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                                attr="get_sem_type",
                                 ctx=ast3.Load(),
                             )
                         ),
-                        self.sync(ast3.Constant(value=str(_output_))),
-                    ],
-                    keywords=[],
-                )
-            )
+                        args=[
+                            self.sync(
+                                ast3.Name(
+                                    id="__file__",
+                                    ctx=ast3.Load(),
+                                )
+                            ),
+                            self.sync(ast3.Constant(value=str(_output_))),
+                        ],
+                        keywords=[],
+                    )
+                ),
+                (
+                    node.parent.type_tag.gen.py_ast[0]
+                    if isinstance(node.parent, ast.Assignment) and node.parent.type_tag
+                    else self.sync(ast3.Constant(value=None))
+                ),
+            ]
             if node.params and node.params.items:
                 inputs = [
                     self.sync(
