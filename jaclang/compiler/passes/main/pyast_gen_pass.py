@@ -500,7 +500,7 @@ class PyastGenPass(Pass):
             for item in node.items.items:
                 if isinstance(item, ast.ModuleItem):
                     imp_from[item.name.sym_name] = (
-                        item.alias.sym_name if item.alias else False
+                        item.alias.sym_name if item.alias else None
                     )
                 elif isinstance(item, ast.ModulePath):
                     path_alias[item.path_str] = (
@@ -518,21 +518,25 @@ class PyastGenPass(Pass):
                 self.sync(
                     ast3.Assign(
                         targets=(
-                            [self.sync(ast3.Name(id=path, ctx=ast3.Store()))]
-                            if not len(keys)
-                            else [
+                            [
                                 self.sync(
                                     ast3.Tuple(
                                         elts=[
                                             self.sync(
-                                                ast3.Name(id=path, ctx=ast3.Store())
+                                                ast3.Name(
+                                                    id=alias if alias else path,
+                                                    ctx=ast3.Store(),
+                                                )
                                             )
                                         ]
                                         + [
                                             self.sync(
-                                                ast3.Name(id=k.value, ctx=ast3.Store())
+                                                ast3.Name(
+                                                    id=v.value if v.value else k.value,
+                                                    ctx=ast3.Store(),
+                                                )
                                             )
-                                            for k in keys
+                                            for k, v in zip(keys, values)
                                         ],
                                         ctx=ast3.Store(),
                                     )
