@@ -85,7 +85,6 @@ def jac_importer(
                         codeobj = marshal.loads(result.ir.gen.py_bytecode)
             if not codeobj:
                 raise ImportError(f"No bytecode found for {full_target}")
-            print("before exec")
             with sys_path_context(caller_dir):
                 exec(codeobj, module.__dict__)
 
