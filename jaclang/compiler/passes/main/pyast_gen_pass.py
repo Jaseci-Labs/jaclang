@@ -515,7 +515,9 @@ class PyastGenPass(Pass):
         self.needs_jac_import()
         path_named_value: str
         for path, alias in path_alias.items():
-            path_named_value = (alias if alias else path).split(".")[0]
+            path_named_value = ("_jac_inc_" if node.is_absorb else "") + (
+                alias if alias else path
+            ).split(".")[0]
             py_nodes.append(
                 self.sync(
                     ast3.Assign(
@@ -637,150 +639,146 @@ class PyastGenPass(Pass):
             absorb_exec = f"={path_named_value}.__dict__['"
             py_nodes.append(
                 self.sync(
-                    ast3.Expr(
-                        value=self.sync(
-                            ast3.ListComp(
-                                elt=self.sync(
-                                    ast3.Call(
-                                        func=self.sync(
-                                            ast3.Name(id="exec", ctx=ast3.Load())
-                                        ),
-                                        args=[
+                    ast3.For(
+                        target=self.sync(ast3.Name(id="i", ctx=ast3.Store())),
+                        iter=self.sync(
+                            ast3.IfExp(
+                                test=self.sync(
+                                    ast3.Compare(
+                                        left=self.sync(ast3.Constant(value="__all__")),
+                                        ops=[self.sync(ast3.In())],
+                                        comparators=[
                                             self.sync(
-                                                ast3.JoinedStr(
-                                                    values=[
-                                                        self.sync(
-                                                            ast3.FormattedValue(
-                                                                value=self.sync(
-                                                                    ast3.Name(
-                                                                        id="i",
-                                                                        ctx=ast3.Load(),
-                                                                    ),
-                                                                ),
-                                                                conversion=-1,
-                                                            )
-                                                        ),
-                                                        self.sync(
-                                                            ast3.Constant(
-                                                                value=absorb_exec
-                                                            )
-                                                        ),
-                                                        self.sync(
-                                                            ast3.FormattedValue(
-                                                                value=self.sync(
-                                                                    ast3.Name(
-                                                                        id="i",
-                                                                        ctx=ast3.Load(),
-                                                                    ),
-                                                                ),
-                                                                conversion=-1,
-                                                            )
-                                                        ),
-                                                        self.sync(
-                                                            ast3.Constant(value="']")
-                                                        ),
-                                                    ]
+                                                ast3.Attribute(
+                                                    value=self.sync(
+                                                        ast3.Name(
+                                                            id=path_named_value,
+                                                            ctx=ast3.Load(),
+                                                        )
+                                                    ),
+                                                    attr="__dict__",
+                                                    ctx=ast3.Load(),
                                                 )
-                                            ),
+                                            )
                                         ],
-                                        keywords=[],
-                                    ),
+                                    )
                                 ),
-                                generators=[
-                                    self.sync(
-                                        ast3.comprehension(
-                                            target=self.sync(
-                                                ast3.Name(id="i", ctx=ast3.Store())
-                                            ),
-                                            iter=self.sync(
-                                                ast3.IfExp(
-                                                    test=self.sync(
-                                                        ast3.Compare(
-                                                            left=self.sync(
-                                                                ast3.Constant(
-                                                                    value="__all__"
-                                                                )
-                                                            ),
-                                                            ops=[self.sync(ast3.In())],
-                                                            comparators=[
-                                                                self.sync(
-                                                                    ast3.Attribute(
-                                                                        value=self.sync(
-                                                                            ast3.Name(
-                                                                                id=path_named_value,
-                                                                                ctx=ast3.Load(),
-                                                                            )
-                                                                        ),
-                                                                        attr="__dict__",
-                                                                        ctx=ast3.Load(),
-                                                                    )
-                                                                )
-                                                            ],
-                                                        )
-                                                    ),
-                                                    body=self.sync(
+                                body=self.sync(
+                                    ast3.Attribute(
+                                        value=self.sync(
+                                            ast3.Name(
+                                                id=path_named_value, ctx=ast3.Load()
+                                            )
+                                        ),
+                                        attr="__all__",
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                                orelse=self.sync(
+                                    ast3.Attribute(
+                                        value=self.sync(
+                                            ast3.Name(
+                                                id=path_named_value, ctx=ast3.Load()
+                                            )
+                                        ),
+                                        attr="__dict__",
+                                        ctx=ast3.Load(),
+                                    )
+                                ),
+                            )
+                        ),
+                        body=[
+                            self.sync(
+                                ast3.If(
+                                    test=self.sync(
+                                        ast3.UnaryOp(
+                                            op=self.sync(ast3.Not()),
+                                            operand=self.sync(
+                                                ast3.Call(
+                                                    func=self.sync(
                                                         ast3.Attribute(
                                                             value=self.sync(
                                                                 ast3.Name(
-                                                                    id=path_named_value,
+                                                                    id="i",
                                                                     ctx=ast3.Load(),
                                                                 )
                                                             ),
-                                                            attr="__all__",
+                                                            attr="startswith",
                                                             ctx=ast3.Load(),
                                                         )
                                                     ),
-                                                    orelse=self.sync(
-                                                        ast3.Attribute(
-                                                            value=self.sync(
-                                                                ast3.Name(
-                                                                    id=path_named_value,
-                                                                    ctx=ast3.Load(),
-                                                                )
-                                                            ),
-                                                            attr="__dict__",
-                                                            ctx=ast3.Load(),
+                                                    args=[
+                                                        self.sync(
+                                                            ast3.Constant(value="_")
                                                         )
-                                                    ),
+                                                    ],
+                                                    keywords=[],
                                                 )
                                             ),
-                                            ifs=[
-                                                self.sync(
-                                                    ast3.UnaryOp(
-                                                        op=self.sync(ast3.Not()),
-                                                        operand=self.sync(
-                                                            ast3.Call(
-                                                                func=self.sync(
-                                                                    ast3.Attribute(
-                                                                        value=self.sync(
-                                                                            ast3.Name(
-                                                                                id="i",
-                                                                                ctx=ast3.Load(),
-                                                                            )
-                                                                        ),
-                                                                        attr="startswith",
-                                                                        ctx=ast3.Load(),
-                                                                    )
-                                                                ),
-                                                                args=[
-                                                                    self.sync(
-                                                                        ast3.Constant(
-                                                                            value="_"
-                                                                        )
-                                                                    )
-                                                                ],
-                                                                keywords=[],
+                                        )
+                                    ),
+                                    body=[
+                                        self.sync(
+                                            ast3.Expr(
+                                                value=self.sync(
+                                                    ast3.Call(
+                                                        func=self.sync(
+                                                            ast3.Name(
+                                                                id="exec",
+                                                                ctx=ast3.Load(),
                                                             )
                                                         ),
+                                                        args=[
+                                                            self.sync(
+                                                                ast3.JoinedStr(
+                                                                    values=[
+                                                                        self.sync(
+                                                                            ast3.FormattedValue(
+                                                                                value=self.sync(
+                                                                                    ast3.Name(
+                                                                                        id="i",
+                                                                                        ctx=ast3.Load(),
+                                                                                    )
+                                                                                ),
+                                                                                conversion=-1,
+                                                                            )
+                                                                        ),
+                                                                        self.sync(
+                                                                            ast3.Constant(
+                                                                                value=absorb_exec
+                                                                            )
+                                                                        ),
+                                                                        self.sync(
+                                                                            ast3.FormattedValue(
+                                                                                value=self.sync(
+                                                                                    ast3.Name(
+                                                                                        id="i",
+                                                                                        ctx=ast3.Load(),
+                                                                                    )
+                                                                                ),
+                                                                                conversion=-1,
+                                                                            )
+                                                                        ),
+                                                                        self.sync(
+                                                                            ast3.Constant(
+                                                                                value="']"
+                                                                            )
+                                                                        ),
+                                                                    ]
+                                                                )
+                                                            )
+                                                        ],
+                                                        keywords=[],
                                                     )
                                                 )
-                                            ],
-                                            is_async=0,
+                                            )
                                         )
-                                    )
-                                ],
+                                    ],
+                                    orelse=[],
+                                )
                             )
-                        )
+                        ],
+                        orelse=[],
                     )
                 )
             )
