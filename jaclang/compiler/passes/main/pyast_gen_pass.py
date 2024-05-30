@@ -493,7 +493,7 @@ class PyastGenPass(Pass):
                 self.sync(ast3.Expr(value=node.doc.gen.py_ast[0]), jac_node=node.doc)
             )
         path_alias: dict[str, Optional[str]] = (
-            {node.from_loc.path_str: None} if node.from_loc else {}
+            {node.from_loc.path_str.lstrip("."): None} if node.from_loc else {}
         )
         imp_from = {}
         if node.items:
@@ -503,17 +503,18 @@ class PyastGenPass(Pass):
                         item.alias.sym_name if item.alias else None
                     )
                 elif isinstance(item, ast.ModulePath):
-                    path_alias[item.path_str] = (
+                    path_alias[item.path_str.lstrip(".")] = (
                         item.alias.sym_name if item.alias else None
                     )
 
-        keys = []
-        values = []
+        item_keys = []
+        item_values = []
         for k, v in imp_from.items():
-            keys.append(self.sync(ast3.Constant(value=k)))
-            values.append(self.sync(ast3.Constant(value=v)))
+            item_keys.append(self.sync(ast3.Constant(value=k)))
+            item_values.append(self.sync(ast3.Constant(value=v)))
         self.needs_jac_import()
         for path, alias in path_alias.items():
+            path_named_value = (alias if alias else path).split(".")[0]
             py_nodes.append(
                 self.sync(
                     ast3.Assign(
@@ -521,23 +522,31 @@ class PyastGenPass(Pass):
                             [
                                 self.sync(
                                     ast3.Tuple(
-                                        elts=[
-                                            self.sync(
-                                                ast3.Name(
-                                                    id=alias if alias else path,
-                                                    ctx=ast3.Store(),
+                                        elts=(
+                                            [
+                                                self.sync(
+                                                    ast3.Name(
+                                                        id=path_named_value,
+                                                        ctx=ast3.Store(),
+                                                    )
                                                 )
-                                            )
-                                        ]
-                                        + [
-                                            self.sync(
-                                                ast3.Name(
-                                                    id=v.value if v.value else k.value,
-                                                    ctx=ast3.Store(),
+                                            ]
+                                            if not len(item_keys)
+                                            else []
+                                            + [
+                                                self.sync(
+                                                    ast3.Name(
+                                                        id=(
+                                                            v.value
+                                                            if v.value
+                                                            else k.value
+                                                        ),
+                                                        ctx=ast3.Store(),
+                                                    )
                                                 )
-                                            )
-                                            for k, v in zip(keys, values)
-                                        ],
+                                                for k, v in zip(item_keys, item_values)
+                                            ]
+                                        ),
                                         ctx=ast3.Store(),
                                     )
                                 )
@@ -611,7 +620,9 @@ class PyastGenPass(Pass):
                                         ast3.keyword(
                                             arg="items",
                                             value=self.sync(
-                                                ast3.Dict(keys=keys, values=values),
+                                                ast3.Dict(
+                                                    keys=item_keys, values=item_values
+                                                ),
                                             ),
                                         )
                                     ),
