@@ -493,7 +493,7 @@ class PyastGenPass(Pass):
                 self.sync(ast3.Expr(value=node.doc.gen.py_ast[0]), jac_node=node.doc)
             )
         path_alias: dict[str, Optional[str]] = (
-            {node.from_loc.path_str.lstrip("."): None} if node.from_loc else {}
+            {node.from_loc.path_str: None} if node.from_loc else {}
         )
         imp_from = {}
         if node.items:
@@ -503,7 +503,7 @@ class PyastGenPass(Pass):
                         item.alias.sym_name if item.alias else None
                     )
                 elif isinstance(item, ast.ModulePath):
-                    path_alias[item.path_str.lstrip(".")] = (
+                    path_alias[item.path_str] = (
                         item.alias.sym_name if item.alias else None
                     )
 
@@ -517,7 +517,12 @@ class PyastGenPass(Pass):
         for path, alias in path_alias.items():
             path_named_value = ("_jac_inc_" if node.is_absorb else "") + (
                 alias if alias else path
-            ).split(".")[0]
+            ).lstrip(".").split(".")[0]
+            target_named_value = ""
+            for i in path.split("."):
+                target_named_value += i if i else "."
+                if i:
+                    break
             py_nodes.append(
                 self.sync(
                     ast3.Assign(
@@ -566,7 +571,7 @@ class PyastGenPass(Pass):
                                         ast3.keyword(
                                             arg="target",
                                             value=self.sync(
-                                                ast3.Constant(value=path),
+                                                ast3.Constant(value=target_named_value),
                                             ),
                                         )
                                     ),

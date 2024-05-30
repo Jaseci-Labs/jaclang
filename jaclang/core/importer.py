@@ -106,7 +106,11 @@ def jac_importer(
         # print(f"Loaded items: {unique_loaded_items}")
 
     # print("Import tuple:", (module, *unique_loaded_items))
-    return (module, *unique_loaded_items)
+    return (
+        (module,)
+        if absorb or (not items or not len(items))
+        else (*unique_loaded_items,)
+    )
 
 
 def create_jac_py_module(
