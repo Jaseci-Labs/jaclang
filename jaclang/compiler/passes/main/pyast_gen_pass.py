@@ -739,8 +739,6 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
-        self.needs_jac_feature()
-        self.needs_dataclass()
         body = self.resolve_stmt_block(
             node.body.body if isinstance(node.body, ast.ArchDef) else node.body,
             doc=node.doc,
@@ -752,6 +750,8 @@ class PyastGenPass(Pass):
         )
         ds_on_entry, ds_on_exit = self.collect_events(node)
         if node.arch_type.name != Tok.KW_CLASS:
+            self.needs_jac_feature()
+            self.needs_dataclass()
             decorators.append(
                 self.sync(
                     ast3.Call(
@@ -786,24 +786,26 @@ class PyastGenPass(Pass):
                     )
                 )
             )
-        decorators.append(
-            self.sync(
-                ast3.Call(
-                    func=self.sync(ast3.Name(id="__jac_dataclass__", ctx=ast3.Load())),
-                    args=[],
-                    keywords=[
-                        self.sync(
-                            ast3.keyword(
-                                arg="eq",
-                                value=self.sync(
-                                    ast3.Constant(value=False),
-                                ),
+            decorators.append(
+                self.sync(
+                    ast3.Call(
+                        func=self.sync(
+                            ast3.Name(id="__jac_dataclass__", ctx=ast3.Load())
+                        ),
+                        args=[],
+                        keywords=[
+                            self.sync(
+                                ast3.keyword(
+                                    arg="eq",
+                                    value=self.sync(
+                                        ast3.Constant(value=False),
+                                    ),
+                                )
                             )
-                        )
-                    ],
+                        ],
+                    )
                 )
             )
-        )
         base_classes = node.base_classes.gen.py_ast if node.base_classes else []
         if node.is_abstract:
             self.needs_jac_feature()
@@ -1128,7 +1130,11 @@ class PyastGenPass(Pass):
                 if isinstance(node.signature, ast.FuncSignature)
                 else []
             )
-            action = node.semstr.gen.py_ast[0] if node.semstr else None
+            action = (
+                node.semstr.gen.py_ast[0]
+                if node.semstr
+                else self.sync(ast3.Constant(value=None))
+            )
             return [
                 self.sync(
                     ast3.Assign(
@@ -1448,12 +1454,20 @@ class PyastGenPass(Pass):
             ):
                 node.gen.py_ast = [
                     self.sync(
-                        ast3.Attribute(
-                            value=self.sync(
-                                ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                        ast3.Call(
+                            func=self.sync(
+                                ast3.Attribute(
+                                    value=self.sync(
+                                        ast3.Name(
+                                            id=Con.JAC_FEATURE.value, ctx=ast3.Load()
+                                        )
+                                    ),
+                                    attr="get_root_type",
+                                    ctx=ast3.Load(),
+                                )
                             ),
-                            attr="RootType",
-                            ctx=ast3.Load(),
+                            args=[],
+                            keywords=[],
                         )
                     )
                 ]
