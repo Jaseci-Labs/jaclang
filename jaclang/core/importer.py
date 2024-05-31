@@ -2,6 +2,7 @@
 
 import importlib
 import marshal
+import os
 import sys
 import types
 from os import getcwd, path
@@ -12,6 +13,53 @@ from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
 from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
+
+
+def compile_and_load_jac_modules(
+    package_name: str,
+    package_path: str,
+    cachable: bool,
+    mod_bundle: Optional[Module] = None,
+) -> list:
+    """Compile and prepare the Jac package, and load submodules."""
+    submodules: types.ModuleType = []
+    for root, _, files in os.walk(package_path):
+        for file in files:
+            if file.endswith(".jac"):
+                submodule_name = path.splitext(file)[0]
+                full_submodule_name = f"{package_name}.{submodule_name}"
+                full_submodule_path = path.join(root, file)
+
+                # Compile the submodule
+                result = compile_jac(full_submodule_path, cache_result=cachable)
+                if result.errors_had or not result.ir.gen.py_bytecode:
+                    for e in result.errors_had:
+                        print(f"Error compiling {full_submodule_path}: {e}")
+                        logging.error(e)
+                    continue
+
+                codeobj = marshal.loads(result.ir.gen.py_bytecode)
+                if not codeobj:
+                    raise ImportError(f"No bytecode found for {full_submodule_path}")
+
+                # Create and load the submodule
+                spec = importlib.util.spec_from_loader(full_submodule_name, loader=None)
+                submodule = importlib.util.module_from_spec(spec)
+                submodule.__file__ = full_submodule_path  # Define __file__ attribute
+                # submodule.__jac_mod_bundle__ = mod_bundle  # Set __jac_mod_bundle__
+                sys.modules[full_submodule_name] = submodule
+                # exec(codeobj, submodule.__dict__)
+
+                # # Add submodule to parent package
+                # parent_module = sys.modules[package_name]
+                # setattr(parent_module, submodule_name, submodule)
+
+                # Print debug information about the submodule
+                print(f"Loaded submodule: {full_submodule_name}")
+                print(f"Attributes of {full_submodule_name}: {dir(submodule)}")
+
+                submodules.append(submodule)
+    return submodules
 
 
 def jac_importer(
@@ -27,68 +75,77 @@ def jac_importer(
 ) -> Optional[tuple[types.ModuleType, ...]]:
     """Core Import Process."""
     loaded_items: list = []
-    dir_path, file_name = path.split(
-        path.join(*(target.split("."))) + (".jac" if lng == "jac" else ".py")
-    )
-    module_name = path.splitext(file_name)[0]
-    package_path = dir_path.replace(path.sep, ".")
 
-    if package_path and f"{package_path}.{module_name}" in sys.modules:
-        module = sys.modules[f"{package_path}.{module_name}"]
-        # print(f"Module found in sys.modules: {package_path}.{module_name}")
-    elif not package_path and module_name in sys.modules:
-        module = sys.modules[module_name]
-        # print(f"Module found in sys.modules: {module_name}")
+    # Determine if the target is a directory or file
+    target_path = path.join(*(target.split(".")))
+    dir_path, file_name = path.split(target_path)
+    caller_dir = get_caller_dir(target, base_path, dir_path)
+    full_target = path.normpath(path.join(caller_dir, target_path))
+
+    if path.isdir(full_target):
+        # It's a directory, handle directory import
+        module_name = override_name if override_name else path.basename(full_target)
+        module = create_jac_py_module(mod_bundle, module_name, dir_path, full_target)
+        submodules = compile_and_load_jac_modules(module_name, full_target, cachable)
+        loaded_items.extend(submodules)
     else:
-        # print("Module not found in sys.modules, proceeding with import")
-        caller_dir = get_caller_dir(target, base_path, dir_path)
-        full_target = path.normpath(path.join(caller_dir, file_name))
-        # print(f"caller_dir={caller_dir}, full_target={full_target}")
-
-        if lng == "py":
-            # print("Before py_import")
-            module, *loaded_items = py_import(
-                target=target,
-                caller_dir=caller_dir,
-                items=items,
-                absorb=absorb,
-                mdl_alias=mdl_alias,
-            )
-            # print(f"py_import returned: module={module}, loaded_items={loaded_items}")
+        # It's a file, handle file import
+        if lng == "jac":
+            full_target += ".jac"
         else:
-            # print("Before jac import")
-            module_name = override_name if override_name else module_name
-            module = create_jac_py_module(
-                mod_bundle, module_name, package_path, full_target
-            )
-            if mod_bundle:
-                codeobj = mod_bundle.mod_deps[full_target].gen.py_bytecode
-                codeobj = marshal.loads(codeobj) if isinstance(codeobj, bytes) else None
-            else:
-                gen_dir = path.join(caller_dir, Con.JAC_GEN_DIR)
-                pyc_file_path = path.join(gen_dir, module_name + ".jbc")
-                if (
-                    cachable
-                    and path.exists(pyc_file_path)
-                    and path.getmtime(pyc_file_path) > path.getmtime(full_target)
-                ):
-                    with open(pyc_file_path, "rb") as f:
-                        codeobj = marshal.load(f)
-                else:
-                    result = compile_jac(full_target, cache_result=cachable)
-                    if result.errors_had or not result.ir.gen.py_bytecode:
-                        for e in result.errors_had:
-                            print(e)
-                            logging.error(e)
-                        return None
-                    else:
-                        codeobj = marshal.loads(result.ir.gen.py_bytecode)
-            if not codeobj:
-                raise ImportError(f"No bytecode found for {full_target}")
-            with sys_path_context(caller_dir):
-                exec(codeobj, module.__dict__)
+            full_target += ".py"
 
-    # Avoid adding duplicate items to loaded_items
+        module_name = path.splitext(file_name)[0]
+        package_path = dir_path.replace(path.sep, ".")
+
+        if package_path and f"{package_path}.{module_name}" in sys.modules:
+            module = sys.modules[f"{package_path}.{module_name}"]
+        elif not package_path and module_name in sys.modules:
+            module = sys.modules[module_name]
+        else:
+            if lng == "py":
+                module, *loaded_items = py_import(
+                    target=target,
+                    caller_dir=caller_dir,
+                    items=items,
+                    absorb=absorb,
+                    mdl_alias=mdl_alias,
+                )
+            else:
+                module_name = override_name if override_name else module_name
+                module = create_jac_py_module(
+                    mod_bundle, module_name, package_path, full_target
+                )
+                if mod_bundle:
+                    codeobj = mod_bundle.mod_deps[full_target].gen.py_bytecode
+                    codeobj = (
+                        marshal.loads(codeobj) if isinstance(codeobj, bytes) else None
+                    )
+                else:
+                    gen_dir = path.join(caller_dir, Con.JAC_GEN_DIR)
+                    pyc_file_path = path.join(gen_dir, module_name + ".jbc")
+                    if (
+                        cachable
+                        and path.exists(pyc_file_path)
+                        and path.getmtime(pyc_file_path) > path.getmtime(full_target)
+                    ):
+                        with open(pyc_file_path, "rb") as f:
+                            codeobj = marshal.load(f)
+                    else:
+                        result = compile_jac(full_target, cache_result=cachable)
+                        if result.errors_had or not result.ir.gen.py_bytecode:
+                            for e in result.errors_had:
+                                print(e)
+                                logging.error(e)
+                            return None
+                        else:
+                            codeobj = marshal.loads(result.ir.gen.py_bytecode)
+                if not codeobj:
+                    raise ImportError(f"No bytecode found for {full_target}")
+                with sys_path_context(caller_dir):
+                    module.__file__ = full_target
+                    exec(codeobj, module.__dict__)
+
     unique_loaded_items = []
     if items:
         for name, _ in items.items():
@@ -103,9 +160,7 @@ def jac_importer(
                         unique_loaded_items.append(item)
                 else:
                     raise e
-        # print(f"Loaded items: {unique_loaded_items}")
 
-    # print("Import tuple:", (module, *unique_loaded_items))
     return (
         (module,)
         if absorb or (not items or not len(items))
