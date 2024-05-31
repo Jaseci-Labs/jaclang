@@ -518,11 +518,11 @@ class PyastGenPass(Pass):
             path_named_value = ("_jac_inc_" if node.is_absorb else "") + (
                 alias if alias else path
             ).lstrip(".").split(".")[0]
-            target_named_value = ""
-            for i in path.split("."):
-                target_named_value += i if i else "."
-                if i:
-                    break
+            # target_named_value = ""
+            # for i in path.split("."):
+            #     target_named_value += i if i else "."
+            #     if i:
+            #         break
             py_nodes.append(
                 self.sync(
                     ast3.Assign(
@@ -571,7 +571,7 @@ class PyastGenPass(Pass):
                                         ast3.keyword(
                                             arg="target",
                                             value=self.sync(
-                                                ast3.Constant(value=target_named_value),
+                                                ast3.Constant(value=path),
                                             ),
                                         )
                                     ),

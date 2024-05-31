@@ -3,7 +3,7 @@ include:py random;
 import:py from ..test_cli, JacCliTests as Jac;
 
 # import:jac from deep.mycode, code as c;
-# import:jac deep.mycode;
+import:jac deep.mycode;
 import:jac hashcheck as h, assign_compr as a;
 include:jac ignore;
 import:jac from jacsamp, my_print as m;

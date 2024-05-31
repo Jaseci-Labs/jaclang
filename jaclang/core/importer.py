@@ -22,7 +22,7 @@ def compile_and_load_jac_modules(
     mod_bundle: Optional[Module] = None,
 ) -> list:
     """Compile and prepare the Jac package, and load submodules."""
-    submodules: types.ModuleType = []
+    submodules: list[types.ModuleType] = []
     for root, _, files in os.walk(package_path):
         for file in files:
             if file.endswith(".jac"):
@@ -44,7 +44,11 @@ def compile_and_load_jac_modules(
 
                 # Create and load the submodule
                 spec = importlib.util.spec_from_loader(full_submodule_name, loader=None)
-                submodule = importlib.util.module_from_spec(spec)
+                submodule = importlib.util.module_from_spec(spec) if spec else None
+                if not submodule:
+                    raise ImportError(
+                        f"Failed to create module for {full_submodule_name}"
+                    )
                 submodule.__file__ = full_submodule_path  # Define __file__ attribute
                 # submodule.__jac_mod_bundle__ = mod_bundle  # Set __jac_mod_bundle__
                 sys.modules[full_submodule_name] = submodule
