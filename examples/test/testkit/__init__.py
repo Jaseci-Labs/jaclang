@@ -64,7 +64,6 @@ class RunnerEvaluator(Evaluator):
     def eval(self, responseA, responseB) -> Comparison:
         return Comparison(Score(), Score())
 
-# TODO: Fact Evaluator
 class FactEvaluator(Evaluator):
     def __init__(self, answer: str):
         self.answer = answer
