@@ -9,6 +9,10 @@ class Score():
 class Comparison():
     scoreA = Score()
     scoreB = Score()
+    def __init__(self, scoreA, scoreB):
+        self.scoreA = scoreA
+        self.scoreB = scoreB
+
     def preferA(self):
         return self.scoreA.overall() > self.scoreB.overall()
 
@@ -48,9 +52,7 @@ class AIEvaluator(Evaluator):
     def eval(self, responseA, responseB) -> Comparison:
         predictor = dspy.TypedPredictor(self.EvalSignature)
         scores = predictor(responses = [responseA, responseB], problem_context = self.context).scores
-        comparison = Comparison()
-        comparison.scoreA = scores[0]
-        comparison.scoreB = scores[1]
+        comparison = Comparison(scores[0], scores[1])
         return comparison
 
 class RunnerEvaluator(Evaluator):
@@ -60,7 +62,16 @@ class RunnerEvaluator(Evaluator):
         super()
 
     def eval(self, responseA, responseB) -> Comparison:
-        return Comparison()
+        return Comparison(Score(), Score())
 
 # TODO: Fact Evaluator
+class FactEvaluator(Evaluator):
+    def __init__(self, answer: str):
+        self.answer = answer
+        super()
 
+    def eval(self, responseA, responseB) -> Comparison:
+        scoreA = FactScore(correctness = (responseA == self.answer))
+        scoreB = FactScore(correctness = (responseB == self.answer))
+        return Comparison(scoreA, scoreB)
+        
