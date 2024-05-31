@@ -19,6 +19,10 @@ class AIScore(BaseModel, Score):
     def overall(self): 
         return (self.consistency + self.correctness) // 2
 
+class FactScore(BaseModel, Score):
+    correctness: bool = Field(description="Whether the response answered is correct")
+    def overall(self):
+        return 10 if self.correctness else 0
 
 class Evaluator():
     def __init__(self):
@@ -57,3 +61,6 @@ class RunnerEvaluator(Evaluator):
 
     def eval(self, responseA, responseB) -> Comparison:
         return Comparison()
+
+# TODO: Fact Evaluator
+
