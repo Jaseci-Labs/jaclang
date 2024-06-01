@@ -164,21 +164,41 @@ def load_submodules(
     """Recursively load submodules of a package."""
     for root, _, files in os.walk(package_path):
         for file in files:
-            if file.endswith(".jac"):
+            if file.endswith(".jac") or file.endswith(".py"):
                 submodule_name = path.splitext(file)[0]
                 full_submodule_name = f"{parent_module.__name__}.{submodule_name}"
                 full_submodule_path = path.join(root, file)
 
-                result = compile_jac(full_submodule_path, cache_result=cachable)
-                if result.errors_had or not result.ir.gen.py_bytecode:
-                    for e in result.errors_had:
-                        print(f"Error compiling {full_submodule_path}: {e}")
-                        logging.error(e)
-                    continue
+                if file.endswith(".jac"):
+                    result = compile_jac(full_submodule_path, cache_result=cachable)
+                    if result.errors_had or not result.ir.gen.py_bytecode:
+                        for e in result.errors_had:
+                            print(f"Error compiling {full_submodule_path}: {e}")
+                            logging.error(e)
+                        continue
 
-                codeobj = marshal.loads(result.ir.gen.py_bytecode)
-                if not codeobj:
-                    raise ImportError(f"No bytecode found for {full_submodule_path}")
+                    codeobj = marshal.loads(result.ir.gen.py_bytecode)
+                    if not codeobj:
+                        raise ImportError(
+                            f"No bytecode found for {full_submodule_path}"
+                        )
+                else:
+                    spec = importlib.util.spec_from_file_location(
+                        full_submodule_name, full_submodule_path
+                    )
+                    if spec is None:
+                        raise ImportError(
+                            f"Cannot create spec for {full_submodule_name}"
+                        )
+                    submodule = importlib.util.module_from_spec(spec)
+                    sys.modules[full_submodule_name] = submodule
+                    if spec.loader is None:
+                        raise ImportError(
+                            f"Cannot load module from spec for {full_submodule_name}"
+                        )
+                    spec.loader.exec_module(submodule)
+                    setattr(parent_module, submodule_name, submodule)
+                    continue
 
                 spec = importlib.util.spec_from_loader(full_submodule_name, loader=None)
                 if spec is None:
@@ -193,14 +213,33 @@ def load_submodules(
 
 def ensure_parent_module(module_name: str) -> types.ModuleType:
     """Ensure that the parent module is created and added to sys.modules."""
-    parent_name, _, child_name = module_name.rpartition(".")
-    parent_module = ensure_parent_module(parent_name) if parent_name else None
+    try:
+        parent_name, _, child_name = module_name.rpartition(".")
+        parent_module = ensure_parent_module(parent_name) if parent_name else None
+        print(
+            f"Creating module {module_name}, parent {parent_name}, child {child_name}"
+        )
 
-    module = types.ModuleType(module_name)
-    if parent_module:
-        setattr(parent_module, child_name, module)
-    sys.modules[module_name] = module
-    return module
+        if module_name in sys.modules:
+            return sys.modules[module_name]
+
+        module = types.ModuleType(module_name)
+        if parent_module:
+            setattr(parent_module, child_name, module)
+        sys.modules[module_name] = module
+
+        # Set the __path__ attribute to make the module a package
+        if parent_name:
+            module.__path__ = []
+            if parent_module and hasattr(parent_module, "__path__"):
+                module.__path__.extend(parent_module.__path__)
+
+        print(
+            f"Module {module_name} created with __path__: {getattr(module, '__path__', None)}"
+        )
+        return module
+    except Exception as e:
+        raise ImportError(f"Error creating module {module_name}: {e}") from e
 
 
 def create_jac_py_module(
@@ -271,6 +310,8 @@ def py_import(
 
         elif items:
             for name, alias in items.items():
+                if isinstance(alias, bool):
+                    alias = name
                 try:
                     item = getattr(module, name)
                     if item not in loaded_items:
@@ -302,4 +343,17 @@ def py_import(
 
     except ImportError as e:
         print(f"Failed to import module {target}: {e}")
-        raise e
+        if "No module named" in str(e) and "." in target:
+            print("I'm in exception py_import")
+            print(f"Trying to import {target} as a package")
+            # Attempt to handle the missing module as a package
+            module_name, submodule_name = target.rsplit(".", 1)
+            parent_module = ensure_parent_module(module_name)
+            print(f"Parent module: {parent_module}")
+            if parent_module and submodule_name in parent_module.__dict__:
+                submodule = parent_module.__dict__[submodule_name]
+                return (submodule, *loaded_items)
+            else:
+                raise e
+        else:
+            raise e

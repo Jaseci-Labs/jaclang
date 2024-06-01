@@ -3,6 +3,7 @@ include:py random;
 import:py from ..test_cli, JacCliTests as Jac;
 
 import:jac from deep.mycode, code as c;
+import:py from deep.mycode_py, code as py_c;
 import:jac deep.mycode;
 import:jac hashcheck as h, assign_compr as a;
 include:jac ignore;
@@ -16,4 +17,5 @@ with entry{
     print(m("--->my_print<---"));
     print(h.a, a.mvar);
     print(c());
+    print(py_c());
     }
