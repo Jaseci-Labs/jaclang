@@ -212,7 +212,6 @@ class Tool:
         # TODO: Implement the Tool class
         pass
 
-MTLLMInfo = tuple[str, Any] # eg- ("example", example)
-MTLLMInput = tuple[str, str, str, Any] #eg- ("x's semstr", "x's type", "x", x)
 
-
+MTLLMInfo = tuple[str, Any]  # eg- ("example", example)
+MTLLMInput = tuple[str, str, str, Any]  # eg- ("x's semstr", "x's type", "x", x)

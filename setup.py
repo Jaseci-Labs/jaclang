@@ -20,24 +20,12 @@ setup(
     package_data={
         "": ["*.ini", "*.lark"],
     },
-    extras_require={
-        "llms": [
-            "transformers",
-            "accelerator",
-            "torch",
-            "ollama",
-            "anthropic",
-            "groq",
-            "openai",
-            "together",
-            "loguru",
-        ]
-    },
     entry_points={
         "console_scripts": [
             "jac = jaclang.cli.cli:start_cli",
         ],
     },
+    extras_require={"llms": ["mtllm"]},
     author="Jason Mars",
     author_email="jason@jaseci.org",
     url="https://github.com/Jaseci-Labs/jaclang",
