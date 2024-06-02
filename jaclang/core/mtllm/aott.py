@@ -8,8 +8,8 @@ import re
 from enum import Enum
 from typing import Any
 
-from jaclang.core.llms.base import BaseLLM
-from jaclang.core.registry import SemInfo, SemRegistry, SemScope
+from jaclang.core.mtllm.base import BaseLLM
+from jaclang.core.mtllm.registry import SemInfo, SemRegistry, SemScope
 
 
 def aott_raise(
@@ -211,3 +211,8 @@ class Tool:
         """Initialize the Tool class."""
         # TODO: Implement the Tool class
         pass
+
+MTLLMInfo = tuple[str, Any] # eg- ("example", example)
+MTLLMInput = tuple[str, str, str, Any] #eg- ("x's semstr", "x's type", "x", x)
+
+

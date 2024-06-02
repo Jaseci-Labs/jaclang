@@ -17,7 +17,7 @@ from jaclang.compiler.symtable import (
     SymbolTable,
     SymbolType,
 )
-from jaclang.core.registry import SemRegistry
+from jaclang.core.mtllm.registry import SemRegistry
 from jaclang.utils.treeprinter import dotgen_ast_tree, print_ast_tree
 
 

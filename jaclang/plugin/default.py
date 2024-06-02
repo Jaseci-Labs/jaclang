@@ -13,14 +13,6 @@ from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
-from jaclang.core.aott import (
-    aott_raise,
-    extract_non_primary_type,
-    get_all_type_explanations,
-    get_info_types,
-    get_object_string,
-    get_type_annotation,
-)
 from jaclang.core.construct import (
     Architype,
     DSFunc,
@@ -37,7 +29,17 @@ from jaclang.core.construct import (
     root,
 )
 from jaclang.core.importer import jac_importer
-from jaclang.core.registry import SemInfo, SemRegistry, SemScope
+from jaclang.core.mtllm.aott import (
+    MTLLMInfo,
+    MTLLMInput,
+    aott_raise,
+    extract_non_primary_type,
+    get_all_type_explanations,
+    get_info_types,
+    get_object_string,
+    get_type_annotation,
+)
+from jaclang.core.mtllm.registry import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -524,7 +526,7 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]:
+    def get_sem_type(file_loc: str, attr: str) -> tuple:
         with open(
             os.path.join(
                 os.path.dirname(file_loc),
@@ -561,8 +563,8 @@ class JacFeatureDefaults:
                         attr_sem_info.name, attr_sem_info.type, attr_scope
                     )
         if isinstance(attr_sem_info, SemInfo) and isinstance(attr_scope, SemScope):
-            return attr_sem_info.semstr, attr_scope.as_type_str
-        return "", ""  #
+            return (attr_sem_info.semstr, attr_scope.as_type_str)
+        return ("", "")
 
     @staticmethod
     @hookimpl
@@ -571,10 +573,10 @@ class JacFeatureDefaults:
         model: Any,  # noqa: ANN401
         model_params: dict[str, Any],
         scope: str,
-        incl_info: list[tuple[str, str]],
-        excl_info: list[tuple[str, str]],
-        inputs: list[tuple[str, str, str, Any]],
-        outputs: tuple,
+        incl_info: list[MTLLMInfo],
+        excl_info: list[MTLLMInfo],
+        inputs: list[MTLLMInput],
+        output: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
@@ -587,8 +589,9 @@ class JacFeatureDefaults:
             "rb",
         ) as f:
             mod_registry = pickle.load(f)
-
-        outputs = outputs[0] if isinstance(outputs, list) else outputs
+        output = (
+            output[0] if isinstance(output, list) else output
+        )  # FIXME: This is a hack. Should get a tuple always
         _scope = SemScope.get_scope_from_str(scope)
         assert _scope is not None
 
@@ -615,12 +618,12 @@ class JacFeatureDefaults:
             )
         inputs_information = "\n".join(inputs_information_list)
 
-        output_information = f"{outputs[0]} ({outputs[1]})"
-        type_collector.extend(extract_non_primary_type(outputs[1]))
+        output_information = f"{output[0]} ({output[1]})"
+        type_collector.extend(extract_non_primary_type(output[1]))
         output_type_explanations = "\n".join(
             list(
                 get_all_type_explanations(
-                    extract_non_primary_type(outputs[1]), mod_registry
+                    extract_non_primary_type(output[1]), mod_registry
                 ).values()
             )
         )
@@ -643,7 +646,7 @@ class JacFeatureDefaults:
             model_params=model_params,
         )
         output = model.resolve_output(
-            meaning_out, outputs[0], outputs[1], output_type_explanations
+            meaning_out, output[0], output[1], output_type_explanations
         )
         return output
 

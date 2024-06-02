@@ -1259,7 +1259,7 @@ class PyastGenPass(Pass):
                     ),
                     self.sync(
                         ast3.keyword(
-                            arg="outputs",
+                            arg="output",
                             value=(
                                 self.sync(
                                     ast3.Tuple(

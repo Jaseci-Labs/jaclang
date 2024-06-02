@@ -264,7 +264,7 @@ class JacFeature:
         incl_info: list[tuple[str, str]],
         excl_info: list[tuple[str, str]],
         inputs: list[tuple[str, str, str, Any]],
-        outputs: tuple,
+        output: tuple,
         action: str,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
@@ -276,7 +276,7 @@ class JacFeature:
             incl_info=incl_info,
             excl_info=excl_info,
             inputs=inputs,
-            outputs=outputs,
+            output=output,
             action=action,
         )
 
