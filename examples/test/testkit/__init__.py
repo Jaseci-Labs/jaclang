@@ -23,17 +23,9 @@ class Comparison:
 
 
 class AIScore(BaseModel, Score):
-    consistency: int = Field(
-        ge=0, le=10, description="Evaluate whether the response answered the question"
-    )
-    correctness: int = Field(
-        ge=0,
-        le=10,
-        description="Evaluate whether the response is in general correct, or how correct it is",
-    )
-
+    value: int
     def overall(self):
-        return (self.consistency + self.correctness) / 2
+        return self.value
 
 
 class FactScore(BaseModel, Score):
@@ -60,26 +52,43 @@ class Evaluator:
         raise Exception("Wrong Call")
 
 
+class Input(BaseModel):
+    responseA: str = Field(description="response from model A")
+    responseB: str = Field(description="response from model B")
+
+
+class Output(BaseModel):
+    scoreA: int = Field(ge=0, le=10, description="preference of A over B")
+    scoreB: int = Field(ge=0, le=10, description="preference of B over A")
+
 class AIEvaluator(Evaluator):
-    def __init__(self, context: str):
-        self.client = dspy.OllamaLocal(model="phi3")
+    def __init__(self, context: str, correct_answer: str):
+        self.client = dspy.OllamaLocal(
+            base_url="http://52.23.242.52:11343", model="phi3", max_tokens=4000
+        )
         dspy.configure(lm=self.client)
         self.context = context
-        super()
+        self.correct_answer = correct_answer
+        super().__init__()
 
     class EvalSignature(dspy.Signature):
-        """You are evaluating the responses of two similar language models. Please provide scores that can help us evaluate how well the models work. Please return the scores in order"""
+        """You are evaluating the responses of two similar language models. Please provide scores that can help us evaluate how well the models work. Please return the scores in order. The correct answer is given"""
 
         problem_context: str = dspy.InputField()
-        responses: list[str] = dspy.InputField()
-        scores: list[AIScore] = dspy.OutputField()
+        correct_answer: str = dspy.InputField()
+        responses: Input = dspy.InputField()
+        scores: Output = dspy.OutputField()
 
     def eval(self, responseA, responseB) -> Comparison:
         predictor = dspy.TypedPredictor(self.EvalSignature)
         scores = predictor(
-            responses=[responseA, responseB], problem_context=self.context
-        ).scores
-        comparison = Comparison(scores[0], scores[1])
+            responses=Input(responseA=responseA, responseB=responseB),
+            problem_context=self.context,
+            correct_answer=self.correct_answer,
+        )
+        scoreA = AIScore(value = scores.scores.scoreA)
+        scoreB = AIScore(value = scores.scores.scoreB)
+        comparison = Comparison(scoreA, scoreB)
         return comparison
 
 
@@ -92,7 +101,9 @@ class RunnerEvaluator(Evaluator):
     def run(self, source: str, inputPath: str):
         start = datetime.now()
         with open(inputPath, "r") as input:
-            result = subprocess.check_output(["python", str(source)], stdin=input).decode()
+            result = subprocess.check_output(
+                ["python", str(source)], stdin=input
+            ).decode()
         delta = datetime.now() - start
         return result, delta
 
