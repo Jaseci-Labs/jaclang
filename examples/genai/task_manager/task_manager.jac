@@ -1,37 +1,28 @@
 import:py from jaclang.core.llms, Ollama;
 
-glob llm = Ollama(model="phi3");
-
+# glob llm = OpenAI(model_name="gpt-3.5-turbo");
+glob llm = Ollama(host="http://52.23.242.52:11343");
 
 obj 'A work to be done in the future'
 Task {
-    has description: 'the content of the job to be done': str;
+    has description: 'Content of the Job to be done': str;
+    has time: 'Estimated time in minutes for one to finish the job': int,
+        priority: 'Estimated Priority for the Task (0-10)': int;
 }
 
-can 'give an estimated time for one to finish the task given, return an int' eta_llm(input: 'the task given': Task) -> 'estimated time in minutes': int by llm();
-
-can 'give an estimated priority for the task, return an int' priority_llm(input: 'the task given': Task) -> 'priority score from 0 to 10, with 10 the most prioritized': int by llm();
-
-obj 'A work to be done in the future'
-TaskFull :Task: {
-    has time: 'number of minutes for one to finish the job': int;
-    has priority: 'priority score from 0 to 10';
-}
+can task_llm(description: str) -> Task by llm(method="Reason");
 
 with entry {
     task_contents = [
-    "Have some sleep",
-    "Enjoy a better weekend with my girlfriend",
-    "Work on Jaseci Project",
-    "Teach EECS 281 Students",
-    "Enjoy family time with my parents"
+        "Have some sleep",
+        "Enjoy a better weekend with my girlfriend",
+        "Work on Jaseci Project",
+        "Teach EECS 281 Students",
+        "Enjoy family time with my parents"
     ];
     tasks = [];
     for task_content in task_contents {
-        task = Task(description = task_content);
-        eta = eta_llm(task);
-        priority = priority_llm(task);
-        task_info = TaskFull(description = task_content, time = eta, priority = priority);
+        task_info = Task(description = task_content by llm(method="Reason"));
         print(task_info);
         tasks.append(task_info);
     }
