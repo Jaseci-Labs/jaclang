@@ -1,3 +1,4 @@
+from pprint import pprint
 from testkit import AIEvaluator, RunnerEvaluator
 from datasets import load_dataset
 import json
@@ -10,12 +11,18 @@ import json
 # print(eval.scoreB)
 
 
-ds = load_dataset("codeparrot/apps", split="test")
-iter = ds.iter(batch_size=1)
-for i in iter:
-    sample = {}
-    sample['question'] = i['question'][0]
-    sample['solution'] = json.loads(i['solutions'][0])[0]
-    sample['input_output'] = json.loads(i['input_output'][0])
-    print(sample)
-    break
+# ds = load_dataset("codeparrot/apps", split="test")
+# iter = ds.iter(batch_size=1)
+# for i in iter:
+#     sample = {}
+#     sample['question'] = i['question'][0]
+#     sample['solution'] = json.loads(i['solutions'][0])[0]
+#     sample['inputs'] = json.loads(i['input_output'][0])['inputs']
+#     sample['outputs'] = json.loads(i['input_output'][0])['outputs']
+#     pprint(sample)
+
+# runnereval = RunnerEvaluator(input = "", correct_output="H\n")
+# eval = runnereval.eval(responseA="print(\'H\')", responseB="print(\'M\')")
+# print(eval.scoreA)
+# print(eval.scoreB)
+

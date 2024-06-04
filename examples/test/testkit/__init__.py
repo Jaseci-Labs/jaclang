@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
-from datasets import load_dataset
+from datetime import timedelta, datetime
+import subprocess
 import dspy
+import tempfile
 
 
 class Score:
@@ -31,7 +33,7 @@ class AIScore(BaseModel, Score):
     )
 
     def overall(self):
-        return (self.consistency + self.correctness) // 2
+        return (self.consistency + self.correctness) / 2
 
 
 class FactScore(BaseModel, Score):
@@ -39,6 +41,14 @@ class FactScore(BaseModel, Score):
 
     def overall(self):
         return 10 if self.correctness else 0
+
+
+class RunnerScore(BaseModel, Score):
+    elapsed: timedelta
+    correctness: bool
+
+    def overall(self):
+        return 10 / self.elapsed.seconds if self.correctness else 0
 
 
 class Evaluator:
@@ -74,13 +84,36 @@ class AIEvaluator(Evaluator):
 
 
 class RunnerEvaluator(Evaluator):
-    def __init__(self, question: str, given_answer: str):
-        self.question = question
-        self.given_answer = given_answer
-        super()
+    def __init__(self, input: str, correct_output: str):
+        self.input = input
+        self.correct_output = correct_output
+        super().__init__()
+
+    def run(self, source: str, inputPath: str):
+        start = datetime.now()
+        with open(inputPath, "r") as input:
+            result = subprocess.check_output(["python", str(source)], stdin=input).decode()
+        delta = datetime.now() - start
+        return result, delta
 
     def eval(self, responseA, responseB) -> Comparison:
-        return Comparison(Score(), Score())
+        sourceA = tempfile.NamedTemporaryFile(delete=False)
+        sourceB = tempfile.NamedTemporaryFile(delete=False)
+        inputFile = tempfile.NamedTemporaryFile(delete=False)
+        with sourceA, sourceB, inputFile:
+            sourceA.write(responseA.encode())
+            sourceB.write(responseB.encode())
+            inputFile.write(self.input.encode())
+        outputA, timeA = self.run(sourceA.name, inputFile.name)
+        outputB, timeB = self.run(sourceB.name, inputFile.name)
+
+        scoreA = RunnerScore(
+            elapsed=timeA, correctness=(outputA == self.correct_output)
+        )
+        scoreB = RunnerScore(
+            elapsed=timeB, correctness=(outputB == self.correct_output)
+        )
+        return Comparison(scoreA, scoreB)
 
 
 class FactEvaluator(Evaluator):
