@@ -14,14 +14,17 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.12'
-      - name: Install Poetry
+      - name: Install Build Tool
         run: |
-          pip install poetry
+          python3 -m pip install --upgrade pip
+          pip install -U setuptools wheel twine build
       - name: Build and publish package
         run: |
-          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry build
-          poetry publish
+          python3 -m build
+          python3 -m twine upload --skip-existing dist/*
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
       - run: pip install githubrelease
       - run: python scripts/gh_release.py
         env:
