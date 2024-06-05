@@ -27,11 +27,14 @@ def jac_importer(
     items: Optional[dict[str, Union[str, bool]]] = None,
 ) -> Optional[tuple[types.ModuleType, ...]]:
     """Core Import Process."""
+
+    # Normalize the target path
     target_path = path.join(*(target.split(".")))
     dir_path, file_name = path.split(target_path)
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, target_path))
 
+    # Check if the target is a directory
     if path.isdir(full_target):
         module_name = override_name if override_name else path.basename(full_target)
         module = create_jac_py_module(mod_bundle, module_name, dir_path, full_target)
@@ -42,7 +45,7 @@ def jac_importer(
         elif path.exists(init_file + ".jac"):
             exec_init_file(init_file + ".jac", module, caller_dir)
 
-        load_submodules(module, full_target, cachable, mod_bundle)
+        # load_submodules(module, full_target, cachable, mod_bundle)
     else:
         if lng == "jac":
             full_target += ".jac"
@@ -68,7 +71,11 @@ def jac_importer(
             else:
                 module_name = override_name if override_name else module_name
                 module = create_jac_py_module(
-                    mod_bundle, module_name, package_path, full_target
+                    mod_bundle,
+                    module_name,
+                    package_path,
+                    full_target,
+                    push_to_sys="." not in target,
                 )
                 if mod_bundle:
                     codeobj = mod_bundle.mod_deps[full_target].gen.py_bytecode
@@ -98,7 +105,7 @@ def jac_importer(
 
         if "." in target:
             parent_module_name, submodule_name = target.rsplit(".", 1)
-            parent_module = ensure_parent_module(parent_module_name)
+            parent_module = ensure_parent_module(parent_module_name, full_target)
             setattr(parent_module, submodule_name, module)
             if items:
                 return tuple(getattr(module, name) for name in items.keys())
@@ -211,15 +218,20 @@ def load_submodules(
                 setattr(parent_module, submodule_name, submodule)
 
 
-def ensure_parent_module(module_name: str) -> types.ModuleType:
+def ensure_parent_module(module_name: str, full_target: str) -> types.ModuleType:
     """Ensure that the parent module is created and added to sys.modules."""
     try:
         parent_name, _, child_name = module_name.rpartition(".")
-        parent_module = ensure_parent_module(parent_name) if parent_name else None
+        # in line line below /foo/bar/baz.py becomes foo/bar, baz
+        target_name, _ = path.split(full_target)
+        print("Target Name", target_name)
+        parent_module = (
+            ensure_parent_module(parent_name, target_name) if parent_name else None
+        )
         print(
             f"Creating module {module_name}, parent {parent_name}, child {child_name}"
         )
-
+        print("Ensure Deep in?", "deep" in list(sys.modules.keys()))
         if module_name in sys.modules:
             return sys.modules[module_name]
 
@@ -229,8 +241,9 @@ def ensure_parent_module(module_name: str) -> types.ModuleType:
         sys.modules[module_name] = module
 
         # Set the __path__ attribute to make the module a package
-        if parent_name:
-            module.__path__ = []
+        print("CHEDCKING", module_name, full_target, path.isdir(full_target))
+        if parent_name and path.isdir(full_target):
+            module.__path__ = [full_target]
             if parent_module and hasattr(parent_module, "__path__"):
                 module.__path__.extend(parent_module.__path__)
 
@@ -243,7 +256,11 @@ def ensure_parent_module(module_name: str) -> types.ModuleType:
 
 
 def create_jac_py_module(
-    mod_bundle: Optional[Module], module_name: str, package_path: str, full_target: str
+    mod_bundle: Optional[Module],
+    module_name: str,
+    package_path: str,
+    full_target: str,
+    push_to_sys: bool = True,
 ) -> types.ModuleType:
     """Create a module."""
     module = types.ModuleType(module_name)
@@ -255,11 +272,14 @@ def create_jac_py_module(
         for i in range(len(parts)):
             package_name = ".".join(parts[: i + 1])
             if package_name not in sys.modules:
-                sys.modules[package_name] = types.ModuleType(package_name)
-
-        setattr(sys.modules[package_path], module_name, module)
-        sys.modules[f"{package_path}.{module_name}"] = module
-    sys.modules[module_name] = module
+                if push_to_sys:
+                    sys.modules[package_name] = types.ModuleType(package_name)
+        if push_to_sys:
+            setattr(sys.modules[package_path], module_name, module)
+        if push_to_sys:
+            sys.modules[f"{package_path}.{module_name}"] = module
+    if push_to_sys:
+        sys.modules[module_name] = module
     return module
 
 
@@ -342,18 +362,18 @@ def py_import(
         return (module, *loaded_items)
 
     except ImportError as e:
-        print(f"Failed to import module {target}: {e}")
-        if "No module named" in str(e) and "." in target:
-            print("I'm in exception py_import")
-            print(f"Trying to import {target} as a package")
-            # Attempt to handle the missing module as a package
-            module_name, submodule_name = target.rsplit(".", 1)
-            parent_module = ensure_parent_module(module_name)
-            print(f"Parent module: {parent_module}")
-            if parent_module and submodule_name in parent_module.__dict__:
-                submodule = parent_module.__dict__[submodule_name]
-                return (submodule, *loaded_items)
-            else:
-                raise e
-        else:
-            raise e
+        # print(f"Failed to import module {target}: {e}")
+        # if "No module named" in str(e) and "." in target:
+        #     print("I'm in exception py_import")
+        #     print(f"Trying to import {target} as a package")
+        #     # Attempt to handle the missing module as a package
+        #     module_name, submodule_name = target.rsplit(".", 1)
+        #     parent_module = ensure_parent_module(module_name)
+        #     print(f"Parent module: {parent_module}")
+        #     if parent_module and submodule_name in parent_module.__dict__:
+        #         submodule = parent_module.__dict__[submodule_name]
+        #         return (submodule, *loaded_items)
+        #     else:
+        #         raise e
+        # else:
+        raise e
