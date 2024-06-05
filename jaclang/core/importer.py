@@ -15,6 +15,19 @@ from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
 
 
+def smart_join(base_path: str, target_path: str) -> str:
+    """Join two paths while attempting to remove any redundant segments."""
+    base_parts = path.normpath(base_path).split(path.sep)
+    target_parts = path.normpath(target_path).split(path.sep)
+
+    # Attempt to detect and remove overlapping segments
+    while base_parts and target_parts and base_parts[-1] == target_parts[0]:
+        target_parts.pop(0)
+
+    full_path = path.join(base_path, *target_parts)
+    return path.normpath(full_path)
+
+
 def jac_importer(
     target: str,
     base_path: str,
@@ -27,12 +40,11 @@ def jac_importer(
     items: Optional[dict[str, Union[str, bool]]] = None,
 ) -> Optional[tuple[types.ModuleType, ...]]:
     """Core Import Process."""
-
-    # Normalize the target path
     target_path = path.join(*(target.split(".")))
     dir_path, file_name = path.split(target_path)
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, target_path))
+    full_target = smart_join(caller_dir, target_path)
 
     # Check if the target is a directory
     if path.isdir(full_target):
@@ -44,7 +56,6 @@ def jac_importer(
             exec_init_file(init_file + ".py", module, caller_dir)
         elif path.exists(init_file + ".jac"):
             exec_init_file(init_file + ".jac", module, caller_dir)
-
         # load_submodules(module, full_target, cachable, mod_bundle)
     else:
         if lng == "jac":
@@ -102,7 +113,6 @@ def jac_importer(
                 with sys_path_context(caller_dir):
                     module.__file__ = full_target
                     exec(codeobj, module.__dict__)
-
         if "." in target:
             parent_module_name, submodule_name = target.rsplit(".", 1)
             parent_module = ensure_parent_module(parent_module_name, full_target)
@@ -219,37 +229,20 @@ def load_submodules(
 
 
 def ensure_parent_module(module_name: str, full_target: str) -> types.ModuleType:
-    """Ensure that the parent module is created and added to sys.modules."""
+    """Ensure that the module is created and added to sys.modules, set as a package if its directory is a package."""
     try:
-        parent_name, _, child_name = module_name.rpartition(".")
-        # in line line below /foo/bar/baz.py becomes foo/bar, baz
-        target_name, _ = path.split(full_target)
-        print("Target Name", target_name)
-        parent_module = (
-            ensure_parent_module(parent_name, target_name) if parent_name else None
-        )
-        print(
-            f"Creating module {module_name}, parent {parent_name}, child {child_name}"
-        )
-        print("Ensure Deep in?", "deep" in list(sys.modules.keys()))
         if module_name in sys.modules:
-            return sys.modules[module_name]
-
-        module = types.ModuleType(module_name)
-        if parent_module:
+            module = sys.modules[module_name]
+        else:
+            module = types.ModuleType(module_name)
+            sys.modules[module_name] = module
+        module_directory = path.dirname(full_target)
+        if path.isdir(module_directory):
+            module.__path__ = [module_directory]
+        parent_name, _, child_name = module_name.rpartition(".")
+        if parent_name:
+            parent_module = ensure_parent_module(parent_name, module_directory)
             setattr(parent_module, child_name, module)
-        sys.modules[module_name] = module
-
-        # Set the __path__ attribute to make the module a package
-        print("CHEDCKING", module_name, full_target, path.isdir(full_target))
-        if parent_name and path.isdir(full_target):
-            module.__path__ = [full_target]
-            if parent_module and hasattr(parent_module, "__path__"):
-                module.__path__.extend(parent_module.__path__)
-
-        print(
-            f"Module {module_name} created with __path__: {getattr(module, '__path__', None)}"
-        )
         return module
     except Exception as e:
         raise ImportError(f"Error creating module {module_name}: {e}") from e
@@ -271,12 +264,10 @@ def create_jac_py_module(
         parts = package_path.split(".")
         for i in range(len(parts)):
             package_name = ".".join(parts[: i + 1])
-            if package_name not in sys.modules:
-                if push_to_sys:
-                    sys.modules[package_name] = types.ModuleType(package_name)
+            if package_name not in sys.modules and push_to_sys:
+                sys.modules[package_name] = types.ModuleType(package_name)
         if push_to_sys:
             setattr(sys.modules[package_path], module_name, module)
-        if push_to_sys:
             sys.modules[f"{package_path}.{module_name}"] = module
     if push_to_sys:
         sys.modules[module_name] = module
@@ -362,18 +353,4 @@ def py_import(
         return (module, *loaded_items)
 
     except ImportError as e:
-        # print(f"Failed to import module {target}: {e}")
-        # if "No module named" in str(e) and "." in target:
-        #     print("I'm in exception py_import")
-        #     print(f"Trying to import {target} as a package")
-        #     # Attempt to handle the missing module as a package
-        #     module_name, submodule_name = target.rsplit(".", 1)
-        #     parent_module = ensure_parent_module(module_name)
-        #     print(f"Parent module: {parent_module}")
-        #     if parent_module and submodule_name in parent_module.__dict__:
-        #         submodule = parent_module.__dict__[submodule_name]
-        #         return (submodule, *loaded_items)
-        #     else:
-        #         raise e
-        # else:
         raise e
