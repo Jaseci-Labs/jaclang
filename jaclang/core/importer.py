@@ -15,6 +15,19 @@ from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
 
 
+def smart_join(base_path: str, target_path: str) -> str:
+    """Join two paths while attempting to remove any redundant segments."""
+    base_parts = path.normpath(base_path).split(path.sep)
+    target_parts = path.normpath(target_path).split(path.sep)
+
+    # Attempt to detect and remove overlapping segments
+    while base_parts and target_parts and base_parts[-1] == target_parts[0]:
+        target_parts.pop(0)
+
+    full_path = path.join(base_path, *target_parts)
+    return path.normpath(full_path)
+
+
 def jac_importer(
     target: str,
     base_path: str,
@@ -31,7 +44,9 @@ def jac_importer(
     dir_path, file_name = path.split(target_path)
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, target_path))
+    full_target = smart_join(caller_dir, target_path)
 
+    # Check if the target is a directory
     if path.isdir(full_target):
         module_name = override_name if override_name else path.basename(full_target)
         module = create_jac_py_module(mod_bundle, module_name, dir_path, full_target)
@@ -41,8 +56,7 @@ def jac_importer(
             exec_init_file(init_file + ".py", module, caller_dir)
         elif path.exists(init_file + ".jac"):
             exec_init_file(init_file + ".jac", module, caller_dir)
-
-        load_submodules(module, full_target, cachable, mod_bundle)
+        # load_submodules(module, full_target, cachable, mod_bundle)
     else:
         if lng == "jac":
             full_target += ".jac"
@@ -68,7 +82,11 @@ def jac_importer(
             else:
                 module_name = override_name if override_name else module_name
                 module = create_jac_py_module(
-                    mod_bundle, module_name, package_path, full_target
+                    mod_bundle,
+                    module_name,
+                    package_path,
+                    full_target,
+                    push_to_sys="." not in target,
                 )
                 if mod_bundle:
                     codeobj = mod_bundle.mod_deps[full_target].gen.py_bytecode
@@ -95,10 +113,9 @@ def jac_importer(
                 with sys_path_context(caller_dir):
                     module.__file__ = full_target
                     exec(codeobj, module.__dict__)
-
         if "." in target:
             parent_module_name, submodule_name = target.rsplit(".", 1)
-            parent_module = ensure_parent_module(parent_module_name)
+            parent_module = ensure_parent_module(parent_module_name, full_target)
             setattr(parent_module, submodule_name, module)
             if items:
                 return tuple(getattr(module, name) for name in items.keys())
@@ -164,21 +181,41 @@ def load_submodules(
     """Recursively load submodules of a package."""
     for root, _, files in os.walk(package_path):
         for file in files:
-            if file.endswith(".jac"):
+            if file.endswith(".jac") or file.endswith(".py"):
                 submodule_name = path.splitext(file)[0]
                 full_submodule_name = f"{parent_module.__name__}.{submodule_name}"
                 full_submodule_path = path.join(root, file)
 
-                result = compile_jac(full_submodule_path, cache_result=cachable)
-                if result.errors_had or not result.ir.gen.py_bytecode:
-                    for e in result.errors_had:
-                        print(f"Error compiling {full_submodule_path}: {e}")
-                        logging.error(e)
-                    continue
+                if file.endswith(".jac"):
+                    result = compile_jac(full_submodule_path, cache_result=cachable)
+                    if result.errors_had or not result.ir.gen.py_bytecode:
+                        for e in result.errors_had:
+                            print(f"Error compiling {full_submodule_path}: {e}")
+                            logging.error(e)
+                        continue
 
-                codeobj = marshal.loads(result.ir.gen.py_bytecode)
-                if not codeobj:
-                    raise ImportError(f"No bytecode found for {full_submodule_path}")
+                    codeobj = marshal.loads(result.ir.gen.py_bytecode)
+                    if not codeobj:
+                        raise ImportError(
+                            f"No bytecode found for {full_submodule_path}"
+                        )
+                else:
+                    spec = importlib.util.spec_from_file_location(
+                        full_submodule_name, full_submodule_path
+                    )
+                    if spec is None:
+                        raise ImportError(
+                            f"Cannot create spec for {full_submodule_name}"
+                        )
+                    submodule = importlib.util.module_from_spec(spec)
+                    sys.modules[full_submodule_name] = submodule
+                    if spec.loader is None:
+                        raise ImportError(
+                            f"Cannot load module from spec for {full_submodule_name}"
+                        )
+                    spec.loader.exec_module(submodule)
+                    setattr(parent_module, submodule_name, submodule)
+                    continue
 
                 spec = importlib.util.spec_from_loader(full_submodule_name, loader=None)
                 if spec is None:
@@ -191,20 +228,32 @@ def load_submodules(
                 setattr(parent_module, submodule_name, submodule)
 
 
-def ensure_parent_module(module_name: str) -> types.ModuleType:
-    """Ensure that the parent module is created and added to sys.modules."""
-    parent_name, _, child_name = module_name.rpartition(".")
-    parent_module = ensure_parent_module(parent_name) if parent_name else None
-
-    module = types.ModuleType(module_name)
-    if parent_module:
-        setattr(parent_module, child_name, module)
-    sys.modules[module_name] = module
-    return module
+def ensure_parent_module(module_name: str, full_target: str) -> types.ModuleType:
+    """Ensure that the module is created and added to sys.modules, set as a package if its directory is a package."""
+    try:
+        if module_name in sys.modules:
+            module = sys.modules[module_name]
+        else:
+            module = types.ModuleType(module_name)
+            sys.modules[module_name] = module
+        module_directory = path.dirname(full_target)
+        if path.isdir(module_directory):
+            module.__path__ = [module_directory]
+        parent_name, _, child_name = module_name.rpartition(".")
+        if parent_name:
+            parent_module = ensure_parent_module(parent_name, module_directory)
+            setattr(parent_module, child_name, module)
+        return module
+    except Exception as e:
+        raise ImportError(f"Error creating module {module_name}: {e}") from e
 
 
 def create_jac_py_module(
-    mod_bundle: Optional[Module], module_name: str, package_path: str, full_target: str
+    mod_bundle: Optional[Module],
+    module_name: str,
+    package_path: str,
+    full_target: str,
+    push_to_sys: bool = True,
 ) -> types.ModuleType:
     """Create a module."""
     module = types.ModuleType(module_name)
@@ -215,12 +264,13 @@ def create_jac_py_module(
         parts = package_path.split(".")
         for i in range(len(parts)):
             package_name = ".".join(parts[: i + 1])
-            if package_name not in sys.modules:
+            if package_name not in sys.modules and push_to_sys:
                 sys.modules[package_name] = types.ModuleType(package_name)
-
-        setattr(sys.modules[package_path], module_name, module)
-        sys.modules[f"{package_path}.{module_name}"] = module
-    sys.modules[module_name] = module
+        if push_to_sys:
+            setattr(sys.modules[package_path], module_name, module)
+            sys.modules[f"{package_path}.{module_name}"] = module
+    if push_to_sys:
+        sys.modules[module_name] = module
     return module
 
 
@@ -271,6 +321,8 @@ def py_import(
 
         elif items:
             for name, alias in items.items():
+                if isinstance(alias, bool):
+                    alias = name
                 try:
                     item = getattr(module, name)
                     if item not in loaded_items:
@@ -301,5 +353,4 @@ def py_import(
         return (module, *loaded_items)
 
     except ImportError as e:
-        print(f"Failed to import module {target}: {e}")
         raise e
