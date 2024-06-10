@@ -199,13 +199,12 @@ class JacAnalyzer(LanguageServer):
     def __init__(self):
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
-        self.path=r'/home/acer/Desktop/jac_kug/jaclang/'
+        self.path=r'C:/Users/PavinithanRetnakumar/OneDrive - BCS TECHNOLOGY INTERNATIONAL PTY LIMITED/Desktop/JAC/jaclang/'
         self.modules: dict[str, ModuleInfo] = {}
         self.rebuild_workspace()
     
     def rebuild_workspace(self) -> None:
         """Rebuild workspace."""
-        log(f'working directory---> {self.path}')
         x=1
         self.modules = {}
         for file in [
@@ -215,14 +214,12 @@ class JacAnalyzer(LanguageServer):
             if name.endswith(".jac")
         ]:
             
-            if 'ures/simple_persistent.jac' in str(file) or x==5:
+            if x==2:
                     return
             x+=1
             lazy_parse = False
             type_check = False
-            log(f'file---> {file}')
             if file in self.modules:
-                log(f'file already in modules---> {file}')
                 continue
             if lazy_parse:
                 # If lazy_parse is True, add the file to modules with empty IR
@@ -265,9 +262,8 @@ class JacAnalyzer(LanguageServer):
                 errors=build.errors_had,
                 warnings=build.warnings_had,
             )
-            log('all symbolss --')
             self.modules[file].symbols=update_symbols(build.ir.sym_tab)
-            log(f'symbols are  {self.modules[file].symbols}')
+            log(f'symbols are  {self.modules[file].symbols[-13:]}')
             if build.ir:
                 for sub in build.ir.mod_deps:
                     self.modules[sub] = ModuleInfo(
@@ -373,36 +369,52 @@ def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
     """Provide hover information for the given hover request."""
     # document = ls.workspace.get_document(params.text_document.uri)
     # current_line = document.lines[params.position.line].strip()
-    # i need to print the position of the cursor
-    log(f'params:--> {params.text_document.uri[7:]}' )
-    # ir=server.modules[params.text_document.uri[7:]].ir
-    # log(f'{server.}')
-    # first key of server.modules is 
-    log(f'first key of server.modules: {list(server.modules.values())[0]}')
-    # log(f'first key of server.modules: {list(server.modules.values())[0].ir.sym_tab}')
-    log(f'first key of server.modules: {list(server.modules.values())[0].ir.sym_tab.owner}')
-    log(f'first key of server.modules: {list(server.modules.values())[0].ir.sym_tab.kid}')
-    # log(f'first key of server.modules: {list(server.modules.values())[0].ir.sym_tab.tab}')
-    # for sym in list(server.modules.values())[0].ir.sym_tab.tab:
-    #     log(f'sym: {sym}')
-    # log(f'first key of server.modules: {list(server.modules.values())[0].ir.sym_tab.uses}')
-    # log(f'ir: {ir.pp()}')
+    
     log(f'position: {params}')
-    log(f'position ufff: {params.position}')
-    log(f'position: {params.position.line}')
-    log(f'position: {params.position.character}')
-    # if current_line.endswith("hello."):
     log(list(server.modules.values())[0])
-    # sym_node=get_symbol_node(params.position,list(server.modules.values())[0].symbols)
-    # log(f'relevant sym_node: {sym_node}')
+    def get_value():
+        """Get value.
+        
+        By using the position, get which ast node it falls under
+        """
+        line = params.position.line
+        character = params.position.character
+
+        def position_within_node(node: ast.AstNode, line: int, character: int) -> bool:
+            """Check if the position falls within the node's location."""
+            if node.loc.first_line < line + 1 < node.loc.last_line:
+                return True
+            if node.loc.first_line == line + 1 and node.loc.col_start <= character:
+                return True
+            if node.loc.last_line == line + 1 and node.loc.col_end >= character:
+                return True
+            return False
+
+        def get_node(node: ast.AstNode, line: int, character: int) -> Optional[ast.AstNode]:
+            """Return the deepest AST node that the position falls under."""
+            if position_within_node(node, line, character):
+                # Start with the current node as the deepest node
+                deepest_node = node
+                for child in node.kid:
+                    result = get_node(child, line, character)
+                    if result:
+                        deepest_node = result
+                return deepest_node
+            return None
+
+        value = get_node(list(server.modules.values())[0].ir, line, character)
+        log(f'fffnode: {value.value}')
+
+    get_value()
+
+        
+
+
+
     return lspt.Hover(
         contents=lspt.MarkupContent(
             kind=lspt.MarkupKind.PlainText, value="Hello, world!"
         ),
-        # range=lspt.Range(
-        #     start=lspt.Position(line=params.position.line, character=0),
-        #     end=lspt.Position(line=params.position.line, character=len(current_line)),
-        # ),
     )
     return None
 
