@@ -1,29 +1,35 @@
 """Jaclang Language Server."""
-from __future__ import annotations
-import os
-from typing import Optional, Sequence
-import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes.main import DefUsePass, schedules
 
+from __future__ import annotations
+
+import os
+from typing import Any, Generator, Optional, Sequence
+
+import jaclang.compiler.absyntree as ast
 from jaclang.compiler.compile import jac_str_to_pass
+from jaclang.compiler.passes.main import DefUsePass, schedules
 from jaclang.compiler.passes.tool import FuseCommentsPass, JacFormatPass
+from jaclang.compiler.passes.transform import Alert
+from jaclang.compiler.symtable import Symbol, SymbolTable
 from jaclang.langserve.utils import log, log_error
 from jaclang.vendor.pygls.server import LanguageServer
-from jaclang.compiler.passes.transform import Alert
-from jaclang.compiler.symtable import SymbolTable,Symbol
 
 import lsprotocol.types as lspt
 
-def update_symbols(symtab: SymbolTable) -> list:
-    symbols=[]
-    def all_symbols(symtab: SymbolTable) -> list:
-        for k,v in symtab.tab.items():
+
+def update_symbols(symtab: SymbolTable) -> Optional[list[Symbol]]:
+    """Update symbols."""
+    symbols = []
+
+    def all_symbols(symtab: SymbolTable) -> Optional[list[Symbol]]:
+        """Get all symbols in the symbol table."""
+        for _, v in symtab.tab.items():
             symbols.append(v)
         for i in symtab.kid:
             all_symbols(i)
         return symbols
-    return all_symbols(symtab)
 
+    return all_symbols(symtab)
 
 
 class ModuleInfo:
@@ -34,7 +40,7 @@ class ModuleInfo:
         ir: Optional[ast.Module],
         errors: Sequence[Alert],
         warnings: Sequence[Alert],
-        symbols: Optional[Symbol] = [],
+        symbols: Optional[list[Symbol]] = None,
     ) -> None:
         """Initialize module info."""
         self.ir = ir
@@ -42,19 +48,20 @@ class ModuleInfo:
         self.warnings = warnings
         self.symbols = symbols
 
+
 class JacAnalyzer(LanguageServer):
     """Class for managing workspace."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
-        self.path=r'/home/acer/Desktop/jac_kug/jaclang/' # fix me 
+        self.path = r"/home/acer/Desktop/jac_kug/jaclang/"  # fix me
         self.modules: dict[str, ModuleInfo] = {}
         self.rebuild_workspace()
-    
+
     def rebuild_workspace(self) -> None:
         """Rebuild workspace."""
-        x=1
+        x = 1
         self.modules = {}
         for file in [
             os.path.normpath(os.path.join(root, name))
@@ -62,12 +69,12 @@ class JacAnalyzer(LanguageServer):
             for name in files
             if name.endswith(".jac")
         ]:
-            
-            if x==2:  # for now , we are building only 1 file(guess_game_3.jac)
-                    return
-            x+=1
-            # lazy_parse = False 
+            # avoid building all files [for the hover ,now we are building only 1 file(guess_game_3.jac)]
+            if x == 2:
+                return
+            x += 1
             type_check = False
+            # lazy_parse = False
             # if file in self.modules:
             #     continue
             # if lazy_parse:
@@ -85,9 +92,7 @@ class JacAnalyzer(LanguageServer):
                 jac_str=source,
                 file_path=file,
                 schedule=(
-                    schedules.py_code_gen_typed
-                    if type_check
-                    else schedules.py_code_gen
+                    schedules.py_code_gen_typed if type_check else schedules.py_code_gen
                 ),
                 target=DefUsePass if not type_check else None,
             )
@@ -111,16 +116,17 @@ class JacAnalyzer(LanguageServer):
                 errors=build.errors_had,
                 warnings=build.warnings_had,
             )
-            self.modules[file].symbols=update_symbols(build.ir.sym_tab)
-            log(f'symbols are  {self.modules[file].symbols[-13:]}')
+            self.modules[file].symbols = update_symbols(build.ir.sym_tab)
+            log(f"symbols are  {self.modules[file].symbols[-13:]}")
             if build.ir:
                 for sub in build.ir.mod_deps:
                     self.modules[sub] = ModuleInfo(
                         ir=build.ir.mod_deps[sub],
                         errors=build.errors_had,
                         warnings=build.warnings_had,
-                    )        
-            
+                    )
+
+
 server = JacAnalyzer()
 
 
@@ -139,7 +145,7 @@ def did_change(ls: JacAnalyzer, params: lspt.DidChangeTextDocumentParams) -> Non
             errors=result.errors_had,
             warnings=result.warnings_had,
         )
-        log(f'errors: {result.errors_had}')
+        log(f"errors: {result.errors_had}")
         if not result.errors_had and not result.warnings_had:
             ls.publish_diagnostics(document.uri, [])
         else:
@@ -174,7 +180,7 @@ def did_change(ls: JacAnalyzer, params: lspt.DidChangeTextDocumentParams) -> Non
 def completions(params: lspt.CompletionParams) -> None:
     """Provide completions for the given completion request."""
     items = []
-    log(f'document. uri {params.text_document.uri}')
+    log(f"document. uri {params.text_document.uri}")
     document = server.workspace.get_text_document(params.text_document.uri)
     current_line = document.lines[params.position.line].strip()
     if current_line.endswith("hello."):
@@ -212,13 +218,14 @@ def formatting(
         )
     ]
 
+
 @server.feature(lspt.TEXT_DOCUMENT_HOVER, lspt.HoverOptions(work_done_progress=True))
-def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
+def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
     """Provide hover information for the given hover request."""
-    log(f'position: {params}')
+    log(f"position: {params}")
     log(list(server.modules.values())[0])
 
-    def get_value():
+    def get_value() -> Optional[str]:
         """Get value by using the position to get which AST node it falls under."""
         line = params.position.line
         character = params.position.character
@@ -227,14 +234,24 @@ def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
             """Check if the position falls within the node's location."""
             if node.loc.first_line < line + 1 < node.loc.last_line:
                 return True
-            if node.loc.first_line == line + 1 and node.loc.col_start <= character <= node.loc.col_end:
+            if (
+                node.loc.first_line == line + 1
+                and node.loc.col_start <= character
+                and (node.loc.last_line == line + 1 and node.loc.col_end >= character)
+                or (node.loc.last_line > line + 1)
+            ):
                 return True
-            if node.loc.last_line == line + 1 and node.loc.col_start <= character <= node.loc.col_end:
+            if (
+                node.loc.last_line == line + 1
+                and node.loc.col_start <= character <= node.loc.col_end
+            ):
                 return True
             return False
 
-        def find_deepest_node(node: ast.AstNode, line: int, character: int):
-            """Generator to yield the deepest AST node that the position falls under."""
+        def find_deepest_node(
+            node: ast.AstNode, line: int, character: int
+        ) -> Generator[Any, Any, Any]:
+            """Find the deepest node that contains the given position."""
             if position_within_node(node, line, character):
                 yield node
                 for child in node.kid:
@@ -245,18 +262,23 @@ def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
         for node in find_deepest_node(root_node, line, character):
             deepest_node = node
 
-        if deepest_node:
-            log(f'Deepest node: {deepest_node}')
+        def get_node_info(node: ast.AstNode) -> str:
+            """Extract meaningful information from the AST node."""
+            node_info = f"Node type: {type(node).__name__}\n"
             try:
-                log(f'Deepest node: {deepest_node.value}')
-                if isinstance(deepest_node, ast.AstSymbolNode):
-                    log(f'syminfo{ deepest_node.sym_link}')
-                    log(f'syminfo{ deepest_node.sym_info}')
-                    return deepest_node.value,deepest_node.sym_link.decl
-                return deepest_node.value
-            except AttributeError:
-                log(f'Deepest node: Attribute error {line+1} {character} {deepest_node}')
-            return deepest_node
+                if hasattr(node, "name"):
+                    node_info += f"Name: {node.name}\n"
+                if hasattr(node, "value"):
+                    node_info += f"Value: {node.value}\n"
+                if hasattr(node, "loc"):
+                    node_info += f"Location: ({node.loc.first_line}:{node.loc.col_start} - \
+                                    {node.loc.last_line}:{node.loc.col_end})\n"
+            except AttributeError as e:
+                log(f"Attribute error when accessing node attributes: {e}")
+            return node_info.strip()
+
+        if deepest_node:
+            return get_node_info(deepest_node)
         return None
 
     value = get_value()
