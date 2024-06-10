@@ -2,16 +2,253 @@
 
 from __future__ import annotations
 
-# import shelve
 import types
 import unittest
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Union
-
+from enum import Enum
+from typing import Any, Callable, Optional, TYPE_CHECKING, Union
 from uuid import UUID, uuid4
 
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
+
+if TYPE_CHECKING:
+    from jaclang.plugin.feature import JacFeature as Jac
+
+
+class AnchorType(Enum):
+    """Enum For Graph Types."""
+
+    node = "n"
+    edge = "e"
+
+
+@dataclass
+class Anchor:
+    """DocAnchor for Mongodb Referencing."""
+
+    type: AnchorType
+    name: str = ""
+    id: ObjectId = field(default_factory=ObjectId)
+    root: Optional[ObjectId] = None
+    access: DocAccess = field(default_factory=DocAccess)
+    connected: bool = False
+    arch: Optional[Architype] = None
+
+    # 0 == don't have access
+    # 1 == with read access
+    # 2 == with write access
+    current_access_level: Optional[int] = None
+
+    @property
+    def ref_id(self) -> str:
+        """Return id in reference type."""
+        return f"{self.type.value}:{self.name}:{self.id}"
+
+    @property
+    def _set(self) -> dict:
+        if "$set" not in self.changes:
+            self.changes["$set"] = {}
+        return self.changes["$set"]
+
+    def _add_to_set(
+        self, field: str, obj: Union["DocAnchor[DA]", ObjectId], remove: bool = False
+    ) -> None:
+        if "$addToSet" not in self.changes:
+            self.changes["$addToSet"] = {}
+
+        if field not in (add_to_set := self.changes["$addToSet"]):
+            add_to_set[field] = {"$each": set()}
+
+        ops: set = add_to_set[field]["$each"]
+
+        if remove:
+            if obj in ops:
+                ops.remove(obj)
+        else:
+            ops.add(obj)
+            self._pull(field, obj, True)
+
+    def _pull(
+        self, field: str, obj: Union["DocAnchor[DA]", ObjectId], remove: bool = False
+    ) -> None:
+        if "$pull" not in self.changes:
+            self.changes["$pull"] = {}
+
+        if field not in (pull := self.changes["$pull"]):
+            pull[field] = {"$in": set()}
+
+        ops: set = pull[field]["$in"]
+
+        if remove:
+            if obj in ops:
+                ops.remove(obj)
+        else:
+            ops.add(obj)
+            self._add_to_set(field, obj, True)
+
+    def connect_edge(self, doc_anc: "DocAnchor[DA]", rollback: bool = False) -> None:
+        """Push update that there's newly added edge."""
+        if not rollback:
+            self._add_to_set("edge", doc_anc)
+        else:
+            self._pull("edge", doc_anc, True)
+
+    def disconnect_edge(self, doc_anc: "DocAnchor[DA]") -> None:
+        """Push update that there's edge that has been removed."""
+        self._pull("edge", doc_anc)
+
+    def allow_node(self, node_id: ObjectId, write: bool = False) -> None:
+        """Allow target node to access current Architype."""
+        w = 1 if write else 0
+        if node_id not in (nodes := self.access.nodes[w]):
+            nodes.add(node_id)
+            self._add_to_set(f"access.nodes.{w}", node_id)
+
+    def disallow_node(self, node_id: ObjectId) -> None:
+        """Remove target node access from current Architype."""
+        for w in range(0, 2):
+            if node_id in (nodes := self.access.nodes[w]):
+                nodes.remove(node_id)
+                self._pull(f"access.nodes.{w}", node_id)
+
+    def allow_root(self, root_id: ObjectId, write: bool = False) -> None:
+        """Allow all access from target root graph to current Architype."""
+        w = 1 if write else 0
+        if root_id not in (roots := self.access.roots[w]):
+            roots.add(root_id)
+            self._add_to_set(f"access.roots.{w}", root_id)
+
+    def disallow_root(self, root_id: ObjectId) -> None:
+        """Disallow all access from target root graph to current Architype."""
+        for w in range(0, 2):
+            if root_id in (roots := self.access.roots[w]):
+                roots.remove(root_id)
+                self._pull(f"access.roots.{w}", root_id)
+
+    def unrestrict(self, write: bool = False) -> None:
+        """Allow everyone to access current Architype."""
+        w = 2 if write else 1
+        if w > self.access.all:
+            self.access.all = w
+            self._set.update({"access.all": w})
+
+    def restrict(self) -> None:
+        """Disallow others to access current Architype."""
+        if self.access.all:
+            self.access.all = 0
+            self._set.update({"access.all": 0})
+
+    def class_ref(self) -> Type[DA]:
+        """Return generated class equivalent for DocAnchor."""
+        if self.type is JType.node:
+            return JCLASS[self.type.value].get(self.name, NodeArchitype)
+        return JCLASS[self.type.value].get(self.name, EdgeArchitype)
+
+    def pull_changes(self) -> dict:
+        """Return changes and clear current reference."""
+        self.rollback_changes = deepcopy(self.changes)
+        self.rollback_hashes = copy(self.hashes)
+
+        changes = self.changes
+        _set = changes.pop("$set", {})
+        self.changes = {}  # renew reference
+
+        if is_dataclass(self.arch) and not isinstance(self.arch, type):
+            for key, val in asdict(self.arch).items():
+                if (h := hash(dumps(val))) != self.hashes.get(key):
+                    self.hashes[key] = h
+                    _set[f"context.{key}"] = val
+
+        if _set:
+            changes["$set"] = _set
+
+        return changes
+
+    def rollback(self) -> None:
+        """Rollback hashes so set update still available."""
+        self.hashes = self.rollback_hashes
+        self.changes = self.rollback_changes
+
+    def build(self, **kwargs: Any) -> DA:  # noqa: ANN401
+        """Return generated class instance equivalent for DocAnchor."""
+        arch = self.arch = self.class_ref()(**kwargs)
+
+        if isinstance(arch, DocArchitype):
+            arch._jac_doc_ = self
+
+        return arch
+
+    def json(self) -> dict:
+        """Return in dictionary type."""
+        return {
+            "_id": self.id,
+            "name": self.name,
+            "root": self.root,
+            "access": self.access.json(),
+        }
+
+    @classmethod
+    def ref(cls, ref_id: str) -> Optional["DocAnchor[DA]"]:
+        """Return DocAnchor instance if ."""
+        if ref_id and (match := TARGET_NODE_REGEX.search(ref_id)):
+            return cls(
+                type=JType(match.group(1)),
+                name=match.group(2),
+                id=ObjectId(match.group(3)),
+            )
+        return None
+
+    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[DA]:
+        """Sync Retrieve the Architype from db and return."""
+        return get_event_loop().run_until_complete(self._connect(node))
+
+    async def _connect(self, node: Optional["NodeArchitype"] = None) -> Optional[DA]:
+        """Retrieve the Architype from db and return."""
+        jctx: JacContext = JacContext.get_context()
+
+        if obj := jctx.get(self.id):
+            self.arch = obj
+            return obj
+
+        cls = self.class_ref()
+        if (
+            cls
+            and (data := await cls.Collection.find_by_id(self.id))
+            and isinstance(data, (NodeArchitype, EdgeArchitype))
+            and (
+                await jctx.root.is_allowed(data)
+                or (node and await node.is_allowed(data))
+            )
+        ):
+            self.arch = data
+            jctx.set(data._jac_doc_.id, data)
+
+        if isinstance(data, (NodeArchitype, EdgeArchitype)):
+            return data
+        return None
+
+    def __eq__(self, other: object) -> bool:
+        """Override equal implementation."""
+        if isinstance(other, DocAnchor):
+            return (
+                self.type == other.type
+                and self.name == other.name
+                and self.id == other.id
+            )
+        elif isinstance(other, DocArchitype):
+            return self == other._jac_doc_
+
+        return False
+
+    def __hash__(self) -> int:
+        """Override hash implementation."""
+        return hash(self.ref_id)
+
+    def __deepcopy__(self, memo: dict) -> "DocAnchor[DA]":
+        """Override deepcopy implementation."""
+        memo[id(self)] = self
+        return self
 
 
 @dataclass(eq=False)

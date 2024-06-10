@@ -1,47 +1,73 @@
-"""
-Memory abstraction for jaseci plugin
-"""
+"""Memory abstraction for jaseci plugin."""
 
-from uuid import UUID, uuid4
+from shelve import Shelf, open
+from types import TracebackType
+from typing import (
+    Callable,
+    Generic,
+    MutableMapping,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from jaclang.core.construct import Architype
 
 
-class Memory:
+T = TypeVar("T", bound="Memory")
+ID = TypeVar("ID")
 
-    mem = {}
-    save_obj_list = set()
 
-    def __init__(self):
-        pass
+class Memory(Generic[ID]):
+    """Generic Memory Handler."""
 
-    def get_obj(self, obj_id: UUID | str) -> Architype:
-        return self.get_obj_from_store(obj_id)
+    ##################################################
+    #     NO INTIALIZATION JUST FOR TYPE HINTING     #
+    ##################################################
 
-    def get_obj_from_store(self, obj_id: UUID | str) -> Architype:
-        ret = self.mem.get(obj_id, None)
-        return ret
+    __ses__: Optional[str]
+    __mem__: MutableMapping[str, Architype]
 
-    def has_obj(self, obj_id: UUID | str) -> bool:
-        return self.has_obj_in_store(obj_id)
+    # ---------------------------------------------- #
 
-    def has_obj_in_store(self, obj_id: UUID | str) -> bool:
-        return obj_id in self.mem
+    def __init__(self, session: Optional[str] = None) -> None:
+        """Initialize memory handler."""
+        self.__ses__ = session
 
-    def save_obj(self, item: Architype, persistent: bool) -> None:
-        self.mem[item._jac_.id] = item
-        if persistent:
-            # TODO: check if it needs to be saved, i.e. dirty or not
-            self.save_obj_list.add(item)
+    def open(self: T) -> T:
+        """Open memory handler."""
+        if self.__ses__:
+            self.__mem__ = open(self.__ses__)  # noqa: SIM115
+        else:
+            self.__mem__ = {}
 
-    def commit(self) -> None:
-        """Commit changes to persistent storage, if applicable"""
-        pass
+        return self
 
     def close(self) -> None:
-        """Close any connection, if applicable"""
-        self.mem.clear()
+        """Close memory handler."""
+        if isinstance(self.__mem__, Shelf):
+            self.__mem__.close()
+        else:
+            self.__mem__.clear()
 
-    def connect(self) -> None:
-        """Establish connection with storage, if applicable"""
-        pass
+    def __enter__(self: T) -> T:
+        """Open memory handler via context handler."""
+        return self.open()
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Close memory handler via context handler."""
+        self.close()
+
+    def __del__(self) -> None:
+        """On garbage collection cleanup."""
+        self.close()
+
+    def find(self, filter: tuple[Union[ID, list[ID]], Callable]) -> list[Architype]:
+        """Temporary."""
+        return []
