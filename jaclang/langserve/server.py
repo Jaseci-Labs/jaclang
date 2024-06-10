@@ -11,151 +11,8 @@ from jaclang.langserve.utils import log, log_error
 from jaclang.vendor.pygls.server import LanguageServer
 from jaclang.compiler.passes.transform import Alert
 from jaclang.compiler.symtable import SymbolTable,Symbol
-from typing import Optional
 
 import lsprotocol.types as lspt
-
-
-# class AstNode:
-#     """Abstract syntax tree node for Jac."""
-
-#     def __init__(self, kid: Sequence[AstNode]) -> None:
-#         """Initialize ast."""
-#         self.parent: Optional[AstNode] = None
-#         self.kid: list[AstNode] = [x.set_parent(self) for x in kid]
-#         self.sym_tab: Optional[SymbolTable] = None
-#         self._sub_node_tab: dict[type, list[AstNode]] = {}
-#         self._typ: type = type(None)
-#         self.gen: CodeGenTarget = CodeGenTarget()
-#         self.meta: dict[str, str] = {}
-#         self.loc: CodeLocInfo = CodeLocInfo(*self.resolve_tok_range())
-
-
-# class CodeLocInfo:
-#     """Code location info."""
-
-#     def __init__(
-#         self,
-#         first_tok: Token,
-#         last_tok: Token,
-#     ) -> None:
-#         """Initialize code location info."""
-#         self.first_tok = first_tok
-#         self.last_tok = last_tok
-
-#     @property
-#     def mod_path(self) -> str:
-#         """Get line number."""
-#         return self.first_tok.file_path
-
-#     @property
-#     def first_line(self) -> int:
-#         """Get line number."""
-#         return self.first_tok.line_no
-
-#     @property
-#     def last_line(self) -> int:
-#         """Get line number."""
-#         return self.last_tok.line_no
-
-#     @property
-#     def col_start(self) -> int:
-#         """Get column position number."""
-#         return self.first_tok.c_start
-
-#     @property
-#     def col_end(self) -> int:
-#         """Get column position number."""
-#         return self.last_tok.c_end
-
-#     @property
-#     def pos_start(self) -> int:
-#         """Get column position number."""
-#         return self.first_tok.pos_start
-
-#     @property
-#     def pos_end(self) -> int:
-#         """Get column position number."""
-#         return self.last_tok.pos_end
-
-#     @property
-#     def tok_range(self) -> tuple[Token, Token]:
-#         """Get token range."""
-#         return (self.first_tok, self.last_tok)
-
-#     @property
-#     def first_token(self) -> Token:
-#         """Get first token."""
-#         return self.first_tok
-
-#     @property
-#     def last_token(self) -> Token:
-#         """Get last token."""
-#         return self.last_tok
-
-#     def update_token_range(self, first_tok: Token, last_tok: Token) -> None:
-#         """Update token range."""
-#         self.first_tok = first_tok
-#         self.last_tok = last_tok
-
-#     def update_first_token(self, first_tok: Token) -> None:
-#         """Update first token."""
-#         self.first_tok = first_tok
-
-#     def update_last_token(self, last_tok: Token) -> None:
-#         """Update last token."""
-#         self.last_tok = last_tok
-
-#     def __str__(self) -> str:
-#         """Stringify."""
-#         return f"{self.first_tok.line_no}:{self.first_tok.c_start} - {self.last_tok.line_no}:{self.last_tok.c_end}"
-
-# Symbols can have mulitple definitions but resolves decl to be the
-# first such definition in a given scope.
-# class Symbol:
-#     """Symbol."""
-
-#     def __init__(
-#         self,
-#         defn: ast.AstSymbolNode,
-#         access: SymbolAccess,
-#         parent_tab: SymbolTable,
-#         typ: Optional[type] = None,
-#     ) -> None:
-#         """Initialize."""
-#         self.typ = typ
-#         self.defn: list[ast.AstSymbolNode] = [defn]
-#         defn.sym_link = self
-#         self.access = access
-#         self.parent_tab = parent_tab
-
-#     @property
-#     def decl(self) -> ast.AstSymbolNode:
-#         """Get decl."""
-#         return self.defn[0]
-
-#     @property
-#     def sym_name(self) -> str:
-#         """Get name."""
-#         return self.decl.sym_name
-
-#     @property
-#     def sym_type(self) -> SymbolType:
-#         """Get sym_type."""
-#         return self.decl.sym_type
-
-#     def add_defn(self, node: ast.AstSymbolNode) -> None:
-#         """Add defn."""
-#         self.defn.append(node)
-#         node.sym_link = self
-
-#     def __repr__(self) -> str:
-#         """Repr."""
-#         return (
-#             f"Symbol({self.sym_name}, {self.sym_type}, {self.access}, "
-#             f"{self.typ}, {self.defn})"
-#         )
-    
 
 def update_symbols(symtab: SymbolTable) -> list:
     symbols=[]
@@ -167,14 +24,6 @@ def update_symbols(symtab: SymbolTable) -> list:
         return symbols
     return all_symbols(symtab)
 
-
-def get_symbol_node(posi: lspt.Position,symbols: list[Symbol]) -> Optional[Symbol]:
-    # first lets find the decl and then from decl return the ast symbol node
-    log(f'{symbols[0].parent_tab.owner}')
-    # log(f'position: {posi.line} {posi.character}')
-    # for sym in symbols:
-    #     if sym.defn[0].loc.first_line==posi.line+1 and sym.defn[0].loc.col_start<=posi.character and sym.defn[0].loc.col_end>=posi.character:
-    #         return sym
 
 
 class ModuleInfo:
@@ -199,7 +48,7 @@ class JacAnalyzer(LanguageServer):
     def __init__(self):
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
-        self.path=r'C:/Users/PavinithanRetnakumar/OneDrive - BCS TECHNOLOGY INTERNATIONAL PTY LIMITED/Desktop/JAC/jaclang/'
+        self.path=r'/home/acer/Desktop/jac_kug/jaclang/' # fix me 
         self.modules: dict[str, ModuleInfo] = {}
         self.rebuild_workspace()
     
@@ -214,21 +63,21 @@ class JacAnalyzer(LanguageServer):
             if name.endswith(".jac")
         ]:
             
-            if x==2:
+            if x==2:  # for now , we are building only 1 file(guess_game_3.jac)
                     return
             x+=1
-            lazy_parse = False
+            # lazy_parse = False 
             type_check = False
-            if file in self.modules:
-                continue
-            if lazy_parse:
-                # If lazy_parse is True, add the file to modules with empty IR
-                self.modules[file] = ModuleInfo(
-                    ir=None,
-                    errors=[],
-                    warnings=[],
-                )
-                continue
+            # if file in self.modules:
+            #     continue
+            # if lazy_parse:
+            #     # If lazy_parse is True, add the file to modules with empty IR
+            #     self.modules[file] = ModuleInfo(
+            #         ir=None,
+            #         errors=[],
+            #         warnings=[],
+            #     )
+            #     continue
 
             with open(file, "r") as f:
                 source = f.read()
@@ -242,21 +91,21 @@ class JacAnalyzer(LanguageServer):
                 ),
                 target=DefUsePass if not type_check else None,
             )
-            if not isinstance(build.ir, ast.Module):
-                src = ast.JacSource(source, mod_path=file)
-                self.modules[file] = ModuleInfo(
-                    ir=ast.Module(
-                        name="",
-                        doc=None,
-                        body=[],
-                        source=src,
-                        is_imported=False,
-                        kid=[src],
-                    ),
-                    errors=build.errors_had,
-                    warnings=build.warnings_had,
-                )
-                continue
+            # if not isinstance(build.ir, ast.Module):
+            #     src = ast.JacSource(source, mod_path=file)
+            #     self.modules[file] = ModuleInfo(
+            #         ir=ast.Module(
+            #             name="",
+            #             doc=None,
+            #             body=[],
+            #             source=src,
+            #             is_imported=False,
+            #             kid=[src],
+            #         ),
+            #         errors=build.errors_had,
+            #         warnings=build.warnings_had,
+            #     )
+            #     continue
             self.modules[file] = ModuleInfo(
                 ir=build.ir,
                 errors=build.errors_had,
@@ -278,7 +127,6 @@ server = JacAnalyzer()
 @server.feature(lspt.TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls: JacAnalyzer, params: lspt.DidChangeTextDocumentParams) -> None:
     """Check syntax on change."""
-    server.path = ls.workspace.root_path # this line should go at opening / initialization of workspace @marsninja
     document = ls.workspace.get_document(params.text_document.uri)
     try:
         result = jac_str_to_pass(
@@ -367,60 +215,59 @@ def formatting(
 @server.feature(lspt.TEXT_DOCUMENT_HOVER, lspt.HoverOptions(work_done_progress=True))
 def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
     """Provide hover information for the given hover request."""
-    # document = ls.workspace.get_document(params.text_document.uri)
-    # current_line = document.lines[params.position.line].strip()
-    
     log(f'position: {params}')
     log(list(server.modules.values())[0])
+
     def get_value():
-        """Get value.
-        
-        By using the position, get which ast node it falls under
-        """
+        """Get value by using the position to get which AST node it falls under."""
         line = params.position.line
         character = params.position.character
 
         def position_within_node(node: ast.AstNode, line: int, character: int) -> bool:
             """Check if the position falls within the node's location."""
             if node.loc.first_line < line + 1 < node.loc.last_line:
-                log(f'node1: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
                 return True
-            if node.loc.first_line == line + 1 and node.loc.col_start <= character and node.loc.col_end >= character:
-                log(f'node2: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
+            if node.loc.first_line == line + 1 and node.loc.col_start <= character <= node.loc.col_end:
                 return True
-            if node.loc.last_line == line + 1 and node.loc.col_end >= character and node.loc.col_start <= character:
-                log(f'node3: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
+            if node.loc.last_line == line + 1 and node.loc.col_start <= character <= node.loc.col_end:
                 return True
-            log(f'node4: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
             return False
 
-        def get_node(node: ast.AstNode, line: int, character: int) -> Optional[ast.AstNode]:
-            """Return the deepest AST node that the position falls under."""
+        def find_deepest_node(node: ast.AstNode, line: int, character: int):
+            """Generator to yield the deepest AST node that the position falls under."""
             if position_within_node(node, line, character):
-                # Start with the current node as the deepest node
-                deepest_node = node
+                yield node
                 for child in node.kid:
-                    result = get_node(child, line, character)
-                    if result:
-                        deepest_node = result
-                return deepest_node
-            return None
+                    yield from find_deepest_node(child, line, character)
 
-        value = get_node(list(server.modules.values())[0].ir, line, character)
-        log(f'fffnode: {value.value}')
+        root_node = list(server.modules.values())[0].ir
+        deepest_node = None
+        for node in find_deepest_node(root_node, line, character):
+            deepest_node = node
 
-    get_value()
+        if deepest_node:
+            log(f'Deepest node: {deepest_node}')
+            try:
+                log(f'Deepest node: {deepest_node.value}')
+                if isinstance(deepest_node, ast.AstSymbolNode):
+                    log(f'syminfo{ deepest_node.sym_link}')
+                    log(f'syminfo{ deepest_node.sym_info}')
+                    return deepest_node.value,deepest_node.sym_link.decl
+                return deepest_node.value
+            except AttributeError:
+                log(f'Deepest node: Attribute error {line+1} {character} {deepest_node}')
+            return deepest_node
+        return None
 
-        
-
-
-
-    return lspt.Hover(
-        contents=lspt.MarkupContent(
-            kind=lspt.MarkupKind.PlainText, value="Hello, world!"
-        ),
-    )
+    value = get_value()
+    if value:
+        return lspt.Hover(
+            contents=lspt.MarkupContent(
+                kind=lspt.MarkupKind.PlainText, value=f"Node: {value}"
+            ),
+        )
     return None
+
 
 def run_lang_server() -> None:
     """Run the language server."""
