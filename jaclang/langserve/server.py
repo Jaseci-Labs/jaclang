@@ -383,11 +383,15 @@ def hover(ls, params: lspt.HoverParams) -> Optional[lspt.Hover]:
         def position_within_node(node: ast.AstNode, line: int, character: int) -> bool:
             """Check if the position falls within the node's location."""
             if node.loc.first_line < line + 1 < node.loc.last_line:
+                log(f'node1: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
                 return True
-            if node.loc.first_line == line + 1 and node.loc.col_start <= character:
+            if node.loc.first_line == line + 1 and node.loc.col_start <= character and node.loc.col_end >= character:
+                log(f'node2: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
                 return True
-            if node.loc.last_line == line + 1 and node.loc.col_end >= character:
+            if node.loc.last_line == line + 1 and node.loc.col_end >= character and node.loc.col_start <= character:
+                log(f'node3: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
                 return True
+            log(f'node4: {node.loc.first_line} {node.loc.last_line} {line+1} {character} {node}')
             return False
 
         def get_node(node: ast.AstNode, line: int, character: int) -> Optional[ast.AstNode]:
