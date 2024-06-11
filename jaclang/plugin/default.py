@@ -44,7 +44,6 @@ from jaclang.plugin.architype import (
 )
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.memory import Memory
-from jaclang.plugin.shelve_storage import ShelveStorage
 from jaclang.plugin.spec import ExecutionContext, T
 
 
@@ -70,27 +69,6 @@ __all__ = [
 
 
 hookimpl = pluggy.HookimplMarker("jac")
-
-
-class DefaultExecutionContext(ExecutionContext):
-    """Default Execution Context implementation."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.mem = ShelveStorage()
-
-    def init_memory(self, session: str = "") -> None:
-        self.mem.connect(session)
-
-    def get_root(self) -> Root:
-        if not self.root:
-            self.root = self.mem.get_obj("root")
-            if not self.root:
-                self.root = Root()
-                self.save_obj(self.root, persistent=self.root._jac_.persistent)
-        return self.root
-
-
 ExecContext = ContextVar("ExecutionContext", default=None)
 
 

@@ -26,13 +26,16 @@ T = TypeVar("T")
 class ExecutionContext:
     """Execution Context."""
 
-    mem: Memory
-    root: Optional[Root] = None
-
-    def __init___(self) -> None:
-        """Initialize execution context."""
-        self.mem = Memory()
-        # TODO: add entry node
+    def __init___(
+        self,
+        root: Optional[str] = None,
+        entry: Optional[str] = None,
+    ) -> None:
+        """Create JacContext."""
+        self.__mem__: dict[UUID, Union[NodeArchitype, EdgeArchitype]] = {}
+        self.root: Root = cast(Root, getattr(request, "auth_root", base_root))
+        self.reports: list[Any] = []
+        self.entry = entry
 
     def init_memory(self) -> None:
         """Initialize memory."""

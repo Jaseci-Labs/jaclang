@@ -6,38 +6,77 @@ import types
 import unittest
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union
+from re import IGNORECASE, compile
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Mapping,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 from uuid import UUID, uuid4
 
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
 
-if TYPE_CHECKING:
-    from jaclang.plugin.feature import JacFeature as Jac
+
+T = TypeVar("T")
+AA = TypeVar("AA", bound="AnchorAccess")
+TARGET_NODE_REGEX = compile(r"^(n|e):([^:]*):([a-f\d]{24})$", IGNORECASE)
 
 
-class AnchorType(Enum):
-    """Enum For Graph Types."""
+class ObjectType(Enum):
+    """Enum For Anchor Types."""
 
+    generic = "g"
     node = "n"
     edge = "e"
+    walker = "w"
 
 
 @dataclass
-class Anchor:
-    """DocAnchor for Mongodb Referencing."""
+class AnchorAccess(Generic[T]):
+    """Anchor Access Handler."""
 
-    type: AnchorType
+    all: int = 0
+    nodes: tuple[set[T], set[T]] = field(default_factory=lambda: (set(), set()))
+    roots: tuple[set[T], set[T]] = field(default_factory=lambda: (set(), set()))
+
+    @classmethod
+    def from_json(cls: type[AA], access: dict[str, list[list[T]]]) -> AA:
+        """Convert dict to DocAccess."""
+        all = bool(access.get("all"))
+        nodes = access.get("nodes") or [[], []]
+        roots = access.get("roots") or [[], []]
+
+        return cls(
+            all,
+            (set(nodes[0]), set(nodes[1])),
+            (set(roots[0]), set(roots[1])),
+        )
+
+    def json(self) -> dict:
+        """Return in dictionary type."""
+        return {
+            "all": self.all,
+            "nodes": [list(self.nodes[0]), list(self.nodes[1])],
+            "roots": [list(self.roots[0]), list(self.roots[1])],
+        }
+
+
+@dataclass(eq=False)
+class ObjectAnchor:
+    """Object Anchor."""
+
+    type: ObjectType = ObjectType.generic
     name: str = ""
-    id: ObjectId = field(default_factory=ObjectId)
-    root: Optional[ObjectId] = None
-    access: DocAccess = field(default_factory=DocAccess)
-    connected: bool = False
-    arch: Optional[Architype] = None
-
-    # 0 == don't have access
-    # 1 == with read access
-    # 2 == with write access
+    id: UUID = field(default_factory=uuid4)
+    root: Optional[UUID] = None
+    access: AnchorAccess[UUID] = field(default_factory=AnchorAccess[UUID])
+    obj: Optional[Architype] = None
     current_access_level: Optional[int] = None
 
     @property
@@ -45,144 +84,19 @@ class Anchor:
         """Return id in reference type."""
         return f"{self.type.value}:{self.name}:{self.id}"
 
-    @property
-    def _set(self) -> dict:
-        if "$set" not in self.changes:
-            self.changes["$set"] = {}
-        return self.changes["$set"]
-
-    def _add_to_set(
-        self, field: str, obj: Union["DocAnchor[DA]", ObjectId], remove: bool = False
-    ) -> None:
-        if "$addToSet" not in self.changes:
-            self.changes["$addToSet"] = {}
-
-        if field not in (add_to_set := self.changes["$addToSet"]):
-            add_to_set[field] = {"$each": set()}
-
-        ops: set = add_to_set[field]["$each"]
-
-        if remove:
-            if obj in ops:
-                ops.remove(obj)
-        else:
-            ops.add(obj)
-            self._pull(field, obj, True)
-
-    def _pull(
-        self, field: str, obj: Union["DocAnchor[DA]", ObjectId], remove: bool = False
-    ) -> None:
-        if "$pull" not in self.changes:
-            self.changes["$pull"] = {}
-
-        if field not in (pull := self.changes["$pull"]):
-            pull[field] = {"$in": set()}
-
-        ops: set = pull[field]["$in"]
-
-        if remove:
-            if obj in ops:
-                ops.remove(obj)
-        else:
-            ops.add(obj)
-            self._add_to_set(field, obj, True)
-
-    def connect_edge(self, doc_anc: "DocAnchor[DA]", rollback: bool = False) -> None:
-        """Push update that there's newly added edge."""
-        if not rollback:
-            self._add_to_set("edge", doc_anc)
-        else:
-            self._pull("edge", doc_anc, True)
-
-    def disconnect_edge(self, doc_anc: "DocAnchor[DA]") -> None:
-        """Push update that there's edge that has been removed."""
-        self._pull("edge", doc_anc)
-
-    def allow_node(self, node_id: ObjectId, write: bool = False) -> None:
-        """Allow target node to access current Architype."""
-        w = 1 if write else 0
-        if node_id not in (nodes := self.access.nodes[w]):
-            nodes.add(node_id)
-            self._add_to_set(f"access.nodes.{w}", node_id)
-
-    def disallow_node(self, node_id: ObjectId) -> None:
-        """Remove target node access from current Architype."""
-        for w in range(0, 2):
-            if node_id in (nodes := self.access.nodes[w]):
-                nodes.remove(node_id)
-                self._pull(f"access.nodes.{w}", node_id)
-
-    def allow_root(self, root_id: ObjectId, write: bool = False) -> None:
-        """Allow all access from target root graph to current Architype."""
-        w = 1 if write else 0
-        if root_id not in (roots := self.access.roots[w]):
-            roots.add(root_id)
-            self._add_to_set(f"access.roots.{w}", root_id)
-
-    def disallow_root(self, root_id: ObjectId) -> None:
-        """Disallow all access from target root graph to current Architype."""
-        for w in range(0, 2):
-            if root_id in (roots := self.access.roots[w]):
-                roots.remove(root_id)
-                self._pull(f"access.roots.{w}", root_id)
-
-    def unrestrict(self, write: bool = False) -> None:
-        """Allow everyone to access current Architype."""
-        w = 2 if write else 1
-        if w > self.access.all:
-            self.access.all = w
-            self._set.update({"access.all": w})
-
-    def restrict(self) -> None:
-        """Disallow others to access current Architype."""
-        if self.access.all:
-            self.access.all = 0
-            self._set.update({"access.all": 0})
-
-    def class_ref(self) -> Type[DA]:
+    def class_ref(self) -> Type[Architype]:
         """Return generated class equivalent for DocAnchor."""
-        if self.type is JType.node:
-            return JCLASS[self.type.value].get(self.name, NodeArchitype)
-        return JCLASS[self.type.value].get(self.name, EdgeArchitype)
+        return Architype
 
-    def pull_changes(self) -> dict:
-        """Return changes and clear current reference."""
-        self.rollback_changes = deepcopy(self.changes)
-        self.rollback_hashes = copy(self.hashes)
-
-        changes = self.changes
-        _set = changes.pop("$set", {})
-        self.changes = {}  # renew reference
-
-        if is_dataclass(self.arch) and not isinstance(self.arch, type):
-            for key, val in asdict(self.arch).items():
-                if (h := hash(dumps(val))) != self.hashes.get(key):
-                    self.hashes[key] = h
-                    _set[f"context.{key}"] = val
-
-        if _set:
-            changes["$set"] = _set
-
-        return changes
-
-    def rollback(self) -> None:
-        """Rollback hashes so set update still available."""
-        self.hashes = self.rollback_hashes
-        self.changes = self.rollback_changes
-
-    def build(self, **kwargs: Any) -> DA:  # noqa: ANN401
+    def build(self, **kwargs: Any) -> Architype:  # noqa: ANN401
         """Return generated class instance equivalent for DocAnchor."""
-        arch = self.arch = self.class_ref()(**kwargs)
-
-        if isinstance(arch, DocArchitype):
-            arch._jac_doc_ = self
-
-        return arch
+        self.obj = self.class_ref()(**kwargs)
+        return self.obj
 
     def json(self) -> dict:
         """Return in dictionary type."""
         return {
-            "_id": self.id,
+            "id": self.id,
             "name": self.name,
             "root": self.root,
             "access": self.access.json(),
@@ -252,28 +166,21 @@ class Anchor:
 
 
 @dataclass(eq=False)
-class ElementAnchor:
-    """Element Anchor."""
-
-    obj: Architype
-    id: UUID = field(default_factory=uuid4)
-
-
-@dataclass(eq=False)
-class ObjectAnchor(ElementAnchor):
-    """Object Anchor."""
-
-    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
-        """Invoke data spatial call."""
-        return walk._jac_.spawn_call(self.obj)
-
-
-@dataclass(eq=False)
 class NodeAnchor(ObjectAnchor):
     """Node Anchor."""
 
-    obj: NodeArchitype
+    type: ObjectType = ObjectType.node
+    obj: Optional[NodeArchitype] = None
     edges: list[EdgeArchitype] = field(default_factory=lambda: [])
+
+    def class_ref(self) -> Type[NodeArchitype]:
+        """Return generated class equivalent for ObjectAnchor."""
+        return NODE_CLASSES.get(self.name, NodeArchitype)
+
+    def build(self, **kwargs: Any) -> NodeArchitype:  # noqa: ANN401
+        """Return generated class instance equivalent for ObjectAnchor."""
+        self.obj = self.class_ref()(**kwargs)
+        return self.obj
 
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
@@ -357,15 +264,29 @@ class NodeAnchor(ObjectAnchor):
                 f.write(dot_content + "}")
         return dot_content + "}"
 
+    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
+        """Invoke data spatial call."""
+        return walk._jac_.spawn_call(self.obj)
+
 
 @dataclass(eq=False)
 class EdgeAnchor(ObjectAnchor):
     """Edge Anchor."""
 
-    obj: EdgeArchitype
+    type: ObjectType = ObjectType.edge
+    obj: Optional[EdgeArchitype] = None
     source: Optional[NodeArchitype] = None
     target: Optional[NodeArchitype] = None
     is_undirected: bool = False
+
+    def class_ref(self) -> Type[EdgeArchitype]:
+        """Return generated class equivalent for DocAnchor."""
+        return EDGE_CLASSES.get(self.name, EdgeArchitype)
+
+    def build(self, **kwargs: Any) -> EdgeArchitype:  # noqa: ANN401
+        """Return generated class instance equivalent for ObjectAnchor."""
+        self.obj = self.class_ref()(**kwargs)
+        return self.obj
 
     def attach(
         self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
@@ -401,7 +322,8 @@ class EdgeAnchor(ObjectAnchor):
 class WalkerAnchor(ObjectAnchor):
     """Walker Anchor."""
 
-    obj: WalkerArchitype
+    type: ObjectType = ObjectType.walker
+    obj: Optional[WalkerArchitype] = None
     path: list[Architype] = field(default_factory=lambda: [])
     next: list[Architype] = field(default_factory=lambda: [])
     ignores: list[Architype] = field(default_factory=lambda: [])
@@ -666,3 +588,11 @@ class JacTestCheck:
     def __getattr__(self, name: str) -> Union[bool, Any]:
         """Make convenient check.Equal(...) etc."""
         return getattr(JacTestCheck.test_case, name)
+
+
+NODE_CLASSES: dict[str, Type[NodeArchitype]] = {"": Root}
+EDGE_CLASSES: dict[str, Type[EdgeArchitype]] = {"": GenericEdge}
+ARCHITYPE_CLASSES: dict[str, Mapping[str, Type[Architype]]] = {
+    "n": NODE_CLASSES,
+    "e": EDGE_CLASSES,
+}
