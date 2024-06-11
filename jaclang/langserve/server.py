@@ -237,8 +237,11 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
             if (
                 node.loc.first_line == line + 1
                 and node.loc.col_start <= character
-                and (node.loc.last_line == line + 1 and node.loc.col_end >= character)
-                or (node.loc.last_line > line + 1)
+                and (
+                    node.loc.last_line == line + 1
+                    and node.loc.col_end >= character
+                    or node.loc.last_line > line + 1
+                )
             ):
                 return True
             if (
@@ -266,13 +269,41 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
             """Extract meaningful information from the AST node."""
             node_info = f"Node type: {type(node).__name__}\n"
             try:
-                if hasattr(node, "name"):
-                    node_info += f"Name: {node.name}\n"
-                if hasattr(node, "value"):
-                    node_info += f"Value: {node.value}\n"
-                if hasattr(node, "loc"):
-                    node_info += f"Location: ({node.loc.first_line}:{node.loc.col_start} - \
-                                    {node.loc.last_line}:{node.loc.col_end})\n"
+                if not isinstance(node, ast.AstSymbolNode):
+                    if hasattr(node, "name"):
+                        node_info += f"Name: {node.name}\n"
+                    if hasattr(node, "value"):
+                        node_info += f"Value: {node.value}\n"
+                    if hasattr(node, "loc"):
+                        node_info += f"Location: ({node.loc.first_line}:{node.loc.col_start} - \
+                                        {node.loc.last_line}:{node.loc.col_end})\n"
+                else:
+                    log(f"symlink node {node.sym_link}")
+                    log(f"sym info  {node.sym_info}")
+                    if node.sym_link and node.sym_link.decl:
+                        decl_node = node.sym_link.decl
+                        if isinstance(decl_node, ast.Architype):
+                            node_info = (
+                                f"(object) {node.value} \n{decl_node.doc.lit_value}"
+                            )
+                        elif isinstance(decl_node, ast.Name):
+                            if (
+                                decl_node.parent
+                                and isinstance(decl_node.parent, ast.SubNodeList)
+                                and decl_node.parent.parent
+                                and isinstance(decl_node.parent.parent, ast.Assignment)
+                            ):
+                                node_info = f"(variable) {node.value}: \
+                                    {node.sym_link.decl.parent.parent.value.unparse()}"
+                            else:
+                                node_info = (
+                                    f"(name) {node.value} \n{node.sym_link.decl}"
+                                )
+                        elif isinstance(node.sym_link.decl, ast.Ability):
+                            node_info = f"(ability) {node.value} \n{node.sym_link.decl.doc.lit_value}"
+                    else:
+                        node_info += f"Name: {node.sym_link.sym_name}\n"
+
             except AttributeError as e:
                 log(f"Attribute error when accessing node attributes: {e}")
             return node_info.strip()
@@ -285,7 +316,7 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
     if value:
         return lspt.Hover(
             contents=lspt.MarkupContent(
-                kind=lspt.MarkupKind.PlainText, value=f"Node: {value}"
+                kind=lspt.MarkupKind.PlainText, value=f"{value}"
             ),
         )
     return None
