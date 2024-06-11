@@ -55,7 +55,7 @@ class JacAnalyzer(LanguageServer):
     def __init__(self) -> None:
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
-        self.path = r"/home/acer/Desktop/jac_kug/jaclang/"  # fix me
+        self.path = r"C:/Users/PavinithanRetnakumar/OneDrive - BCS TECHNOLOGY INTERNATIONAL PTY LIMITED/Desktop/JAC/jaclang/"  # fix me
         self.modules: dict[str, ModuleInfo] = {}
         self.rebuild_workspace()
 
@@ -286,6 +286,12 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
                             node_info = (
                                 f"(object) {node.value} \n{decl_node.doc.lit_value}"
                             )
+                        elif isinstance(node.sym_link.decl, ast.Ability):
+                            log("comeshere")
+                            if node.sym_link.decl.doc:
+                                node_info = f"(ability) {node.value} \n{node.sym_link.decl.doc.lit_value}"
+                            else:
+                                node_info = f"(ability) {node.value}"
                         elif isinstance(decl_node, ast.Name):
                             if (
                                 decl_node.parent
@@ -299,8 +305,6 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
                                 node_info = (
                                     f"(name) {node.value} \n{node.sym_link.decl}"
                                 )
-                        elif isinstance(node.sym_link.decl, ast.Ability):
-                            node_info = f"(ability) {node.value} \n{node.sym_link.decl.doc.lit_value}"
                     else:
                         node_info += f"Name: {node.sym_link.sym_name}\n"
 

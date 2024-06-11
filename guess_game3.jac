@@ -24,7 +24,8 @@ A number guessing game. The player must guess a number between 1 and 100.
 obj GuessTheNumberGame :Game: {
     has attempts: int = 1,
         correct_number: int = (1, 100) |> random.randint;
-
+        
+    """ The play ability of the game. """
     can play {
 
         while self.attempts > 0 {
