@@ -1,8 +1,9 @@
 {
-  "name": "jac",
-  "version": "0.0.2",
-  "displayName": "Jac",
+  "name": "jaclang-extension",
+  "displayName": "%extension.displayName%",
+  "version": "2024.6.11",
   "description": "Jac Language",
+  "publisher": "jaseci-labs",
   "engines": {
     "vscode": "^1.79.0"
   },
