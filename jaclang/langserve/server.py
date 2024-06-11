@@ -55,7 +55,7 @@ class JacAnalyzer(LanguageServer):
     def __init__(self) -> None:
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
-        self.path = r"C:/Users/PavinithanRetnakumar/OneDrive - BCS TECHNOLOGY INTERNATIONAL PTY LIMITED/Desktop/JAC/jaclang/"  # fix me
+        self.path = r"/home/acer/Desktop/jac_kug/jaclang/"  # fix me
         self.modules: dict[str, ModuleInfo] = {}
         self.rebuild_workspace()
 
@@ -73,7 +73,7 @@ class JacAnalyzer(LanguageServer):
             if x == 2:
                 return
             x += 1
-            type_check = False
+            type_check = True
             # lazy_parse = False
             # if file in self.modules:
             #     continue
@@ -222,8 +222,6 @@ def formatting(
 @server.feature(lspt.TEXT_DOCUMENT_HOVER, lspt.HoverOptions(work_done_progress=True))
 def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
     """Provide hover information for the given hover request."""
-    log(f"position: {params}")
-    log(list(server.modules.values())[0])
 
     def get_value() -> Optional[str]:
         """Get value by using the position to get which AST node it falls under."""
@@ -260,57 +258,42 @@ def hover(ls: JacAnalyzer, params: lspt.TextDocumentPositionParams) -> None:
                 for child in node.kid:
                     yield from find_deepest_node(child, line, character)
 
-        root_node = list(server.modules.values())[0].ir
+        # root_node = list(server.modules.values())[0].ir
+        root_node = 
         deepest_node = None
         for node in find_deepest_node(root_node, line, character):
             deepest_node = node
 
         def get_node_info(node: ast.AstNode) -> str:
             """Extract meaningful information from the AST node."""
-            node_info = f"Node type: {type(node).__name__}\n"
             try:
-                if not isinstance(node, ast.AstSymbolNode):
-                    if hasattr(node, "name"):
-                        node_info += f"Name: {node.name}\n"
-                    if hasattr(node, "value"):
-                        node_info += f"Value: {node.value}\n"
-                    if hasattr(node, "loc"):
-                        node_info += f"Location: ({node.loc.first_line}:{node.loc.col_start} - \
-                                        {node.loc.last_line}:{node.loc.col_end})\n"
-                else:
-                    log(f"symlink node {node.sym_link}")
-                    log(f"sym info  {node.sym_info}")
+                node_info = None
+                if isinstance(node, ast.AstSymbolNode):
+                    if isinstance(node, ast.String):
+                        return
                     if node.sym_link and node.sym_link.decl:
                         decl_node = node.sym_link.decl
                         if isinstance(decl_node, ast.Architype):
                             node_info = (
                                 f"(object) {node.value} \n{decl_node.doc.lit_value}"
                             )
-                        elif isinstance(node.sym_link.decl, ast.Ability):
-                            log("comeshere")
-                            if node.sym_link.decl.doc:
-                                node_info = f"(ability) {node.value} \n{node.sym_link.decl.doc.lit_value}"
-                            else:
-                                node_info = f"(ability) {node.value}"
+                        elif isinstance(decl_node, ast.Ability):
+                            node_info = f"(ability) can {node.value}"
+                            if decl_node.signature:
+                                node_info += f" {decl_node.signature.unparse()}"
+                            if decl_node.doc:
+                                node_info += f"{decl_node.doc.lit_value}"
                         elif isinstance(decl_node, ast.Name):
-                            if (
-                                decl_node.parent
-                                and isinstance(decl_node.parent, ast.SubNodeList)
-                                and decl_node.parent.parent
-                                and isinstance(decl_node.parent.parent, ast.Assignment)
-                            ):
-                                node_info = f"(variable) {node.value}: \
-                                    {node.sym_link.decl.parent.parent.value.unparse()}"
-                            else:
-                                node_info = (
-                                    f"(name) {node.value} \n{node.sym_link.decl}"
-                                )
+                            node_info = f'{node.value}'
+                        elif isinstance(decl_node, ast.HasVar):
+                            node_info = f"(variable) {decl_node.name.value} {decl_node.type_tag.unparse()}"
+                        else:
+                            log(f"no match found decl node is \n {decl_node}")
                     else:
-                        node_info += f"Name: {node.sym_link.sym_name}\n"
-
+                        node_info = f"Name: {node.value}\n"
             except AttributeError as e:
-                log(f"Attribute error when accessing node attributes: {e}")
-            return node_info.strip()
+                log(f"Attribute error when accessing node attributes: {node.name} {e}")
+            return node_info.strip() if node_info else None
 
         if deepest_node:
             return get_node_info(deepest_node)
