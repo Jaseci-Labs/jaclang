@@ -1,6 +1,6 @@
-import:jac deeper.snd_lev as snd_lev;
+import:jac from .deeper, snd_lev as sl;
 
 can olprint ->str {
-    return "one level deeper" + snd_lev.slprint();
+    return "one level deeper" + sl.slprint();
 }
 

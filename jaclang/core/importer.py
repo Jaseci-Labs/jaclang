@@ -28,6 +28,38 @@ def smart_join(base_path: str, target_path: str) -> str:
     return path.normpath(full_path)
 
 
+def process_items(module, items, target):
+    """Extracts items from a module, renaming them if specified, and handles missing attributes."""
+    unique_loaded_items = []
+    for name, alias in items.items():
+        if isinstance(alias, bool):
+            alias = name
+        try:
+            item = getattr(module, name)
+            unique_loaded_items.append(item)
+            if alias and alias != name:
+                setattr(module, alias, item)
+        except AttributeError as e:
+            print(f"Attribute {name} not found in module {module.__name__}")
+            if hasattr(module, "__path__"):
+                try:
+                    item = importlib.import_module(f"{module.__name__}.{name}")
+                    sys.modules[f"{module.__name__}.{name}"] = item
+                    unique_loaded_items.append(item)
+                    if alias and alias != name:
+                        setattr(module, alias, item)
+                    print(f"Imported {name} from submodule and set alias {alias}.")
+                except ImportError as ie:
+                    print(f"Failed to import {name} from {module.__name__}: {str(ie)}")
+                    continue
+            else:
+                print(
+                    f"{name} is expected to be a direct attribute of {module.__name__}, not a submodule."
+                )
+
+    return unique_loaded_items
+
+
 def jac_importer(
     target: str,
     base_path: str,
@@ -118,30 +150,12 @@ def jac_importer(
             parent_module = ensure_parent_module(parent_module_name, full_target)
             setattr(parent_module, submodule_name, module)
             if items:
-                return tuple(getattr(module, name) for name in items.keys())
+                return process_items(module, items, target)
             return (parent_module,)
 
     unique_loaded_items = []
     if items:
-        for name, alias in items.items():
-            if isinstance(alias, bool):
-                alias = name
-            try:
-                item = getattr(module, name)
-                if item not in unique_loaded_items:
-                    unique_loaded_items.append(item)
-                if alias:
-                    setattr(module, alias, item)
-            except AttributeError as e:
-                if hasattr(module, "__path__"):
-                    item = importlib.import_module(f"{target}.{name}")
-                    if item not in unique_loaded_items:
-                        unique_loaded_items.append(item)
-                    if alias:
-                        setattr(module, alias, item)
-                else:
-                    raise e
-
+        unique_loaded_items = process_items(module, items, target)
     return (
         (module,)
         if absorb or (not items or not len(items))
@@ -255,22 +269,41 @@ def create_jac_py_module(
     full_target: str,
     push_to_sys: bool = True,
 ) -> types.ModuleType:
-    """Create a module."""
-    module = types.ModuleType(module_name)
+    """Create a module and ensure all parent namespaces are registered in sys.modules."""
+    full_module_name = f"{package_path}.{module_name}" if package_path else module_name
+
+    # Initialize the module and set its attributes
+    module = types.ModuleType(full_module_name)
     module.__file__ = full_target
-    module.__name__ = module_name
+    module.__name__ = full_module_name
     module.__dict__["__jac_mod_bundle__"] = mod_bundle
-    if package_path:
-        parts = package_path.split(".")
-        for i in range(len(parts)):
-            package_name = ".".join(parts[: i + 1])
-            if package_name not in sys.modules and push_to_sys:
-                sys.modules[package_name] = types.ModuleType(package_name)
-        if push_to_sys:
-            setattr(sys.modules[package_path], module_name, module)
-            sys.modules[f"{package_path}.{module_name}"] = module
-    if push_to_sys:
-        sys.modules[module_name] = module
+
+    # Build and register the module's full namespace in sys.modules
+    namespace_parts = full_module_name.split(".")
+    constructed_path = ""
+    for i, part in enumerate(namespace_parts):
+        if i != 0:
+            constructed_path += "."
+        constructed_path += part
+
+        # Ensure each part of the namespace exists in sys.modules
+        if constructed_path not in sys.modules:
+            interim_module = types.ModuleType(constructed_path)
+            interim_module.__package__ = ".".join(constructed_path.split(".")[:-1])
+            if (
+                i == len(namespace_parts) - 1
+            ):  # Only the last part gets the __file__ and __path__
+                interim_module.__file__ = full_target
+            if os.path.isdir(os.path.dirname(full_target)):
+                interim_module.__path__ = [os.path.dirname(full_target)]
+            sys.modules[constructed_path] = interim_module
+
+        # Set parent-child relationship
+        if i > 0:
+            parent_path = ".".join(namespace_parts[:i])
+            parent_module = sys.modules[parent_path]
+            setattr(parent_module, part, sys.modules[constructed_path])
+
     return module
 
 
