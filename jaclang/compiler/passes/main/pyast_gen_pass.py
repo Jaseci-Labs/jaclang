@@ -19,8 +19,6 @@ T = TypeVar("T", bound=ast3.AST)
 class PyastGenPass(Pass):
     """Jac blue transpilation to python pass."""
 
-    cout = 1
-
     @staticmethod
     def node_compilable_test(node: ast3.AST) -> None:
         """Convert any AST node to a compilable module node."""
@@ -44,6 +42,7 @@ class PyastGenPass(Pass):
         """Initialize pass."""
         self.debuginfo: dict[str, list[str]] = {"jac_mods": []}
         self.already_added: list[str] = []
+        self.method_sigs: list[ast.FuncSignature | ast.EventSignature] = []
         self.preamble: list[ast3.AST] = [
             self.sync(
                 ast3.ImportFrom(
@@ -214,24 +213,17 @@ class PyastGenPass(Pass):
                 i.end_lineno = (
                     jac_node.loc.last_line
                     if jac_node.loc.last_line
+                    and (jac_node.loc.last_line > jac_node.loc.first_line)
                     else jac_node.loc.first_line
                 )
                 i.end_col_offset = (
                     jac_node.loc.col_end
                     if jac_node.loc.col_end
+                    and (jac_node.loc.col_end > jac_node.loc.col_start)
                     else jac_node.loc.col_start
                 )
                 i.jac_link: list[ast3.AST] = [jac_node]  # type: ignore
         return py_node
-
-    def link_jac_py_nodes(
-        self, jac_node: ast.AstNode, py_nodes: list[ast3.AST]
-    ) -> None:
-        """Link jac name ast to py ast nodes."""
-        jac_node.gen.py_ast = py_nodes
-        for i in py_nodes:
-            if isinstance(i.jac_link, list):  # type: ignore
-                i.jac_link.append(jac_node)  # type: ignore
 
     def pyinline_sync(
         self,
@@ -329,7 +321,10 @@ class PyastGenPass(Pass):
         is_imported: bool,
         """
         clean_body = [i for i in node.body if not isinstance(i, ast.AstImplOnlyNode)]
-        pre_body = [*node.impl_mod.body, *clean_body] if node.impl_mod else clean_body
+        pre_body: list[ast.AstNode] = []
+        for pbody in node.impl_mod:
+            pre_body = [*pre_body, *pbody.body]
+        pre_body = [*pre_body, *clean_body]
         pre_body = [*pre_body, *node.test_mod.body] if node.test_mod else pre_body
         body = (
             [
@@ -804,8 +799,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        if node.alias:
-            self.link_jac_py_nodes(jac_node=node.alias, py_nodes=node.gen.py_ast)
 
     def exit_module_item(self, node: ast.ModuleItem) -> None:
         """Sub objects.
@@ -821,6 +814,28 @@ class PyastGenPass(Pass):
                 )
             )
         ]
+
+    def enter_architype(self, node: ast.Architype) -> None:
+        """Sub objects.
+
+        name: Name,
+        arch_type: Token,
+        access: Optional[SubTag[Token]],
+        base_classes: Optional[SubNodeList[AtomType]],
+        body: Optional[SubNodeList[ArchBlockStmt] | ArchDef],
+        doc: Optional[String],
+        decorators: Optional[SubNodeList[ExprType]],
+        """
+        # Record all signatures that are part of methods
+        for i in (
+            node.body.body.items
+            if isinstance(node.body, ast.ArchDef)
+            else node.body.items if node.body else []
+        ):
+            if isinstance(i, ast.Ability) and i.signature:
+                self.method_sigs.append(i.signature)
+        if isinstance(node.body, ast.ArchDef):
+            self.traverse(node.body)
 
     def exit_architype(self, node: ast.Architype) -> None:
         """Sub objects.
@@ -932,9 +947,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        self.link_jac_py_nodes(jac_node=node.name, py_nodes=node.gen.py_ast)
-        if isinstance(node.body, ast.ArchDef):
-            self.link_jac_py_nodes(jac_node=node.body, py_nodes=node.gen.py_ast)
 
     def collect_events(
         self, node: ast.Architype
@@ -987,12 +999,19 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
-        for i in node.target.archs:
-            if i.sym_link:
-                self.link_jac_py_nodes(jac_node=i, py_nodes=i.sym_link.decl.gen.py_ast)
-                self.link_jac_py_nodes(
-                    jac_node=i.name_ref, py_nodes=i.sym_link.decl.gen.py_ast
-                )
+
+    def enter_enum(self, node: ast.Enum) -> None:
+        """Sub objects.
+
+        name: Name,
+        access: Optional[SubTag[Token]],
+        base_classes: Optional[SubNodeList[AtomType]],
+        body: Optional[SubNodeList[EnumBlockStmt] | EnumDef],
+        doc: Optional[String],
+        decorators: Optional[SubNodeList[ExprType]],
+        """
+        if isinstance(node.body, ast.EnumDef):
+            self.traverse(node.body)
 
     def exit_enum(self, node: ast.Enum) -> None:
         """Sub objects.
@@ -1033,8 +1052,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        if isinstance(node.body, ast.EnumDef):
-            self.link_jac_py_nodes(jac_node=node.body, py_nodes=node.gen.py_ast)
 
     def exit_enum_def(self, node: ast.EnumDef) -> None:
         """Sub objects.
@@ -1044,12 +1061,23 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
-        for i in node.target.archs:
-            if i.sym_link:
-                self.link_jac_py_nodes(jac_node=i, py_nodes=i.sym_link.decl.gen.py_ast)
-                self.link_jac_py_nodes(
-                    jac_node=i.name_ref, py_nodes=i.sym_link.decl.gen.py_ast
-                )
+
+    def enter_ability(self, node: ast.Ability) -> None:
+        """Sub objects.
+
+        name_ref: NameType,
+        is_func: bool,
+        is_async: bool,
+        is_static: bool,
+        is_abstract: bool,
+        access: Optional[SubTag[Token]],
+        signature: Optional[FuncSignature | ExprType | EventSignature],
+        body: Optional[SubNodeList[CodeBlockStmt] | AbilityDef | FuncCall],
+        doc: Optional[String],
+        decorators: Optional[SubNodeList[ExprType]],
+        """
+        if isinstance(node.body, ast.AbilityDef):
+            self.traverse(node.body)
 
     def exit_ability(self, node: ast.Ability) -> None:
         """Sub objects.
@@ -1151,9 +1179,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        self.link_jac_py_nodes(jac_node=node.name_ref, py_nodes=node.gen.py_ast)
-        if isinstance(node.body, ast.AbilityDef):
-            self.link_jac_py_nodes(jac_node=node.body, py_nodes=node.gen.py_ast)
 
     def gen_llm_body(self, node: ast.Ability) -> list[ast3.AST]:
         """Generate llm body."""
@@ -1447,15 +1472,6 @@ class PyastGenPass(Pass):
         doc: Optional[String],
         decorators: Optional[SubNodeList[ExprType]],
         """
-        for i in node.target.archs:
-            if i.sym_link:
-                self.link_jac_py_nodes(jac_node=i, py_nodes=i.sym_link.decl.gen.py_ast)
-                self.link_jac_py_nodes(
-                    jac_node=i.name_ref, py_nodes=i.sym_link.decl.gen.py_ast
-                )
-        if isinstance(node.parent, ast.Ability) and node.parent.signature:
-            # TODO: Here we need to do a link for each subnode to the original parent signature
-            pass
 
     def exit_func_signature(self, node: ast.FuncSignature) -> None:
         """Sub objects.
@@ -1465,7 +1481,7 @@ class PyastGenPass(Pass):
         """
         params = (
             [self.sync(ast3.arg(arg="self", annotation=None))]
-            if node.is_method and not node.is_static
+            if node in self.method_sigs and not node.is_static
             else []
         )
         vararg = None
@@ -1523,7 +1539,7 @@ class PyastGenPass(Pass):
                     posonlyargs=[],
                     args=(
                         [self.sync(ast3.arg(arg="self", annotation=None)), here]
-                        if node.is_method
+                        if node in self.method_sigs
                         else [here]
                     ),
                     kwonlyargs=[],
@@ -1620,7 +1636,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        self.link_jac_py_nodes(jac_node=node.name, py_nodes=node.gen.py_ast)
 
     def exit_arch_has(self, node: ast.ArchHas) -> None:
         """Sub objects.
@@ -1876,8 +1891,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        if node.name:
-            self.link_jac_py_nodes(jac_node=node.name, py_nodes=node.gen.py_ast)
 
     def exit_finally_stmt(self, node: ast.FinallyStmt) -> None:
         """Sub objects.
@@ -1985,9 +1998,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        self.link_jac_py_nodes(jac_node=node.expr, py_nodes=node.gen.py_ast)
-        if node.alias:
-            self.link_jac_py_nodes(jac_node=node.alias, py_nodes=node.gen.py_ast)
 
     def exit_raise_stmt(self, node: ast.RaiseStmt) -> None:
         """Sub objects.
@@ -2245,7 +2255,6 @@ class PyastGenPass(Pass):
                     jac_node=x,
                 )
             )
-            self.link_jac_py_nodes(jac_node=x, py_nodes=[py_nodes[-1]])
         node.gen.py_ast = [*py_nodes]
 
     def exit_non_local_stmt(self, node: ast.NonLocalStmt) -> None:
@@ -2261,7 +2270,6 @@ class PyastGenPass(Pass):
                     jac_node=x,
                 )
             )
-            self.link_jac_py_nodes(jac_node=x, py_nodes=[py_nodes[-1]])
         node.gen.py_ast = [*py_nodes]
 
     def exit_assignment(self, node: ast.Assignment) -> None:
@@ -2803,8 +2811,6 @@ class PyastGenPass(Pass):
                 )
             )
         ]
-        if node.key:
-            self.link_jac_py_nodes(jac_node=node.key, py_nodes=node.gen.py_ast)
 
     def exit_inner_compr(self, node: ast.InnerCompr) -> None:
         """Sub objects.
@@ -2914,9 +2920,6 @@ class PyastGenPass(Pass):
                         )
                     )
                 ]
-                self.link_jac_py_nodes(
-                    jac_node=node.right.sym_name_node, py_nodes=node.gen.py_ast
-                )
             else:
                 self.error("Invalid attribute access")
         elif isinstance(node.right, ast.FilterCompr):
@@ -3181,7 +3184,6 @@ class PyastGenPass(Pass):
                     for kw_pair in node.params.items
                     if isinstance(kw_pair, ast.KWPair)
                 ]
-                self.cout += 1
             else:
                 inputs = []
 

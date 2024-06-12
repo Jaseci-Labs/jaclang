@@ -12,7 +12,7 @@ from jaclang.compiler.passes.main import SubNodeTabPass
 from jaclang.compiler.symtable import Symbol, SymbolTable, SymbolType
 
 
-class DeclDefMatchPass(Pass):
+class DeclImplMatchPass(Pass):
     """Decls and Def matching pass."""
 
     def enter_module(self, node: ast.Module) -> None:
@@ -43,6 +43,10 @@ class DeclDefMatchPass(Pass):
                 # currently strips the type info from impls
                 arch_refs = [x[3:] for x in sym.sym_name.split(".")]
                 lookup = sym_tab.lookup(arch_refs[0])
+                # Below may need to be a while instead of if to skip over local
+                # import name collisions (see test: test_impl_decl_resolution_fix)
+                if lookup and not isinstance(lookup.decl, ast.AstImplNeedingNode):
+                    lookup = sym_tab.parent.lookup(arch_refs[0])
                 decl_node = (
                     self.defn_lookup(lookup)
                     if len(arch_refs) == 1 and lookup
@@ -72,7 +76,6 @@ class DeclDefMatchPass(Pass):
                     continue
                 decl_node.body = sym.decl  # type: ignore
                 sym.decl.decl_link = decl_node  # type: ignore
-                decl_node.add_kids_right([sym.decl], pos_update=False)  # type: ignore
                 decl_node.sym_tab.tab = sym.decl.sym_tab.tab  # type: ignore
         for i in sym_tab.kid:
             self.connect_def_impl(i)

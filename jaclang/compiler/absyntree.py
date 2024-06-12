@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast as ast3
+from hashlib import md5
 from types import EllipsisType
 from typing import Any, Callable, Generic, Optional, Sequence, Type, TypeVar
 
@@ -391,7 +392,6 @@ class Module(AstDocNode):
         body: Sequence[ElementStmt | String | EmptyToken],
         is_imported: bool,
         kid: Sequence[AstNode],
-        impl_mod: Optional[Module] = None,
         test_mod: Optional[Module] = None,
         registry: Optional[SemRegistry] = None,
     ) -> None:
@@ -400,7 +400,7 @@ class Module(AstDocNode):
         self.source = source
         self.body = body
         self.is_imported = is_imported
-        self.impl_mod = impl_mod
+        self.impl_mod: list[Module] = []
         self.test_mod = test_mod
         self.mod_deps: dict[str, Module] = {}
         self.registry = registry
@@ -661,6 +661,13 @@ class ModulePath(AstSymbolNode):
             sym_type=SymbolType.MODULE,
         )
 
+    @property
+    def path_str(self) -> str:
+        """Get path string."""
+        return ("." * self.level) + ".".join(
+            [p.value for p in self.path] if self.path else ""
+        )
+
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module path node."""
         res = True
@@ -684,13 +691,6 @@ class ModulePath(AstSymbolNode):
             new_kid.append(self.alias)
         self.set_kids(nodes=new_kid)
         return res
-
-    @property
-    def path_str(self) -> str:
-        """Get path string."""
-        return ("." * self.level) + ".".join(
-            [p.value for p in self.path] if self.path else ""
-        )
 
 
 class ModuleItem(AstSymbolNode):
@@ -1028,16 +1028,6 @@ class Ability(
         AstAsyncNode.__init__(self, is_async=is_async)
 
     @property
-    def is_method(self) -> bool:
-        """Check if is method."""
-        check = isinstance(self.parent, SubNodeList) and isinstance(
-            self.parent.parent, Architype
-        )
-        if check:
-            self.sym_type = SymbolType.METHOD
-        return check
-
-    @property
     def is_func(self) -> bool:
         """Check if is func."""
         return isinstance(self.body, FuncSignature)
@@ -1152,14 +1142,6 @@ class AbilityDef(AstSymbolNode, ElementStmt, AstImplOnlyNode, CodeBlockStmt):
         self.set_kids(nodes=new_kid)
         return res
 
-    @property
-    def is_method(self) -> bool:
-        """Check if is method."""
-        return (
-            len(self.target.archs) > 1
-            and self.target.archs[-2].arch.name != Tok.ABILITY_OP
-        )
-
 
 class FuncSignature(AstSemStrNode):
     """FuncSignature node type for Jac Ast."""
@@ -1196,13 +1178,6 @@ class FuncSignature(AstSemStrNode):
             new_kid.append(self.return_type)
         self.set_kids(nodes=new_kid)
         return res
-
-    @property
-    def is_method(self) -> bool:
-        """Check if is method."""
-        return (isinstance(self.parent, Ability) and self.parent.is_method) or (
-            isinstance(self.parent, AbilityDef) and self.parent.is_method
-        )
 
     @property
     def is_static(self) -> bool:
@@ -1255,17 +1230,6 @@ class EventSignature(AstSemStrNode):
             new_kid.append(self.return_type)
         self.set_kids(nodes=new_kid)
         return res
-
-    @property
-    def is_method(self) -> bool:
-        """Check if is method."""
-        if (isinstance(self.parent, Ability) and self.parent.is_method) or (
-            isinstance(self.parent, AbilityDef)
-            and isinstance(self.parent.decl_link, Ability)
-            and self.parent.decl_link.is_method
-        ):
-            return True
-        return False
 
 
 class ArchRefChain(AstNode):
@@ -4082,6 +4046,7 @@ class JacSource(EmptyToken):
         """Initialize source string."""
         super().__init__()
         self.value = source
+        self.hash = md5(source.encode()).hexdigest()
         self.file_path = mod_path
         self.comments: list[CommentToken] = []
 
