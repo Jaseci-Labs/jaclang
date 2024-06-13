@@ -7,6 +7,7 @@ import html
 import os
 import pickle
 import types
+from collections import OrderedDict
 from contextvars import ContextVar
 from dataclasses import field
 from functools import wraps
@@ -179,12 +180,20 @@ class JacFeatureDefaults:
             cls._jac_entry_funcs_ = on_entry  # type: ignore
             cls._jac_exit_funcs_ = on_exit  # type: ignore
         else:
-            cls._jac_entry_funcs_ = cls._jac_entry_funcs_ + [
-                x for x in on_entry if x not in cls._jac_entry_funcs_
-            ]
-            cls._jac_exit_funcs_ = cls._jac_exit_funcs_ + [
-                x for x in on_exit if x not in cls._jac_exit_funcs_
-            ]
+            new_entry_funcs = OrderedDict(zip([i.name for i in on_entry], on_entry))
+            entry_funcs = OrderedDict(
+                zip([i.name for i in cls._jac_entry_funcs_], cls._jac_entry_funcs_)
+            )
+            entry_funcs.update(new_entry_funcs)
+            cls._jac_entry_funcs_ = list(entry_funcs.values())
+
+            new_exit_funcs = OrderedDict(zip([i.name for i in on_exit], on_exit))
+            exit_funcs = OrderedDict(
+                zip([i.name for i in cls._jac_exit_funcs_], cls._jac_exit_funcs_)
+            )
+            exit_funcs.update(new_exit_funcs)
+            cls._jac_exit_funcs_ = list(exit_funcs.values())
+
         inner_init = cls.__init__  # type: ignore
 
         @wraps(inner_init)

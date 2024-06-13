@@ -58,6 +58,7 @@ class JacImportPass(Pass):
         if mod:
             self.run_again = True
             node.sub_module = mod
+            self.__annex_impl(mod)
             node.add_kids_right([mod], pos_update=False)
 
     def __annex_impl(self, node: ast.Module) -> None:

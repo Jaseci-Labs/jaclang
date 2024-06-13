@@ -2,27 +2,31 @@
 
 from __future__ import annotations
 
+from enum import IntEnum
 from hashlib import md5
-from typing import Any, Generator, Sequence, Type
+from typing import Optional, Sequence
 
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.compile import jac_pass_to_pass, jac_str_to_pass
+from jaclang.compiler.compile import jac_ir_to_pass, jac_str_to_pass
 from jaclang.compiler.parser import JacParser
 from jaclang.compiler.passes import Pass
-from jaclang.compiler.passes.main.schedules import (
-    AccessCheckPass,
-    PyBytecodeGenPass,
-    py_code_gen_typed,
-)
+from jaclang.compiler.passes.main.schedules import type_checker_sched
 from jaclang.compiler.passes.tool import FuseCommentsPass, JacFormatPass
 from jaclang.compiler.passes.transform import Alert
-from jaclang.compiler.symtable import Symbol
-from jaclang.langserve.utils import position_within_node, sym_tab_list
+from jaclang.langserve.utils import find_deepest_node_at_pos
+from jaclang.vendor.pygls import uris
 from jaclang.vendor.pygls.server import LanguageServer
-from jaclang.vendor.pygls.workspace.text_document import TextDocument
 
 import lsprotocol.types as lspt
+
+
+class ALev(IntEnum):
+    """Analysis Level."""
+
+    QUICK = 1
+    DEEP = 2
+    TYPE = 3
 
 
 class ModuleInfo:
@@ -31,18 +35,28 @@ class ModuleInfo:
     def __init__(
         self,
         ir: ast.Module,
-        to_pass: Pass,
         errors: Sequence[Alert],
         warnings: Sequence[Alert],
+        alev: ALev,
+        parent: Optional[ModuleInfo] = None,
     ) -> None:
         """Initialize module info."""
         self.ir = ir
-        self.at_pass = to_pass
         self.errors = errors
         self.warnings = warnings
-        self.parents: list[ModuleInfo] = []
-        self.kids: list[ModuleInfo] = []
+        self.alev = alev
+        self.parent: Optional[ModuleInfo] = parent
         self.diagnostics = self.gen_diagnostics()
+
+    @property
+    def uri(self) -> str:
+        """Return uri."""
+        return uris.from_fs_path(self.ir.loc.mod_path)
+
+    @property
+    def has_syntax_error(self) -> bool:
+        """Return if there are syntax errors."""
+        return len(self.errors) > 0 and self.alev == ALev.QUICK
 
     def gen_diagnostics(self) -> list[lspt.Diagnostic]:
         """Return diagnostics."""
@@ -88,18 +102,17 @@ class JacLangServer(LanguageServer):
         super().__init__("jac-lsp", "v0.1")
         self.modules: dict[str, ModuleInfo] = {}
 
-    def module_not_diff(self, doc: TextDocument) -> bool:
+    def module_not_diff(self, uri: str, alev: ALev) -> bool:
         """Check if module was changed."""
+        doc = self.workspace.get_text_document(uri)
         return (
             doc.uri in self.modules
             and self.modules[doc.uri].ir.source.hash
             == md5(doc.source.encode()).hexdigest()
-        )
-
-    def module_reached_pass(self, doc: TextDocument, target: Type[Pass]) -> bool:
-        """Check if module reached a pass."""
-        return doc.uri in self.modules and isinstance(
-            self.modules[doc.uri].at_pass, target
+            and (
+                self.modules[doc.uri].alev >= alev
+                or self.modules[doc.uri].has_syntax_error
+            )
         )
 
     def push_diagnostics(self, file_path: str) -> None:
@@ -110,73 +123,95 @@ class JacLangServer(LanguageServer):
                 self.modules[file_path].diagnostics,
             )
 
-    def quick_check(self, file_path: str) -> None:
+    def unwind_to_parent(self, file_path: str) -> str:
+        """Unwind to parent."""
+        if file_path in self.modules:
+            while cur := self.modules[file_path].parent:
+                file_path = cur.uri
+        return file_path
+
+    def update_modules(self, file_path: str, build: Pass, alev: ALev) -> None:
+        """Update modules."""
+        if not isinstance(build.ir, ast.Module):
+            self.log_error("Error with module build.")
+            return
+        save_parent = (
+            self.modules[file_path].parent if file_path in self.modules else None
+        )
+        self.modules[file_path] = ModuleInfo(
+            ir=build.ir,
+            errors=[
+                i
+                for i in build.errors_had
+                if i.loc.mod_path == uris.to_fs_path(file_path)
+            ],
+            warnings=[
+                i
+                for i in build.warnings_had
+                if i.loc.mod_path == uris.to_fs_path(file_path)
+            ],
+            alev=alev,
+        )
+        self.modules[file_path].parent = save_parent
+        for p in build.ir.mod_deps.keys():
+            uri = uris.from_fs_path(p)
+            self.modules[uri] = ModuleInfo(
+                ir=build.ir.mod_deps[p],
+                errors=[i for i in build.errors_had if i.loc.mod_path == p],
+                warnings=[i for i in build.warnings_had if i.loc.mod_path == p],
+                alev=alev,
+            )
+            self.modules[uri].parent = (
+                self.modules[file_path] if file_path != uri else None
+            )
+
+    def quick_check(self, file_path: str, force: bool = False) -> None:
         """Rebuild a file."""
-        document = self.workspace.get_document(file_path)
-        if self.module_not_diff(document):
+        if not force and self.module_not_diff(file_path, ALev.QUICK):
             return
         try:
+            document = self.workspace.get_text_document(file_path)
             build = jac_str_to_pass(
                 jac_str=document.source, file_path=document.path, schedule=[]
             )
         except Exception as e:
             self.log_error(f"Error during syntax check: {e}")
-        if isinstance(build.ir, ast.Module):
-            self.modules[file_path] = ModuleInfo(
-                ir=build.ir,
-                to_pass=build,
-                errors=build.errors_had,
-                warnings=build.warnings_had,
-            )
+        self.update_modules(file_path, build, ALev.QUICK)
 
-    def deep_check(self, file_path: str) -> None:
+    def deep_check(self, file_path: str, force: bool = False) -> None:
         """Rebuild a file and its dependencies."""
-        document = self.workspace.get_document(file_path)
-        if self.module_not_diff(document) and self.module_reached_pass(
-            document, PyBytecodeGenPass
-        ):
+        if file_path in self.modules:
+            self.quick_check(file_path, force=force)
+        if not force and self.module_not_diff(file_path, ALev.DEEP):
             return
         try:
-            build = jac_pass_to_pass(in_pass=self.modules[file_path].at_pass)
+            file_path = self.unwind_to_parent(file_path)
+            build = jac_ir_to_pass(ir=self.modules[file_path].ir)
         except Exception as e:
             self.log_error(f"Error during syntax check: {e}")
-        if isinstance(build.ir, ast.Module):
-            self.modules[file_path] = ModuleInfo(
-                ir=build.ir,
-                to_pass=build,
-                errors=build.errors_had,
-                warnings=build.warnings_had,
-            )
+        self.update_modules(file_path, build, ALev.DEEP)
 
-    def type_check(self, file_path: str) -> None:
+    def type_check(self, file_path: str, force: bool = False) -> None:
         """Rebuild a file and its dependencies."""
-        document = self.workspace.get_document(file_path)
-        if self.module_not_diff(document) and self.module_reached_pass(
-            document, AccessCheckPass
-        ):
+        if file_path not in self.modules:
+            self.deep_check(file_path, force=force)
+        if not force and self.module_not_diff(file_path, ALev.TYPE):
             return
         try:
-            build = jac_pass_to_pass(
-                in_pass=self.modules[file_path].at_pass,
-                target=AccessCheckPass,
-                schedule=py_code_gen_typed,
+            file_path = self.unwind_to_parent(file_path)
+            build = jac_ir_to_pass(
+                ir=self.modules[file_path].ir, schedule=type_checker_sched
             )
         except Exception as e:
             self.log_error(f"Error during type check: {e}")
-        if isinstance(build.ir, ast.Module):
-            self.modules[file_path] = ModuleInfo(
-                ir=build.ir,
-                to_pass=build,
-                errors=build.errors_had,
-                warnings=build.warnings_had,
-            )
+        self.update_modules(file_path, build, ALev.TYPE)
 
     def get_completion(
         self, file_path: str, position: lspt.Position
     ) -> lspt.CompletionList:
         """Return completion for a file."""
         items = []
-        document = self.workspace.get_document(file_path)
+        document = self.workspace.get_text_document(file_path)
         current_line = document.lines[position.line].strip()
         if current_line.endswith("hello."):
 
@@ -200,7 +235,7 @@ class JacLangServer(LanguageServer):
     def formatted_jac(self, file_path: str) -> list[lspt.TextEdit]:
         """Return formatted jac."""
         try:
-            document = self.workspace.get_document(file_path)
+            document = self.workspace.get_text_document(file_path)
             format = jac_str_to_pass(
                 jac_str=document.source,
                 file_path=document.path,
@@ -227,61 +262,109 @@ class JacLangServer(LanguageServer):
             )
         ]
 
-    def get_dependencies(
-        self, file_path: str, deep: bool = False
-    ) -> list[ast.ModulePath]:
-        """Return a list of dependencies for a file."""
-        mod_ir = self.modules[file_path].ir
-        if deep:
-            return (
-                [
-                    i
-                    for i in mod_ir.get_all_sub_nodes(ast.ModulePath)
-                    if i.parent_of_type(ast.Import).hint.tag.value == "jac"
-                ]
-                if mod_ir
-                else []
+    def get_hover_info(
+        self, file_path: str, position: lspt.Position
+    ) -> Optional[lspt.Hover]:
+        """Return hover information for a file."""
+        node_selected = find_deepest_node_at_pos(
+            self.modules[file_path].ir, position.line, position.character
+        )
+        value = self.get_node_info(node_selected) if node_selected else None
+        if value:
+            return lspt.Hover(
+                contents=lspt.MarkupContent(
+                    kind=lspt.MarkupKind.PlainText, value=f"{value}"
+                ),
             )
-        else:
-            return (
-                [
-                    i
-                    for i in mod_ir.get_all_sub_nodes(ast.ModulePath)
-                    if i.loc.mod_path == file_path
-                    and i.parent_of_type(ast.Import).hint.tag.value == "jac"
-                ]
-                if mod_ir
-                else []
-            )
+        return None
 
-    def get_symbols(self, file_path: str) -> list[Symbol]:
-        """Return a list of symbols for a file."""
-        symbols = []
-        mod_ir = self.modules[file_path].ir
-        if file_path in self.modules:
-            root_table = mod_ir.sym_tab if mod_ir else None
-            if file_path in self.modules and root_table:
-                for i in sym_tab_list(sym_tab=root_table, file_path=file_path):
-                    symbols += list(i.tab.values())
-        return symbols
-
-    def get_definitions(
-        self, file_path: str
-    ) -> Sequence[ast.AstSymbolNode]:  # need test
-        """Return a list of definitions for a file."""
-        defs = []
-        for i in self.get_symbols(file_path):
-            defs += i.defn
-        return defs
-
-    def find_deepest_node(
-        self, node: ast.AstNode, line: int, character: int
-    ) -> Generator[Any, Any, Any]:
-        """Find the deepest node that contains the given position."""
-        if position_within_node(node, line, character):
-            yield node
-            for child in node.kid:
-                yield from self.find_deepest_node(child, line, character)
+    def get_node_info(self, node: ast.AstNode) -> Optional[str]:
+        """Extract meaningful information from the AST node."""
+        try:
+            if isinstance(node, ast.Token):
+                if isinstance(node, ast.AstSymbolNode):
+                    if isinstance(node, ast.String):
+                        return None
+                    if node.sym_link and node.sym_link.decl:
+                        decl_node = node.sym_link.decl
+                        if isinstance(decl_node, ast.Architype):
+                            if decl_node.doc:
+                                node_info = f"({decl_node.arch_type.value}) {node.value} \n{decl_node.doc.lit_value}"
+                            else:
+                                node_info = (
+                                    f"({decl_node.arch_type.value}) {node.value}"
+                                )
+                            if decl_node.semstr:
+                                node_info += f"\n{decl_node.semstr.lit_value}"
+                        elif isinstance(decl_node, ast.Ability):
+                            node_info = f"(ability) can {node.value}"
+                            if decl_node.signature:
+                                node_info += f" {decl_node.signature.unparse()}"
+                            if decl_node.doc:
+                                node_info += f"\n{decl_node.doc.lit_value}"
+                            if decl_node.semstr:
+                                node_info += f"\n{decl_node.semstr.lit_value}"
+                        elif isinstance(decl_node, ast.Name):
+                            if (
+                                decl_node.parent
+                                and isinstance(decl_node.parent, ast.SubNodeList)
+                                and decl_node.parent.parent
+                                and isinstance(decl_node.parent.parent, ast.Assignment)
+                                and decl_node.parent.parent.type_tag
+                            ):
+                                node_info = (
+                                    f"(variable) {decl_node.value}: "
+                                    f"{decl_node.parent.parent.type_tag.unparse()}"
+                                )
+                                if decl_node.parent.parent.semstr:
+                                    node_info += (
+                                        f"\n{decl_node.parent.parent.semstr.lit_value}"
+                                    )
+                            else:
+                                if decl_node.value in [
+                                    "str",
+                                    "int",
+                                    "float",
+                                    "bool",
+                                    "bytes",
+                                    "list",
+                                    "tuple",
+                                    "set",
+                                    "dict",
+                                    "type",
+                                ]:
+                                    node_info = f"({decl_node.value}) Built-in type"
+                                else:
+                                    node_info = f"(variable) {decl_node.value}: None"
+                        elif isinstance(decl_node, ast.HasVar):
+                            if decl_node.type_tag:
+                                node_info = f"(variable) {decl_node.name.value} {decl_node.type_tag.unparse()}"
+                            else:
+                                node_info = f"(variable) {decl_node.name.value}"
+                            if decl_node.semstr:
+                                node_info += f"\n{decl_node.semstr.lit_value}"
+                        elif isinstance(decl_node, ast.ParamVar):
+                            if decl_node.type_tag:
+                                node_info = f"(parameter) {decl_node.name.value} {decl_node.type_tag.unparse()}"
+                            else:
+                                node_info = f"(parameter) {decl_node.name.value}"
+                            if decl_node.semstr:
+                                node_info += f"\n{decl_node.semstr.lit_value}"
+                        elif isinstance(decl_node, ast.ModuleItem):
+                            node_info = (
+                                f"(ModuleItem) {node.value}"  # TODO: Add more info
+                            )
+                        else:
+                            node_info = f"{node.value}"
+                    else:
+                        node_info = f"{node.value}"  # non symbol node
+                else:
+                    return None
+            else:
+                return None
+        except AttributeError as e:
+            self.log_warning(f"Attribute error when accessing node attributes: {e}")
+        return node_info.strip()
 
     def log_error(self, message: str) -> None:
         """Log an error message."""
