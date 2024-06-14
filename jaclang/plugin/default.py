@@ -46,7 +46,7 @@ from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
 
 
-import pluggy
+import jaclang.vendor.pluggy as pluggy
 
 
 __all__ = [

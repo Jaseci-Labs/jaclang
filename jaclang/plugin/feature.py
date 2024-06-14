@@ -34,6 +34,7 @@ class JacFeature:
     import abc
     from jaclang.compiler.constant import EdgeDir
     from jaclang.plugin.spec import DSFunc
+    from jaclang.core.construct import Root
 
     @staticmethod
     def context(session: str = "") -> ExecutionContext:

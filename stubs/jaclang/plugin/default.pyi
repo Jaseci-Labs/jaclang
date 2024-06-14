@@ -1,4 +1,6 @@
 import types
+from _typeshed import Incomplete
+from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.construct import (
     Architype as Architype,
@@ -15,10 +17,11 @@ from jaclang.core.construct import (
     WalkerArchitype as WalkerArchitype,
 )
 from jaclang.core.importer import jac_importer as jac_importer
-from typing import Any, Callable, Optional, Type, Union, TypeVar
-
-from jaclang.compiler.absyntree import Module
-import pluggy
+from jaclang.core.memory import Memory
+from jaclang.plugin.spec import T as T
+import jaclang.vendor.pluggy as pluggy
+from typing import Any, Callable, Optional, Type, Union
+from uuid import UUID
 
 __all__ = [
     "EdgeAnchor",
@@ -29,20 +32,38 @@ __all__ = [
     "WalkerAnchor",
     "NodeArchitype",
     "EdgeArchitype",
+    "Root",
     "WalkerArchitype",
     "Architype",
     "DSFunc",
-    "Root",
     "jac_importer",
     "T",
-    "ArchBound",
 ]
 
-T = TypeVar("T")
-ArchBound = TypeVar("ArchBound", bound=Architype)
-hookimpl = pluggy.HookimplMarker("jac")
+hookimpl: pluggy.HookimplMarker
+
+class ExecutionContext:
+    mem: Optional[Memory]
+    root: Optional[Root]
+    def __init__(self) -> None: ...
+    def init_memory(self, session: str = "") -> None: ...
+    def get_root(self) -> Root: ...
+    def get_obj(self, obj_id: UUID) -> Architype | None: ...
+    def save_obj(self, item: Architype, persistent: bool) -> None: ...
+    def reset(self) -> None: ...
 
 class JacFeatureDefaults:
+    pm: Incomplete
+    @staticmethod
+    def context(session: str = "") -> ExecutionContext: ...
+    @staticmethod
+    def reset_context() -> None: ...
+    @staticmethod
+    def memory_hook() -> Memory | None: ...
+    @staticmethod
+    def make_architype(
+        cls, arch_base: Type[Architype], on_entry: list[DSFunc], on_exit: list[DSFunc]
+    ) -> Type[Architype]: ...
     @staticmethod
     def make_obj(
         on_entry: list[DSFunc], on_exit: list[DSFunc]
@@ -74,7 +95,14 @@ class JacFeatureDefaults:
     @staticmethod
     def create_test(test_fun: Callable) -> Callable: ...
     @staticmethod
-    def run_test(filename: str) -> None: ...
+    def run_test(
+        filepath: str,
+        filter: Optional[str],
+        xit: bool,
+        maxfail: Optional[int],
+        directory: Optional[str],
+        verbose: bool,
+    ) -> bool: ...
     @staticmethod
     def elvis(op1: Optional[T], op2: T) -> T: ...
     @staticmethod
@@ -98,8 +126,8 @@ class JacFeatureDefaults:
     @staticmethod
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
+        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
         dir: EdgeDir,
-        filter_type: Optional[type],
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,
     ) -> list[NodeArchitype] | list[EdgeArchitype]: ...
@@ -115,7 +143,6 @@ class JacFeatureDefaults:
         left: NodeArchitype | list[NodeArchitype],
         right: NodeArchitype | list[NodeArchitype],
         dir: EdgeDir,
-        filter_type: Optional[type],
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
     ) -> bool: ...
     @staticmethod
@@ -132,7 +159,40 @@ class JacFeatureDefaults:
         conn_type: Optional[Type[EdgeArchitype]],
         conn_assign: Optional[tuple[tuple, tuple]],
     ) -> Callable[[], EdgeArchitype]: ...
+    @staticmethod
+    def get_semstr_type(
+        file_loc: str, scope: str, attr: str, return_semstr: bool
+    ) -> Optional[str]: ...
+    @staticmethod
+    def obj_scope(file_loc: str, attr: str) -> str: ...
+    @staticmethod
+    def get_sem_type(file_loc: str, attr: str) -> tuple[str | None, str | None]: ...
+    @staticmethod
+    def with_llm(
+        file_loc: str,
+        model: Any,
+        model_params: dict[str, Any],
+        scope: str,
+        incl_info: list[tuple[str, str]],
+        excl_info: list[tuple[str, str]],
+        inputs: list[tuple[str, str, str, Any]],
+        outputs: tuple,
+        action: str,
+    ) -> Any: ...
 
 class JacBuiltin:
     @staticmethod
-    def dotgen(node: NodeArchitype, radius: int = 0) -> str: ...
+    def dotgen(
+        node: NodeArchitype,
+        depth: int,
+        traverse: bool,
+        edge_type: list[str],
+        bfs: bool,
+        edge_limit: int,
+        node_limit: int,
+        dot_file: Optional[str],
+    ) -> str: ...
+
+class JacCmdDefaults:
+    @staticmethod
+    def create_cmd() -> None: ...

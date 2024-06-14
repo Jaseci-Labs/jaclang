@@ -1409,21 +1409,28 @@ class PyastGenPass(Pass):
             ):
                 node.gen.py_ast = [
                     self.sync(
-                        ast3.Call(
-                            func=self.sync(
-                                ast3.Attribute(
-                                    value=self.sync(
-                                        ast3.Name(
-                                            id=Con.JAC_FEATURE.value, ctx=ast3.Load()
-                                        )
-                                    ),
-                                    attr="get_root_type",
-                                    ctx=ast3.Load(),
-                                )
+                        ast3.Attribute(
+                            value=self.sync(
+                                ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
                             ),
-                            args=[],
-                            keywords=[],
+                            attr="Root",
+                            ctx=ast3.Load(),
                         )
+                        # ast3.Call(
+                        #     func=self.sync(
+                        #         ast3.Attribute(
+                        #             value=self.sync(
+                        #                 ast3.Name(
+                        #                     id=Con.JAC_FEATURE.value, ctx=ast3.Load()
+                        #                 )
+                        #             ),
+                        #             attr="get_root_type",
+                        #             ctx=ast3.Load(),
+                        #         )
+                        #     ),
+                        #     args=[],
+                        #     keywords=[],
+                        # )
                     )
                 ]
             else:

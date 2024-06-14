@@ -1,4 +1,3 @@
-from .default import hookimpl as hookimpl
-from .spec import Architype as Architype, DSFunc as DSFunc
+from .default import Architype as Architype, DSFunc as DSFunc, hookimpl as hookimpl
 
-__all__ = ["Architype", "DSFunc", "hookimpl"]
+__all__ = ['Architype', 'DSFunc', 'hookimpl']

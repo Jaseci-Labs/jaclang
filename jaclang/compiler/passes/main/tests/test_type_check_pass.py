@@ -62,3 +62,12 @@ class MypyTypeCheckPassTests(TestCase):
         self.assertEqual(out.count("Type: builtins.str"), 28)
         for i in lis:
             self.assertNotIn(i, out)
+
+    def test_ds_type_check(self) -> None:
+        """Basic test for pass."""
+        type_checked = jac_file_to_pass(
+            file_path=self.fixture_abs_path("simple_walk.jac"),
+            schedule=py_code_gen_typed,
+        )
+        self.assertEqual(len(type_checked.warnings_had), 0)
+        self.assertEqual(len(type_checked.errors_had), 0)
