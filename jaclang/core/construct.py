@@ -12,8 +12,8 @@ from typing import (
     Callable,
     Generic,
     Mapping,
-    NotRequired,
     Optional,
+    TYPE_CHECKING,
     Type,
     TypeVar,
     TypedDict,
@@ -23,6 +23,9 @@ from uuid import UUID, uuid4
 
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
+
+if TYPE_CHECKING:
+    from jaclang.plugin.feature import JacFeature as Jac
 
 
 T = TypeVar("T")
@@ -118,11 +121,14 @@ class ObjectAnchor:
             )
         return None
 
-    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[ObjectAnchor]:
+    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[Architype]:
         """Retrieve the Architype from db and return."""
-        jctx: JacContext = JacContext.get_context()
+        if self.obj:
+            return self.obj
 
-        if obj := jctx.get(self.id):
+        jmem = Jac.context().memory
+
+        if obj := jmem.find(self.id):
             self.arch = obj
             return obj
 
@@ -620,6 +626,12 @@ class ExecutionContext:
             self.entry = en
         else:
             self.entry = self.root
+
+    def open(self) -> None:
+        self.memory.open()
+
+    def close(self) -> None:
+        self.memory.close()
 
 
 class JacTestResult(unittest.TextTestResult):

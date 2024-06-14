@@ -16,7 +16,6 @@ from jaclang.core.construct import (
     WalkerArchitype,
 )
 from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, T
-from jaclang.plugin.memory import Memory
 
 
 import pluggy

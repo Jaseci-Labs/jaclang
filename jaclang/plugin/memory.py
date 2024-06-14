@@ -4,22 +4,24 @@ from shelve import Shelf, open
 from types import TracebackType
 from typing import (
     Callable,
-    Generic,
+    Generator,
     MutableMapping,
     Optional,
     Type,
     TypeVar,
     Union,
 )
+from uuid import UUID
 
 from jaclang.core.construct import Architype
 
 
-T = TypeVar("T", bound="Memory")
-ID = TypeVar("ID")
+M = TypeVar("M", bound="Memory")
+A = TypeVar("A", bound=Architype)
+IDS = Union[UUID, list[UUID]]
 
 
-class Memory(Generic[ID]):
+class Memory:
     """Generic Memory Handler."""
 
     ##################################################
@@ -35,7 +37,7 @@ class Memory(Generic[ID]):
         """Initialize memory handler."""
         self.__ses__ = session
 
-    def open(self: T) -> T:
+    def open(self: M) -> M:
         """Open memory handler."""
         if self.__ses__:
             self.__mem__ = open(self.__ses__)  # noqa: SIM115
@@ -51,7 +53,7 @@ class Memory(Generic[ID]):
         else:
             self.__mem__.clear()
 
-    def __enter__(self: T) -> T:
+    def __enter__(self: M) -> M:
         """Open memory handler via context handler."""
         return self.open()
 
@@ -68,6 +70,39 @@ class Memory(Generic[ID]):
         """On garbage collection cleanup."""
         self.close()
 
-    def find(self, filter: tuple[Union[ID, list[ID]], Callable]) -> list[Architype]:
+    def find(
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Architype], Architype]],
+    ) -> Generator[Architype, None, None]:
         """Temporary."""
-        return []
+        if not isinstance(ids, list):
+            ids = [ids]
+
+        return (
+            filter(obj) if filter else obj
+            for id in ids
+            if (obj := self.__mem__.get(str(id)))
+        )
+
+    def find_one(
+        self, ids: IDS, filter: Optional[Callable[[Architype], Architype]]
+    ) -> Architype:
+        """Temporary."""
+        return next(self.find(ids, filter))
+
+    def set(self, data: Union[Architype, list[Architype]]) -> None:
+        """Temporary."""
+        if not isinstance(data, list):
+            data = [data]
+
+        for d in data:
+            self.__mem__[str(d._jac_.id)] = d
+
+    def remove(self, data: Union[Architype, list[Architype]]) -> None:
+        """Temporary."""
+        if not isinstance(data, list):
+            data = [data]
+
+        for d in data:
+            self.__mem__.pop(str(d._jac_.id))
