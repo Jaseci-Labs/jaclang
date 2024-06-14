@@ -12,9 +12,11 @@ from typing import (
     Callable,
     Generic,
     Mapping,
+    NotRequired,
     Optional,
     Type,
     TypeVar,
+    TypedDict,
     Union,
 )
 from uuid import UUID, uuid4
@@ -25,7 +27,10 @@ from jaclang.core.utils import collect_node_connections
 
 T = TypeVar("T")
 AA = TypeVar("AA", bound="AnchorAccess")
-TARGET_NODE_REGEX = compile(r"^(n|e):([^:]*):([a-f\d]{24})$", IGNORECASE)
+GENERIC_ID_REGEX = compile(r"^(g|n|e|w):([^:]*):([a-f\d]{24})$", IGNORECASE)
+NODE_ID_REGEX = compile(r"^n:([^:]*):([a-f\d]{24})$", IGNORECASE)
+EDGE_ID_REGEX = compile(r"^e:([^:]*):([a-f\d]{24})$", IGNORECASE)
+WALKER_ID_REGEX = compile(r"^w:([^:]*):([a-f\d]{24})$", IGNORECASE)
 
 
 class ObjectType(Enum):
@@ -103,21 +108,17 @@ class ObjectAnchor:
         }
 
     @classmethod
-    def ref(cls, ref_id: str) -> Optional["DocAnchor[DA]"]:
+    def ref(cls, ref_id: str) -> Optional[ObjectAnchor]:
         """Return DocAnchor instance if ."""
-        if ref_id and (match := TARGET_NODE_REGEX.search(ref_id)):
+        if ref_id and (match := GENERIC_ID_REGEX.search(ref_id)):
             return cls(
-                type=JType(match.group(1)),
+                type=ObjectType(match.group(1)),
                 name=match.group(2),
-                id=ObjectId(match.group(3)),
+                id=UUID(match.group(3)),
             )
         return None
 
-    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[DA]:
-        """Sync Retrieve the Architype from db and return."""
-        return get_event_loop().run_until_complete(self._connect(node))
-
-    async def _connect(self, node: Optional["NodeArchitype"] = None) -> Optional[DA]:
+    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[ObjectAnchor]:
         """Retrieve the Architype from db and return."""
         jctx: JacContext = JacContext.get_context()
 
@@ -142,27 +143,56 @@ class ObjectAnchor:
             return data
         return None
 
+    async def is_allowed(self, to: DA, jctx: Optional["JacContext"] = None) -> bool:
+        """Access validation."""
+        if not jctx:
+            jctx = JacContext.get_context()
+        if (
+            not jctx
+            or not (from_jd := self._jac_doc_).connected
+            or not (to_jd := to._jac_doc_).connected
+            or not (from_root := from_jd.root)
+            or not (to_root := to_jd.root)
+        ):
+            return False
+
+        if (isinstance(self, Root) and from_jd.id == to_root) or from_root == to_root:
+            to_jd.current_access_level = 1
+            return True
+
+        if (to_access := to_jd.access).all:
+            to_jd.current_access_level = to_access.all - 1
+            return True
+
+        for i in range(1, -1, -1):
+            if from_jd.id in to_access.nodes[i] or from_root in to_access.roots[i]:
+                to_jd.current_access_level = i
+                return True
+
+        if isinstance(
+            to_root_access := await jctx.check_root_access(to_root),
+            DocAccess,
+        ) and (cur_root_id := jctx.get_root_id()):
+            for i in range(1, -1, -1):
+                if cur_root_id in to_root_access.roots[i]:
+                    to_jd.current_access_level = i
+                    return True
+
+        to_jd.current_access_level = None
+        return False
+
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
-        if isinstance(other, DocAnchor):
+        if isinstance(other, ObjectAnchor):
             return (
                 self.type == other.type
                 and self.name == other.name
                 and self.id == other.id
             )
-        elif isinstance(other, DocArchitype):
-            return self == other._jac_doc_
+        elif isinstance(other, Architype):
+            return self == other._jac_
 
         return False
-
-    def __hash__(self) -> int:
-        """Override hash implementation."""
-        return hash(self.ref_id)
-
-    def __deepcopy__(self, memo: dict) -> "DocAnchor[DA]":
-        """Override deepcopy implementation."""
-        memo[id(self)] = self
-        return self
 
 
 @dataclass(eq=False)
@@ -178,9 +208,20 @@ class NodeAnchor(ObjectAnchor):
         return NODE_CLASSES.get(self.name, NodeArchitype)
 
     def build(self, **kwargs: Any) -> NodeArchitype:  # noqa: ANN401
-        """Return generated class instance equivalent for ObjectAnchor."""
-        self.obj = self.class_ref()(**kwargs)
+        """Return generated class instance equivalent for NodeAnchor."""
+        self.obj = object.__new__(self.class_ref())
+        self.obj.__pre_init__(**kwargs)
         return self.obj
+
+    @classmethod
+    def ref(cls, ref_id: str) -> Optional[NodeAnchor]:
+        """Return NodeAnchor instance if existing."""
+        if ref_id and (match := NODE_ID_REGEX.search(ref_id)):
+            return cls(
+                name=match.group(2),
+                id=UUID(match.group(3)),
+            )
+        return None
 
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
@@ -284,9 +325,20 @@ class EdgeAnchor(ObjectAnchor):
         return EDGE_CLASSES.get(self.name, EdgeArchitype)
 
     def build(self, **kwargs: Any) -> EdgeArchitype:  # noqa: ANN401
-        """Return generated class instance equivalent for ObjectAnchor."""
-        self.obj = self.class_ref()(**kwargs)
+        """Return generated class instance equivalent for EdgeAnchor."""
+        self.obj = object.__new__(self.class_ref())
+        self.obj.__pre_init__(**kwargs)
         return self.obj
+
+    @classmethod
+    def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
+        """Return EdgeAnchor instance if existing."""
+        if ref_id and (match := EDGE_ID_REGEX.search(ref_id)):
+            return cls(
+                name=match.group(2),
+                id=UUID(match.group(3)),
+            )
+        return None
 
     def attach(
         self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
@@ -328,6 +380,26 @@ class WalkerAnchor(ObjectAnchor):
     next: list[Architype] = field(default_factory=lambda: [])
     ignores: list[Architype] = field(default_factory=lambda: [])
     disengaged: bool = False
+
+    def class_ref(self) -> Type[WalkerArchitype]:
+        """Return generated class equivalent for DocAnchor."""
+        return WALKER_CLASSES.get(self.name, WalkerArchitype)
+
+    def build(self, **kwargs: Any) -> WalkerArchitype:  # noqa: ANN401
+        """Return generated class instance equivalent for WalkerAnchor."""
+        self.obj = object.__new__(self.class_ref())
+        self.obj.__pre_init__(**kwargs)
+        return self.obj
+
+    @classmethod
+    def ref(cls, ref_id: str) -> Optional[WalkerAnchor]:
+        """Return EdgeAnchor instance if existing."""
+        if ref_id and (match := WALKER_ID_REGEX.search(ref_id)):
+            return cls(
+                name=match.group(2),
+                id=UUID(match.group(3)),
+            )
+        return None
 
     def visit_node(
         self,
@@ -425,6 +497,9 @@ class Architype:
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
 
+    def __pre_init__(self, **kwargs) -> None:
+        pass
+
     def __init__(self) -> None:
         """Create default architype."""
         self._jac_: ObjectAnchor = ObjectAnchor(obj=self)
@@ -432,9 +507,13 @@ class Architype:
     def __hash__(self) -> int:
         return hash(self._jac_.id)
 
-    def __eq__(self, other: Architype) -> bool:
+    def __eq__(self, other: object) -> bool:
+        """Override equal implementation."""
         if isinstance(other, Architype):
             return self._jac_.id == other._jac_.id
+        elif isinstance(other, ObjectAnchor):
+            return self._jac_ == other
+
         return False
 
     def __repr__(self) -> str:
@@ -504,6 +583,43 @@ class DSFunc:
     def resolve(self, cls: type) -> None:
         """Resolve the function."""
         self.func = getattr(cls, self.name)
+
+
+class ContextOptions(TypedDict, total=False):
+    root: str
+    entry: str
+
+
+class ExecutionContext:
+    """Execution Context."""
+
+    def __init__(
+        self,
+        session: Optional[str] = "",
+        root: Optional[str] = None,
+        entry: Optional[str] = None,
+    ) -> None:
+        """Create JacContext."""
+        from jaclang.plugin.memory import Memory
+
+        self.memory: Memory = Memory(session)
+        self.reports: list[Any] = []
+        self.root: NodeArchitype
+
+        if (
+            root
+            and (ra := NodeAnchor.ref(root))
+            and (rn := ra.build())
+            and isinstance(rn, Root)
+        ):
+            self.root = rn
+        else:
+            self.root = ROOT
+
+        if entry and (ea := NodeAnchor.ref(entry)) and (en := ea.build()):
+            self.entry = en
+        else:
+            self.entry = self.root
 
 
 class JacTestResult(unittest.TextTestResult):
@@ -590,9 +706,12 @@ class JacTestCheck:
         return getattr(JacTestCheck.test_case, name)
 
 
+ROOT = NodeAnchor(id=UUID(int=0)).build()
 NODE_CLASSES: dict[str, Type[NodeArchitype]] = {"": Root}
 EDGE_CLASSES: dict[str, Type[EdgeArchitype]] = {"": GenericEdge}
+WALKER_CLASSES: dict[str, Type[WalkerArchitype]] = {}
 ARCHITYPE_CLASSES: dict[str, Mapping[str, Type[Architype]]] = {
     "n": NODE_CLASSES,
     "e": EDGE_CLASSES,
+    "w": WALKER_CLASSES,
 }

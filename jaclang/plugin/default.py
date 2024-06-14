@@ -25,11 +25,14 @@ from jaclang.core.aott import (
 )
 from jaclang.core.construct import (
     Architype,
+    ContextOptions,
     DSFunc,
     EdgeAnchor,
+    ExecutionContext,
     JacTestCheck,
     NodeAnchor,
     ObjectAnchor,
+    T,
     WalkerAnchor,
     WalkerArchitype,
 )
@@ -43,8 +46,6 @@ from jaclang.plugin.architype import (
     PersistentRoot as Root,
 )
 from jaclang.plugin.feature import JacFeature as Jac
-from jaclang.plugin.memory import Memory
-from jaclang.plugin.spec import ExecutionContext, T
 
 
 import pluggy
@@ -69,7 +70,7 @@ __all__ = [
 
 
 hookimpl = pluggy.HookimplMarker("jac")
-ExecContext = ContextVar("ExecutionContext", default=None)
+ExecContext = ContextVar[ExecutionContext]("ExecutionContext")
 
 
 class JacFeatureDefaults:
@@ -79,27 +80,13 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Get the execution context."""
-        ctx = ExecContext.get()
-        if ctx is None:
-            ExecContext.set(DefaultExecutionContext())
-            return ExecContext.get()
-        else:
-            return ctx
-
-    @staticmethod
-    @hookimpl
-    def reset_context() -> None:
-        """Reset the execution context."""
-        ExecContext.get().reset()
-        ExecContext.set(None)
-
-    @staticmethod
-    @hookimpl
-    def memory_hook() -> Memory:
-        """Return the memory hook."""
-        return Jac.context().get_memory()
+        if not isinstance(ctx := ExecContext.get(), ExecutionContext):
+            ExecContext.set(ctx := ExecutionContext(session, **options or {}))
+        return ctx
 
     @staticmethod
     @hookimpl
@@ -127,7 +114,7 @@ class JacFeatureDefaults:
             cls._jac_exit_funcs_ = cls._jac_exit_funcs_ + [
                 x for x in on_exit if x not in cls._jac_exit_funcs_
             ]
-        inner_init = cls.__init__  # type: ignore
+        inner_init = cls.__pre_init__ = cls.__init__  # type: ignore
 
         @wraps(inner_init)
         def new_init(self: Architype, *args: object, **kwargs: object) -> None:

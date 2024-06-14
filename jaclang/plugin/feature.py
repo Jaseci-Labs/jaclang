@@ -8,18 +8,14 @@ from typing import Any, Callable, Optional, Type, TypeAlias, Union
 from jaclang.compiler.absyntree import Module
 from jaclang.core.construct import (
     Architype,
+    ContextOptions,
     EdgeArchitype,
+    ExecutionContext,
     NodeArchitype,
     Root,
     WalkerArchitype,
 )
-from jaclang.plugin.spec import (
-    JacBuiltin,
-    JacCmdSpec,
-    JacFeatureSpec,
-    T,
-    ExecutionContext,
-)
+from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, T
 from jaclang.plugin.memory import Memory
 
 
@@ -41,19 +37,11 @@ class JacFeature:
     RootType: TypeAlias = Root
 
     @staticmethod
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Create execution context."""
         return pm.hook.context(session=session)
-
-    @staticmethod
-    def reset_context() -> None:
-        """Reset execution context."""
-        return pm.hook.reset_context()
-
-    @staticmethod
-    def memory_hook() -> Memory:
-        """Create memory abstraction."""
-        return pm.hook.memory_hook()
 
     @staticmethod
     def make_architype(

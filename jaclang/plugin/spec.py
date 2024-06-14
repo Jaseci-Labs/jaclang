@@ -4,17 +4,20 @@ from __future__ import annotations
 
 import types
 from typing import Any, Callable, Optional, Type, TypeVar, Union
-from uuid import UUID
 
 from jaclang.compiler.absyntree import Module
-from jaclang.core.construct import EdgeArchitype, NodeArchitype, Root
+from jaclang.core.construct import (
+    ContextOptions,
+    EdgeArchitype,
+    ExecutionContext,
+    NodeArchitype,
+)
 from jaclang.plugin.default import (
     Architype,
     DSFunc,
     EdgeDir,
     WalkerArchitype,
 )
-from jaclang.plugin.memory import Memory
 
 import pluggy
 
@@ -23,66 +26,15 @@ hookspec = pluggy.HookspecMarker("jac")
 T = TypeVar("T")
 
 
-class ExecutionContext:
-    """Execution Context."""
-
-    def __init___(
-        self,
-        root: Optional[str] = None,
-        entry: Optional[str] = None,
-    ) -> None:
-        """Create JacContext."""
-        self.__mem__: dict[UUID, Union[NodeArchitype, EdgeArchitype]] = {}
-        self.root: Root = cast(Root, getattr(request, "auth_root", base_root))
-        self.reports: list[Any] = []
-        self.entry = entry
-
-    def init_memory(self) -> None:
-        """Initialize memory."""
-        raise NotImplementedError
-
-    def get_root(self) -> Root:
-        """Get root."""
-        return self.root
-
-    def get_memory(self) -> Memory:
-        """Get memory."""
-        return self.mem
-
-    def get_obj(self, id: UUID) -> Architype:
-        """Get object from memory."""
-        return self.mem.get_obj(id)
-
-    def save_obj(self, obj: Architype, persistent: bool) -> None:
-        """Save object to memory."""
-        self.mem.save_obj(item=obj, persistent=persistent)
-
-    def reset(self) -> None:
-        """Reset the execution context."""
-        self.mem.close()
-        self.mem = None  # type: ignore
-        self.root = None  # type: ignore
-
-
 class JacFeatureSpec:
     """Jac Feature."""
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Get the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def memory_hook() -> Memory:
-        """Create memory abstraction."""
         raise NotImplementedError
 
     @staticmethod
