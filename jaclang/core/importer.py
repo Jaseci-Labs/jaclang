@@ -16,6 +16,16 @@ from jaclang.core.utils import sys_path_context
 from jaclang.utils.log import logging
 
 
+base_mod_path: str = ""
+
+
+def resolve_sys_mod_name(path: str) -> str:
+    """Resolve system module name."""
+    rel_path = os.path.relpath(path, base_mod_path)
+    name = ".".join(rel_path.rstrip(".jac").rstrip("/__init__").split(os.path.sep))
+    return name
+
+
 def smart_join(base_path: str, target_path: str) -> str:
     """Join two paths while attempting to remove any redundant segments."""
     base_parts = path.normpath(base_path).split(path.sep)
@@ -147,12 +157,15 @@ def handle_directory(
 
 
 def get_full_target(target: str, base_path: str) -> str:
-    global caller_dir, dir_path, file_name
+    global caller_dir, dir_path, file_name, base_mod_path
     target_path = path.join(*(target.split(".")))
     dir_path, file_name = path.split(target_path)
     caller_dir = get_caller_dir(target, base_path, dir_path)
     full_target = path.normpath(path.join(caller_dir, target_path))
     full_target = smart_join(caller_dir, target_path)
+    if not base_mod_path:
+        base_mod_path = os.path.dirname(full_target)
+    base_mod_path = base_mod_path
     return full_target
 
 
@@ -168,9 +181,10 @@ def jac_importer(
     items: Optional[dict[str, Union[str, bool]]] = None,
 ) -> Optional[Tuple[types.ModuleType, ...]]:
     """Core Import Process."""
-    global caller_dir, dir_path, file_name
+    global caller_dir, dir_path, file_name, base_mod_path
 
     full_target = get_full_target(target, base_path)
+
     # Handle directory import
     if os.path.isdir(full_target):
         module = handle_directory(full_target, override_name, mod_bundle)
