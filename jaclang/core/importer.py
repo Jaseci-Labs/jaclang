@@ -19,11 +19,27 @@ from jaclang.utils.log import logging
 base_mod_path: str = ""
 
 
-def resolve_sys_mod_name(path: str) -> str:
+def resolve_sys_mod_name(target: str) -> str:
     """Resolve system module name."""
-    rel_path = os.path.relpath(path, base_mod_path)
-    name = ".".join(rel_path.rstrip(".jac").rstrip("/__init__").split(os.path.sep))
-    return name
+    # Get the relative path from the base module path
+    rel_path = os.path.relpath(target, base_mod_path)
+    # Normalize path to remove OS-specific characters and '.jac' extension
+    normalized_path = rel_path.replace(os.sep, ".").replace(".jac", "")
+    # Handling '__init__' suffix properly
+    if normalized_path.endswith(".__init__"):
+        normalized_path = normalized_path[:-9]  # Strip the '.__init__' suffix
+
+    # Handling excessive dots
+    parts = normalized_path.split(".")
+    parts = [part for part in parts if part and part != ".."]
+    normalized_path = ".".join(parts)
+
+    # Ensure there are no leading dots
+    normalized_path = normalized_path.lstrip(".")
+    # print(
+    #     f"Resolving system module name: {target}, base path: {base_mod_path}, name: {normalized_path}"
+    # )
+    return normalized_path
 
 
 def smart_join(base_path: str, target_path: str) -> str:
@@ -166,6 +182,7 @@ def get_full_target(target: str, base_path: str) -> str:
     if not base_mod_path:
         base_mod_path = os.path.dirname(full_target)
     base_mod_path = base_mod_path
+    # print(f"base_mod_path: {base_mod_path}")
     return full_target
 
 
@@ -182,7 +199,7 @@ def jac_importer(
 ) -> Optional[Tuple[types.ModuleType, ...]]:
     """Core Import Process."""
     global caller_dir, dir_path, file_name, base_mod_path
-
+    # print(f"resolving: {target} in {base_path} relpath {resolve_sys_mod_name(target)})")
     full_target = get_full_target(target, base_path)
 
     # Handle directory import
@@ -190,7 +207,8 @@ def jac_importer(
         module = handle_directory(full_target, override_name, mod_bundle)
     else:
         full_target += ".jac" if lng == "jac" else ".py"
-        module_name = path.splitext(file_name)[0]
+        # module_name = path.splitext(file_name)[0]
+        module_name = resolve_sys_mod_name(target)
         package_path = dir_path.replace(path.sep, ".")
 
         module = sys.modules.get(
@@ -273,6 +291,7 @@ def ensure_parent_module(
         if module_name in sys.modules:
             module = sys.modules[module_name]
         else:
+            # print(f"module_name in ensure: {module_name}")
             module = types.ModuleType(module_name)
             module.__dict__["__jac_mod_bundle__"] = mod_bundle
             sys.modules[module_name] = module
@@ -281,7 +300,9 @@ def ensure_parent_module(
             module.__path__ = [module_directory]
         parent_name, _, child_name = module_name.rpartition(".")
         if parent_name:
-            parent_module = ensure_parent_module(parent_name, module_directory)
+            parent_module = ensure_parent_module(
+                parent_name, module_directory, mod_bundle
+            )
             setattr(parent_module, child_name, module)
         return module
     except Exception as e:
@@ -299,10 +320,12 @@ def create_jac_py_module(
     module = sys.modules.get(
         f"{package_path}.{module_name}" if package_path else module_name
     )
-    full_module_name = f"{package_path}.{module_name}" if package_path else module_name
     if not module:
-        module = types.ModuleType(full_module_name)
-        module.__name__ = full_module_name
+        # print(f"module_name: {module_name}, in create")
+        module_name = resolve_sys_mod_name(module_name)
+        # print(f"module_name: {module_name}, after resolve_sys_mod_name")
+        module = types.ModuleType(module_name)
+        module.__name__ = module_name
     module.__dict__["__jac_mod_bundle__"] = mod_bundle
 
     # Determine if the target is a directory and set path attributes accordingly.
@@ -317,7 +340,7 @@ def create_jac_py_module(
     else:
         module.__file__ = full_target
 
-    namespace_parts = full_module_name.split(".")
+    namespace_parts = module_name.split(".")
     constructed_path = ""
 
     for i, part in enumerate(namespace_parts):
