@@ -1,10 +1,11 @@
-name: Run Tests
+name: Plugin Tests
 
 on:
-  pull_request:
   push:
     branches:
       - main
+    paths:
+      - 'support/plugins/**'
 
 jobs:
   test:
@@ -18,14 +19,14 @@ jobs:
       with:
         python-version: 3.12
 
-    - name: Install dependencies
+    - name: Installing Jaclang and Pytest
       run: |
         python -m pip install --upgrade pip
         pip install -e .
         pip install pytest
-        pip install streamlit
-        pip install pydot
-        pip install streamlit-agraph
 
-    - name: Run tests
-      run: pytest support/plugins/streamlit
+    - name: Testing Streamlit Plugin
+      run: |
+        cd support/plugins/streamlit
+        pip install -e .
+        pytest
