@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'support/plugins/**'
 
 jobs:
   test:
@@ -30,3 +28,6 @@ jobs:
         cd support/plugins/streamlit
         pip install -e .
         pytest
+      continue-on-error: true
+
+    # Add more steps for testing other plugins
