@@ -19,10 +19,13 @@ from jaclang.utils.log import logging
 base_mod_path: str = ""
 
 
-def resolve_sys_mod_name(target: str) -> str:
+def resolve_sys_mod_name(target: str, base_path) -> str:
     """Resolve system module name."""
     # Get the relative path from the base module path
-    rel_path = os.path.relpath(target, base_mod_path)
+    rel_path = os.path.relpath(target, base_path)
+    print(
+        f"Resolving system module name: {target}, base path: {base_path}, name: {rel_path}"
+    )
     # Normalize path to remove OS-specific characters and '.jac' extension
     normalized_path = rel_path.replace(os.sep, ".").replace(".jac", "")
     # Handling '__init__' suffix properly
@@ -177,7 +180,11 @@ def get_full_target(target: str, base_path: str) -> str:
     target_path = path.join(*(target.split(".")))
     dir_path, file_name = path.split(target_path)
     caller_dir = get_caller_dir(target, base_path, dir_path)
+    # print(f"caller_dir: {caller_dir}")
     full_target = path.normpath(path.join(caller_dir, target_path))
+    # print(
+    #     f"full_target: {full_target}, target_path: {target_path}, dir_path: {dir_path}, file_name: {file_name}, target: {target}"
+    # )
     full_target = smart_join(caller_dir, target_path)
     if not base_mod_path:
         base_mod_path = os.path.dirname(full_target)
@@ -207,8 +214,10 @@ def jac_importer(
         module = handle_directory(full_target, override_name, mod_bundle)
     else:
         full_target += ".jac" if lng == "jac" else ".py"
-        # module_name = path.splitext(file_name)[0]
-        module_name = resolve_sys_mod_name(target)
+        if lng == "py":
+            module_name = path.splitext(file_name)[0]
+        else:
+            module_name = resolve_sys_mod_name(target, full_target)
         package_path = dir_path.replace(path.sep, ".")
 
         module = sys.modules.get(
@@ -321,8 +330,8 @@ def create_jac_py_module(
         f"{package_path}.{module_name}" if package_path else module_name
     )
     if not module:
-        # print(f"module_name: {module_name}, in create")
-        module_name = resolve_sys_mod_name(module_name)
+        print(f"module_name: {module_name}, in create, full_target: {full_target}")
+        module_name = resolve_sys_mod_name(module_name, full_target)
         # print(f"module_name: {module_name}, after resolve_sys_mod_name")
         module = types.ModuleType(module_name)
         module.__name__ = module_name
