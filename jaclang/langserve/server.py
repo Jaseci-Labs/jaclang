@@ -147,6 +147,14 @@ async def definition(
     return ls.get_definition(params.text_document.uri, params.position)
 
 
+@server.feature(lspt.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL)
+async def semantic_tokens_full(
+    ls: JacLangServer, params: lspt.SemanticTokensParams
+) -> lspt.SemanticTokens:
+    """Provide semantic tokens."""
+    return ls.get_semantic_tokens(params.text_document.uri)
+
+
 def run_lang_server() -> None:
     """Run the language server."""
     server.start_io()
