@@ -83,16 +83,52 @@ class TestJacLangServer(TestCase):
         lsp.quick_check(circle_file)
         lsp.deep_check(circle_file)
         lsp.type_check(circle_file)
-        pos = lspt.Position(13, 8)
+        pos = lspt.Position(20, 8)
         self.assertIn(
             "Circle class inherits from Shape.",
             lsp.get_hover_info(circle_file, pos).contents.value,
+        )
+        lsp.type_check(circle_impl_file, force=True)
+        pos = lspt.Position(8, 11)
+        self.assertIn(
+            "ability) calculate_area: float",
+            lsp.get_hover_info(circle_impl_file, pos).contents.value,
+        )
+
+    def test_impl_auto_discover(self) -> None:
+        """Test that the server doesn't run if there is a syntax error."""
+        lsp = JacLangServer()
+        # Set up the workspace path to "fixtures/"
+        workspace_path = self.fixture_abs_path("")
+        workspace = Workspace(workspace_path, lsp)
+        lsp.lsp._workspace = workspace
+        circle_impl_file = uris.from_fs_path(
+            self.fixture_abs_path("circle_pure.impl.jac")
         )
         lsp.quick_check(circle_impl_file, force=True)
         lsp.deep_check(circle_impl_file, force=True)
         lsp.type_check(circle_impl_file, force=True)
         pos = lspt.Position(8, 11)
         self.assertIn(
-            "(ability) can calculate_area ( radius : float ) -> float",
+            "ability) calculate_area: float",
             lsp.get_hover_info(circle_impl_file, pos).contents.value,
+        )
+
+    def test_show_type_impl(self) -> None:
+        """Test that the server doesn't run if there is a syntax error."""
+        lsp = JacLangServer()
+        # Set up the workspace path to "fixtures/"
+        workspace_path = self.fixture_abs_path("")
+        workspace = Workspace(workspace_path, lsp)
+        lsp.lsp._workspace = workspace
+        target = uris.from_fs_path(
+            self.fixture_abs_path("../../../../examples/guess_game/guess_game4.jac")
+        )
+        lsp.quick_check(target)
+        lsp.deep_check(target)
+        lsp.type_check(target)
+        pos = lspt.Position(43, 18)
+        self.assertIn(
+            "attempts: int",
+            lsp.get_hover_info(target, pos).contents.value,
         )

@@ -32,7 +32,6 @@ class AstNode:
         self.kid: list[AstNode] = [x.set_parent(self) for x in kid]
         self.sym_tab: Optional[SymbolTable] = None
         self._sub_node_tab: dict[type, list[AstNode]] = {}
-        self._typ: type = type(None)
         self.gen: CodeGenTarget = CodeGenTarget()
         self.meta: dict[str, str] = {}
         self.loc: CodeLocInfo = CodeLocInfo(*self.resolve_tok_range())
@@ -112,11 +111,15 @@ class AstNode:
 
         return Pass.get_all_sub_nodes(node=self, typ=typ, brute_force=brute_force)
 
-    def parent_of_type(self, typ: Type[T]) -> T:
+    def find_parent_of_type(self, typ: Type[T]) -> Optional[T]:
         """Get parent of type."""
         from jaclang.compiler.passes import Pass
 
-        ret = Pass.has_parent_of_type(node=self, typ=typ)
+        return Pass.has_parent_of_type(node=self, typ=typ)
+
+    def parent_of_type(self, typ: Type[T]) -> T:
+        """Get parent of type."""
+        ret = self.find_parent_of_type(typ)
         if isinstance(ret, typ):
             return ret
         else:
@@ -179,6 +182,8 @@ class AstSymbolNode(AstNode):
         self.sym_link: Optional[Symbol] = None
         self.sym_name: str = sym_name
         self.sym_name_node = sym_name_node
+        if isinstance(self.sym_name_node, NameSpec):
+            self.sym_name_node.name_of = self
         self.sym_type: SymbolType = sym_type
         self.sym_info: SymbolInfo = SymbolInfo()
         self.py_ctx_func: Type[ast3.AST] = ast3.Load
@@ -259,8 +264,11 @@ class WalkerStmtOnlyNode(AstNode):
 class AstImplOnlyNode(AstNode):
     """ImplOnly node type for Jac Ast."""
 
-    def __init__(self, body: SubNodeList, decl_link: Optional[AstNode]) -> None:
+    def __init__(
+        self, target: ArchRefChain, body: SubNodeList, decl_link: Optional[AstNode]
+    ) -> None:
         """Initialize impl only node."""
+        self.target = target
         self.body = body
         self.decl_link = decl_link
 
@@ -304,6 +312,10 @@ class CodeBlockStmt(AstNode):
 
 class NameSpec(AtomExpr, EnumBlockStmt):
     """NameSpec node type for Jac Ast."""
+
+    def __init__(self) -> None:
+        """Initialize name spec node."""
+        self.name_of: AstSymbolNode = self
 
 
 class ArchSpec(ElementStmt, CodeBlockStmt, AstSymbolNode, AstDocNode, AstSemStrNode):
@@ -408,6 +420,29 @@ class Module(AstDocNode):
         self.registry = registry
         AstNode.__init__(self, kid=kid)
         AstDocNode.__init__(self, doc=doc)
+
+    @property
+    def annexable_by(self) -> Optional[str]:
+        """Get annexable by."""
+        if not self.stub_only and self.loc.mod_path.endswith("impl.jac"):
+            head_mod_name = self.name.split(".")[0]
+            potential_path = os.path.join(
+                os.path.dirname(self.loc.mod_path),
+                f"{head_mod_name}.jac",
+            )
+            if os.path.exists(potential_path):
+                return potential_path
+            if os.path.split(os.path.dirname(self.loc.mod_path))[-1].endswith(".impl"):
+                head_mod_name = os.path.split(os.path.dirname(self.loc.mod_path))[
+                    -1
+                ].split(".")[0]
+                potential_path = os.path.join(
+                    os.path.dirname(os.path.dirname(self.loc.mod_path)),
+                    f"{head_mod_name}.jac",
+                )
+                if os.path.exists(potential_path):
+                    return potential_path
+        return None
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module node."""
@@ -843,7 +878,6 @@ class ArchDef(ArchSpec, AstImplOnlyNode):
         decl_link: Optional[Architype] = None,
     ) -> None:
         """Initialize arch def node."""
-        self.target = target
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
@@ -853,7 +887,7 @@ class ArchDef(ArchSpec, AstImplOnlyNode):
         )
         AstDocNode.__init__(self, doc=doc)
         ArchSpec.__init__(self, decorators=decorators)
-        AstImplOnlyNode.__init__(self, body=body, decl_link=decl_link)
+        AstImplOnlyNode.__init__(self, target=target, body=body, decl_link=decl_link)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize arch def node."""
@@ -954,7 +988,6 @@ class EnumDef(ArchSpec, AstImplOnlyNode):
         decl_link: Optional[Enum] = None,
     ) -> None:
         """Initialize arch def node."""
-        self.target = target
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
@@ -964,7 +997,7 @@ class EnumDef(ArchSpec, AstImplOnlyNode):
         )
         AstDocNode.__init__(self, doc=doc)
         ArchSpec.__init__(self, decorators=decorators)
-        AstImplOnlyNode.__init__(self, body=body, decl_link=decl_link)
+        AstImplOnlyNode.__init__(self, target=target, body=body, decl_link=decl_link)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize enum def node."""
@@ -1004,7 +1037,7 @@ class Ability(
         is_static: bool,
         is_abstract: bool,
         access: Optional[SubTag[Token]],
-        signature: Optional[FuncSignature | EventSignature],
+        signature: FuncSignature | EventSignature,
         body: Optional[SubNodeList[CodeBlockStmt] | AbilityDef | FuncCall],
         kid: Sequence[AstNode],
         semstr: Optional[String] = None,
@@ -1113,7 +1146,6 @@ class AbilityDef(AstSymbolNode, ElementStmt, AstImplOnlyNode, CodeBlockStmt):
         decl_link: Optional[Ability] = None,
     ) -> None:
         """Initialize ability def node."""
-        self.target = target
         self.signature = signature
         self.decorators = decorators
         AstNode.__init__(self, kid=kid)
@@ -1124,7 +1156,7 @@ class AbilityDef(AstSymbolNode, ElementStmt, AstImplOnlyNode, CodeBlockStmt):
             sym_type=SymbolType.IMPL,
         )
         AstDocNode.__init__(self, doc=doc)
-        AstImplOnlyNode.__init__(self, body=body, decl_link=decl_link)
+        AstImplOnlyNode.__init__(self, target=target, body=body, decl_link=decl_link)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ability def node."""
@@ -1396,7 +1428,7 @@ class HasVar(AstSymbolNode, AstTypedVarNode, AstSemStrNode):
             self,
             sym_name=name.value,
             sym_name_node=name,
-            sym_type=SymbolType.VAR,
+            sym_type=SymbolType.HAS_VAR,
         )
         AstTypedVarNode.__init__(self, type_tag=type_tag)
         AstSemStrNode.__init__(self, semstr=semstr)
@@ -3068,6 +3100,7 @@ class ArchRef(NameSpec):
             sym_name_node=name_ref,
             sym_type=SymbolType.TYPE,
         )
+        NameSpec.__init__(self)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""
@@ -3105,6 +3138,7 @@ class SpecialVarRef(NameSpec):
             sym_name_node=var,
             sym_type=SymbolType.VAR,
         )
+        NameSpec.__init__(self)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""
@@ -3788,6 +3822,7 @@ class Name(Token, NameSpec):
             sym_name_node=self,
             sym_type=SymbolType.VAR,
         )
+        NameSpec.__init__(self)
 
     def unparse(self) -> str:
         """Unparse name."""
