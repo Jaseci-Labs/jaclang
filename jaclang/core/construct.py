@@ -6,6 +6,7 @@ import types
 import unittest
 from dataclasses import dataclass, field
 from enum import Enum
+from os import getenv
 from re import IGNORECASE, compile
 from typing import (
     Any,
@@ -18,6 +19,7 @@ from typing import (
     TypeVar,
     TypedDict,
     Union,
+    cast,
 )
 from uuid import UUID, uuid4
 
@@ -34,6 +36,7 @@ GENERIC_ID_REGEX = compile(r"^(g|n|e|w):([^:]*):([a-f\d]{24})$", IGNORECASE)
 NODE_ID_REGEX = compile(r"^n:([^:]*):([a-f\d]{24})$", IGNORECASE)
 EDGE_ID_REGEX = compile(r"^e:([^:]*):([a-f\d]{24})$", IGNORECASE)
 WALKER_ID_REGEX = compile(r"^w:([^:]*):([a-f\d]{24})$", IGNORECASE)
+ENABLE_MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 
 
 class ObjectType(Enum):
@@ -86,6 +89,7 @@ class ObjectAnchor:
     access: AnchorAccess[UUID] = field(default_factory=AnchorAccess[UUID])
     obj: Optional[Architype] = None
     current_access_level: Optional[int] = None
+    persistent: Optional[bool] = field(default=ENABLE_MANUAL_SAVE)
 
     @property
     def ref_id(self) -> str:
@@ -168,6 +172,17 @@ class ObjectAnchor:
         to.current_access_level = None
         return False
 
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        state = self.__dict__.copy()
+        state.pop("obj")
+
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Override setstate for pickle and shelve."""
+        self.__dict__.update(state)
+
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
         if isinstance(other, ObjectAnchor):
@@ -210,16 +225,17 @@ class NodeAnchor(ObjectAnchor):
             )
         return None
 
+    def architype(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeArchitype]:
+        """Retrieve the Architype from db and return."""
+        return cast(Optional[NodeArchitype], super().architype(node))
+
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
-        if not self.obj:
-            self.architype()
+        if obj := self.architype():
+            edg._jac_.attach(obj, nd)
+            return obj
 
-        if not self.obj:
-            raise Exception(f"Invalid Reference {self.ref_id}")
-
-        edg._jac_.attach(self.obj, nd)
-        return self.obj
+        raise Exception(f"Invalid Reference {self.ref_id}")
 
     def get_edges(
         self,
@@ -300,7 +316,10 @@ class NodeAnchor(ObjectAnchor):
 
     def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
         """Invoke data spatial call."""
-        return walk._jac_.spawn_call(self.obj)
+        if obj := self.architype():
+            return walk._jac_.spawn_call(obj)
+
+        raise Exception(f"Invalid Reference {self.ref_id}")
 
 
 @dataclass(eq=False)
@@ -333,27 +352,37 @@ class EdgeAnchor(ObjectAnchor):
             )
         return None
 
+    def architype(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeArchitype]:
+        """Retrieve the Architype from db and return."""
+        return cast(Optional[EdgeArchitype], super().architype(node))
+
     def attach(
         self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
     ) -> EdgeAnchor:
         """Attach edge to nodes."""
-        self.source = src
-        self.target = trg
-        self.is_undirected = is_undirected
-        src._jac_.edges.append(self.obj)
-        trg._jac_.edges.append(self.obj)
-        return self
+        if obj := self.architype():
+            self.source = src
+            self.target = trg
+            self.is_undirected = is_undirected
+            src._jac_.edges.append(obj)
+            trg._jac_.edges.append(obj)
+            return self
+
+        raise Exception(f"Invalid Reference {self.ref_id}")
 
     def detach(
         self, src: NodeArchitype, trg: NodeArchitype, is_undirected: bool = False
     ) -> None:
         """Detach edge from nodes."""
-        self.is_undirected = is_undirected
-        src._jac_.edges.remove(self.obj)
-        trg._jac_.edges.remove(self.obj)
-        self.source = None
-        self.target = None
-        del self
+        if obj := self.architype():
+            self.is_undirected = is_undirected
+            src._jac_.edges.remove(obj)
+            trg._jac_.edges.remove(obj)
+            self.source = None
+            self.target = None
+            del self
+
+        raise Exception(f"Invalid Reference {self.ref_id}")
 
     def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
         """Invoke data spatial call."""
@@ -393,6 +422,12 @@ class WalkerAnchor(ObjectAnchor):
                 id=UUID(match.group(3)),
             )
         return None
+
+    def architype(
+        self, node: Optional["NodeAnchor"] = None
+    ) -> Optional[WalkerArchitype]:
+        """Retrieve the Architype from db and return."""
+        return cast(Optional[WalkerArchitype], super().architype(node))
 
     def visit_node(
         self,
@@ -444,44 +479,47 @@ class WalkerAnchor(ObjectAnchor):
 
     def spawn_call(self, nd: Architype) -> WalkerArchitype:
         """Invoke data spatial call."""
-        self.path = []
-        self.next = [nd]
-        while len(self.next):
-            nd = self.next.pop(0)
-            for i in nd._jac_entry_funcs_:
-                if not i.trigger or isinstance(self.obj, i.trigger):
-                    if i.func:
-                        i.func(nd, self.obj)
-                    else:
-                        raise ValueError(f"No function {i.name} to call.")
-                if self.disengaged:
-                    return self.obj
-            for i in self.obj._jac_entry_funcs_:
-                if not i.trigger or isinstance(nd, i.trigger):
-                    if i.func:
-                        i.func(self.obj, nd)
-                    else:
-                        raise ValueError(f"No function {i.name} to call.")
-                if self.disengaged:
-                    return self.obj
-            for i in self.obj._jac_exit_funcs_:
-                if not i.trigger or isinstance(nd, i.trigger):
-                    if i.func:
-                        i.func(self.obj, nd)
-                    else:
-                        raise ValueError(f"No function {i.name} to call.")
-                if self.disengaged:
-                    return self.obj
-            for i in nd._jac_exit_funcs_:
-                if not i.trigger or isinstance(self.obj, i.trigger):
-                    if i.func:
-                        i.func(nd, self.obj)
-                    else:
-                        raise ValueError(f"No function {i.name} to call.")
-                if self.disengaged:
-                    return self.obj
-        self.ignores = []
-        return self.obj
+        if obj := self.architype():
+            self.path = []
+            self.next = [nd]
+            while len(self.next):
+                nd = self.next.pop(0)
+                for i in nd._jac_entry_funcs_:
+                    if not i.trigger or isinstance(self.obj, i.trigger):
+                        if i.func:
+                            i.func(nd, self.obj)
+                        else:
+                            raise ValueError(f"No function {i.name} to call.")
+                    if self.disengaged:
+                        return obj
+                for i in obj._jac_entry_funcs_:
+                    if not i.trigger or isinstance(nd, i.trigger):
+                        if i.func:
+                            i.func(obj, nd)
+                        else:
+                            raise ValueError(f"No function {i.name} to call.")
+                    if self.disengaged:
+                        return obj
+                for i in obj._jac_exit_funcs_:
+                    if not i.trigger or isinstance(nd, i.trigger):
+                        if i.func:
+                            i.func(obj, nd)
+                        else:
+                            raise ValueError(f"No function {i.name} to call.")
+                    if self.disengaged:
+                        return obj
+                for i in nd._jac_exit_funcs_:
+                    if not i.trigger or isinstance(obj, i.trigger):
+                        if i.func:
+                            i.func(nd, obj)
+                        else:
+                            raise ValueError(f"No function {i.name} to call.")
+                    if self.disengaged:
+                        return obj
+            self.ignores = []
+            return obj
+
+        raise Exception(f"Invalid Reference {self.ref_id}")
 
 
 class Architype:
@@ -497,6 +535,14 @@ class Architype:
     def __init__(self) -> None:
         """Create default architype."""
         self._jac_: ObjectAnchor = ObjectAnchor(obj=self)
+
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        return self.__dict__.copy()
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Override setstate for pickle and shelve."""
+        self.__dict__.update(state)
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
@@ -578,6 +624,8 @@ class DSFunc:
 
 
 class ContextOptions(TypedDict, total=False):
+    """Execution Context Options."""
+
     root: str
     entry: str
 
@@ -614,6 +662,7 @@ class ExecutionContext:
             self.entry = self.root
 
     def close(self) -> None:
+        """Clean up context."""
         self.datasource.close()
 
 

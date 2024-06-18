@@ -10,7 +10,8 @@ from jaclang.core.construct import Architype
 
 M = TypeVar("M", bound="Memory")
 A = TypeVar("A", bound=Architype)
-IDS = Union[UUID, list[UUID]]
+ID = Union[str, UUID]
+IDS = Union[ID, list[ID]]
 
 
 @dataclass
@@ -65,7 +66,7 @@ class Memory:
             if (obj := self.__mem__.get(str(id))) and (not filter or filter(obj)):
                 yield obj
             elif extended:
-                yield id
+                yield UUID(id) if isinstance(id, str) else id
 
     def find_one(
         self,

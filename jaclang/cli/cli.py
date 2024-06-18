@@ -6,11 +6,10 @@ import inspect
 import marshal
 import os
 import pickle
-import pprint
 import shutil
 import sys
 import types
-from typing import Optional
+from typing import Any, Optional
 
 import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
@@ -73,6 +72,7 @@ def run(
     cache: bool = True,
     walker: str = "",
     node: str = "",
+    root: str = "",
 ) -> None:
     """Run the specified .jac file."""
     # if no session specified, check if it was defined when starting the command shell
@@ -84,7 +84,7 @@ def run(
             else "jaclang.session"
         )
 
-    Jac.context().init_memory(session)
+    jctx = Jac.context(session, {"root": root, "entry": node})
 
     base, mod = os.path.split(filename)
     base = base if base else "./"
@@ -109,27 +109,19 @@ def run(
     else:
         print("Not a .jac file.")
 
-    if node:
-        entrypoint = Jac.memory_hook().get_obj(node)
-        if not entrypoint:
-            print(f"Node {node} not found.")
-            return
-    else:
-        entrypoint = Jac.get_root()
-
     # TODO: handle no override name
     if walker:
         walker_module = dict(inspect.getmembers(sys.modules["__main__"])).get(walker)
         if walker_module:
-            Jac.spawn_call(entrypoint, walker_module())
+            Jac.spawn_call(jctx.entry, walker_module())
         else:
             print(f"Walker {walker} not found.")
 
-    Jac.reset_context()
+    jctx.close()
 
 
 @cmd_registry.register
-def get_object(id: str, session: str = "") -> dict:
+def get_object(id: str, session: str = "") -> dict[str, Any]:
     """Get the object with the specified id."""
     if session == "":
         session = (
@@ -138,13 +130,16 @@ def get_object(id: str, session: str = "") -> dict:
             else "jaclang.session"
         )
 
-    Jac.context().init_memory(session)
+    jctx = Jac.context(session)
+    jsrc = jctx.datasource
 
-    obj = Jac.memory_hook().get_obj(id)
+    obj = jsrc.find_one(id)
 
-    Jac.reset_context()
+    jctx.close()
 
-    return obj.__getstate__()
+    if obj:
+        return obj.__getstate__()
+    return {}
 
 
 @cmd_registry.register

@@ -28,10 +28,14 @@ from jaclang.core.construct import (
     ContextOptions,
     DSFunc,
     EdgeAnchor,
+    EdgeArchitype,
     ExecutionContext,
+    GenericEdge,
     JacTestCheck,
     NodeAnchor,
+    NodeArchitype,
     ObjectAnchor,
+    Root,
     T,
     WalkerAnchor,
     WalkerArchitype,
@@ -39,12 +43,6 @@ from jaclang.core.construct import (
 from jaclang.core.importer import jac_importer
 from jaclang.core.registry import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
-from jaclang.plugin.architype import (
-    PersistentEdgeArchitype as EdgeArchitype,
-    PersistentGenericEdge as GenericEdge,
-    PersistentNodeArchitype as NodeArchitype,
-    PersistentRoot as Root,
-)
 from jaclang.plugin.feature import JacFeature as Jac
 
 
@@ -392,15 +390,6 @@ class JacFeatureDefaults:
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
                 i._jac_.connect_node(j, conn_edge)
-
-                if i._jac_.persistent:
-                    conn_edge.save()
-                    j.save()
-
-                if j._jac_.persistent:
-                    conn_edge.save()
-                    i.save()
-
         return right if not edges_only else edges
 
     @staticmethod
@@ -451,9 +440,9 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_root() -> Architype:
+    def get_root() -> NodeArchitype:
         """Jac's assign comprehension feature."""
-        return Jac.context().get_root()
+        return Jac.context().root
 
     @staticmethod
     @hookimpl
