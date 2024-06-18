@@ -468,14 +468,14 @@ class PyastGenPass(Pass):
             doc = self.sync(ast3.Expr(value=node.doc.gen.py_ast[0]), jac_node=node.doc)
             if isinstance(doc, ast3.AST):
                 node.gen.py_ast = self.pyinline_sync(
-                    [doc, *ast3.parse(node.code.value).body]
+                    [doc, *ast3.parse(node.code._value).body]
                 )
 
             else:
                 raise self.ice()
         else:
             node.gen.py_ast = self.pyinline_sync(
-                [*ast3.parse(textwrap.dedent(node.code.value)).body]
+                [*ast3.parse(textwrap.dedent(node.code._value)).body]
             )
 
     def exit_import(self, node: ast.Import) -> None:
@@ -563,7 +563,7 @@ class PyastGenPass(Pass):
                                             arg="lng",
                                             value=self.sync(
                                                 ast3.Constant(
-                                                    value=node.hint.tag.value
+                                                    value=node.hint.tag.sym_name
                                                 ),
                                                 node.hint,
                                             ),
@@ -721,7 +721,7 @@ class PyastGenPass(Pass):
                                 value=self.sync(
                                     ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
                                 ),
-                                attr=f"make_{node.arch_type.value}",
+                                attr=f"make_{node.arch_type._value}",
                                 ctx=ast3.Load(),
                             )
                         ),
@@ -775,7 +775,7 @@ class PyastGenPass(Pass):
                         value=self.sync(
                             ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
                         ),
-                        attr=node.arch_type.value.capitalize(),
+                        attr=node.arch_type._value.capitalize(),
                         ctx=ast3.Load(),
                     )
                 )
@@ -1078,10 +1078,10 @@ class PyastGenPass(Pass):
                                     if param.type_tag
                                     else None
                                 ),
-                                self.sync(ast3.Constant(value=param.name.value)),
+                                self.sync(ast3.Constant(value=param.name.sym_name)),
                                 self.sync(
                                     ast3.Name(
-                                        id=param.name.value,
+                                        id=param.name.sym_name,
                                         ctx=ast3.Load(),
                                     )
                                 ),
@@ -1352,9 +1352,9 @@ class PyastGenPass(Pass):
         kwarg = None
         if isinstance(node.params, ast.SubNodeList):
             for i in node.params.items:
-                if i.unpack and i.unpack.value == "*":
+                if i.unpack and i.unpack._value == "*":
                     vararg = i.gen.py_ast[0]
-                elif i.unpack and i.unpack.value == "**":
+                elif i.unpack and i.unpack._value == "**":
                     kwarg = i.gen.py_ast[0]
                 else:
                     (
@@ -2371,7 +2371,7 @@ class PyastGenPass(Pass):
             ]
         else:
             self.error(
-                f"Binary operator {node.op.value} not supported in bootstrap Jac"
+                f"Binary operator {node.op._value} not supported in bootstrap Jac"
             )
         return []
 
@@ -2503,7 +2503,7 @@ class PyastGenPass(Pass):
         elif node.op.name in [Tok.STAR_POW]:
             node.gen.py_ast = node.operand.gen.py_ast
         else:
-            self.ice(f"Unknown Unary operator {node.op.value}")
+            self.ice(f"Unknown Unary operator {node.op._value}")
 
     def exit_if_else_expr(self, node: ast.IfElseExpr) -> None:
         """Sub objects.
@@ -2970,7 +2970,7 @@ class PyastGenPass(Pass):
                                             self.sync(
                                                 ast3.Constant(
                                                     value=(
-                                                        kw_pair.key.value
+                                                        kw_pair.key.sym_name
                                                         if isinstance(
                                                             kw_pair.key, ast.Name
                                                         )
@@ -3007,7 +3007,7 @@ class PyastGenPass(Pass):
                                             self.sync(
                                                 ast3.Constant(
                                                     value=(
-                                                        kw_pair.key.value
+                                                        kw_pair.key.sym_name
                                                         if isinstance(
                                                             kw_pair.key, ast.Name
                                                         )
@@ -3023,7 +3023,7 @@ class PyastGenPass(Pass):
                                 self.sync(
                                     ast3.Constant(
                                         value=(
-                                            kw_pair.key.value
+                                            kw_pair.key.sym_name
                                             if isinstance(kw_pair.key, ast.Name)
                                             else None
                                         )
@@ -3686,7 +3686,7 @@ class PyastGenPass(Pass):
         pos_start: int,
         pos_end: int,
         """
-        node.gen.py_ast = [self.sync(ast3.Constant(value=float(node.value)))]
+        node.gen.py_ast = [self.sync(ast3.Constant(value=float(node._value)))]
 
     def exit_int(self, node: ast.Int) -> None:
         """Sub objects.
@@ -3712,7 +3712,7 @@ class PyastGenPass(Pass):
 
         node.gen.py_ast = [
             self.sync(
-                ast3.Constant(value=handle_node_value(str(node.value)), kind=None)
+                ast3.Constant(value=handle_node_value(str(node._value)), kind=None)
             )
         ]
 
@@ -3740,7 +3740,7 @@ class PyastGenPass(Pass):
         pos_start: int,
         pos_end: int,
         """
-        node.gen.py_ast = [self.sync(ast3.Constant(value=node.value == "True"))]
+        node.gen.py_ast = [self.sync(ast3.Constant(value=node._value == "True"))]
 
     def exit_builtin_type(self, node: ast.BuiltinType) -> None:
         """Sub objects.

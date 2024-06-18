@@ -57,7 +57,7 @@ def dotgen_ast_tree(
             """ "Only tokens and some declared types are box(others are oval )"""
             shape = 'shape="box"'
             info1.append(("name", "=", node.name))
-            info1.append(("value", "=", html.escape(node.value)))
+            info1.append(("value", "=", html.escape(node._value)))
 
         if len(info1) == 0:
             label = f'"{node.__class__.__name__}"'
@@ -91,7 +91,7 @@ def print_ast_tree(
 
     def __node_repr_in_tree(node: AstNode) -> str:
         access = (
-            f"Access: {node.access.tag.value} ,"
+            f"Access: {node.access.tag._value} ,"
             if isinstance(node, ast.AstAccessNode) and node.access is not None
             else ""
         )
@@ -102,7 +102,7 @@ def print_ast_tree(
         )
 
         if isinstance(node, Token) and isinstance(node, AstSymbolNode):
-            out = f"{node.__class__.__name__} - {node.value} - Type: {node.sym_info.typ}, {access} {sym_table_link}"
+            out = f"{node.__class__.__name__} - {node._value} - Type: {node.sym_info.typ}, {access} {sym_table_link}"
             if settings.ast_symbol_info_detailed:
                 symbol = (
                     node.sym.sym_path_str
@@ -112,7 +112,7 @@ def print_ast_tree(
                 out += f" SymbolPath: {symbol}"
             return out
         elif isinstance(node, Token):
-            return f"{node.__class__.__name__} - {node.value}, {access}"
+            return f"{node.__class__.__name__} - {node._value}, {access}"
         elif isinstance(node, AstSymbolNode):
             out = f"{node.__class__.__name__} - {node.sym_name} - Type: {node.sym_info.typ}, {access} {sym_table_link}"
             if settings.ast_symbol_info_detailed:

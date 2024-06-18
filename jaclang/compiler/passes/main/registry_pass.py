@@ -46,8 +46,8 @@ class RegistryPass(Pass):
         """Save architype information."""
         scope = get_sem_scope(node)
         seminfo = SemInfo(
-            node.name.value,
-            node.arch_type.value,
+            node.name.sym_name,
+            node.arch_type._value,
             node.semstr.lit_value if node.semstr else None,
         )
         if (
@@ -61,7 +61,7 @@ class RegistryPass(Pass):
         """Save enum information."""
         scope = get_sem_scope(node)
         seminfo = SemInfo(
-            node.name.value, "Enum", node.semstr.lit_value if node.semstr else None
+            node.name.sym_name, "Enum", node.semstr.lit_value if node.semstr else None
         )
         if (
             len(self.modules_visited)
@@ -77,7 +77,7 @@ class RegistryPass(Pass):
         )
         scope = get_sem_scope(node)
         seminfo = SemInfo(
-            node.name.value,
+            node.name.sym_name,
             extracted_type,
             node.semstr.lit_value if node.semstr else None,
         )
@@ -95,7 +95,7 @@ class RegistryPass(Pass):
         scope = get_sem_scope(node)
         seminfo = SemInfo(
             (
-                node.target.items[0].value
+                node.target.items[0].sym_name
                 if isinstance(node.target.items[0], ast.Name)
                 else ""
             ),
@@ -113,7 +113,7 @@ class RegistryPass(Pass):
             and node.parent.parent.__class__.__name__ == "Enum"
         ):
             scope = get_sem_scope(node)
-            seminfo = SemInfo(node.value, None, None)
+            seminfo = SemInfo(node.sym_name, None, None)
             if len(self.modules_visited) and self.modules_visited[-1].registry:
                 self.modules_visited[-1].registry.add(scope, seminfo)
 
@@ -121,7 +121,7 @@ class RegistryPass(Pass):
         """Collect type information in assignment using bfs."""
         extracted_type = []
         if isinstance(node, (ast.BuiltinType, ast.Token)):
-            extracted_type.append(node.value)
+            extracted_type.append(node._value)
         for child in node.kid:
             extracted_type.extend(self.extract_type(child))
         return extracted_type

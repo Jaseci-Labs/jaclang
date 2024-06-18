@@ -44,7 +44,7 @@ class JacImportPass(Pass):
 
     def process_import(self, node: ast.Module, i: ast.ModulePath) -> None:
         """Process an import."""
-        lang = i.parent_of_type(ast.Import).hint.tag.value
+        lang = i.parent_of_type(ast.Import).hint.tag.sym_name
         if lang == "jac" and not i.sub_module:
             self.import_jac_module(
                 node=i,
@@ -119,7 +119,7 @@ class JacImportPass(Pass):
         sub_module: Optional[Module] = None,
         """
         if node.alias and node.sub_module:
-            node.sub_module.name = node.alias.value
+            node.sub_module.name = node.alias.sym_name
         # Items matched during def/decl pass
 
     def import_jac_module(self, node: ast.ModulePath, mod_path: str) -> None:
@@ -141,7 +141,7 @@ class JacImportPass(Pass):
                     if isinstance(i, ast.ModuleItem):
                         from_mod_target = import_target_to_relative_path(
                             level=node.level,
-                            target=node.path_str + "." + i.name.value,
+                            target=node.path_str + "." + i.name.sym_name,
                             base_path=os.path.dirname(node.loc.mod_path),
                         )
                         # If package
@@ -206,7 +206,7 @@ class PyImportPass(JacImportPass):
 
     def process_import(self, node: ast.Module, i: ast.ModulePath) -> None:
         """Process an import."""
-        lang = i.parent_of_type(ast.Import).hint.tag.value
+        lang = i.parent_of_type(ast.Import).hint.tag.sym_name
         if (
             lang == "py"
             and not i.sub_module

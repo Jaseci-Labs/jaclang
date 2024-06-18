@@ -282,7 +282,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
             if (
                 isinstance(body_stmt, ast.Ability)
                 and isinstance(body_stmt.name_ref, ast.Name)
-                and body_stmt.name_ref.value == "__init__"
+                and body_stmt.name_ref.sym_name == "__init__"
             ):
                 tok = ast.Name(
                     file_path=self.mod_path,
@@ -304,7 +304,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
                 body_stmt.signature.params.items = [
                     param
                     for param in body_stmt.signature.params.items
-                    if param.name.value != "self"
+                    if param.name.sym_name != "self"
                 ]
         doc = (
             body[0].expr
@@ -353,14 +353,14 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if (
             base_classes
             and isinstance(base_classes[0], ast.Name)
-            and base_classes[0].value == "Enum"
+            and base_classes[0].sym_name == "Enum"
         ):
             if len(base_classes) > 1:
                 raise ValueError(
                     "Python's Enum class cannot be used with multiple inheritance."
                 )
             arch_type.name = Tok.KW_ENUM
-            arch_type.value = "enum"
+            arch_type._value = "enum"
             valid_enum_body: list[ast.EnumBlockStmt] = []
             for class_body_stmt in node.body:
                 converted_stmt = self.convert(class_body_stmt)
@@ -901,7 +901,7 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
         if (
             isinstance(value, ast.FuncCall)
             and isinstance(value.target, ast.Name)
-            and value.target.value == "super"
+            and value.target.sym_name == "super"
         ):
             tok = ast.Name(
                 file_path=self.mod_path,
@@ -2558,12 +2558,12 @@ class PyastBuildPass(Pass[ast.PythonModuleAst]):
 
     def convert_to_doc(self, string: ast.String) -> None:
         """Convert a string to a docstring."""
-        string.value = f'""{string.value}""'
+        string._value = f'""{string._value}""'
 
     def aug_op_map(self, tok_dict: dict, op: ast.Token) -> str:
         """aug_mapper."""
-        op.value += "="
+        op._value += "="
         for _key, value in tok_dict.items():
-            if value == op.value:
+            if value == op._value:
                 break
         return _key

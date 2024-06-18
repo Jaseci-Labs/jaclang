@@ -339,7 +339,7 @@ class SymTabBuildPass(SymTabPass):
         body: CodeBlock,
         """
         self.def_insert(node, single_decl="test")
-        self.push_scope(node.name.value, node)
+        self.push_scope(node.name.sym_name, node)
         self.sync_node_to_scope(node)
         self.pop_scope()
 
@@ -393,7 +393,7 @@ class SymTabBuildPass(SymTabPass):
         if not node.is_absorb:
             for i in node.items.items:
                 self.def_insert(i, single_decl="import item")
-        elif node.is_absorb and node.hint.tag.value == "jac":
+        elif node.is_absorb and node.hint.tag.sym_name == "jac":
             source = node.items.items[0]
             if (
                 not isinstance(source, ast.ModulePath)
@@ -454,7 +454,7 @@ class SymTabBuildPass(SymTabPass):
         """
         self.sync_node_to_scope(node)
         self.def_insert(node, access_spec=node, single_decl="architype")
-        self.push_scope(node.name.value, node)
+        self.push_scope(node.name.sym_name, node)
         self.sync_node_to_scope(node)
 
     def exit_architype(self, node: ast.Architype) -> None:

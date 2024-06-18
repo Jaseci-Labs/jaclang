@@ -1199,7 +1199,7 @@ class JacParser(Pass):
                     ast.BuiltinType(
                         name=kid[0].name,
                         file_path=self.parse_ref.mod_path,
-                        value=kid[0].value,
+                        value=kid[0]._value,
                         line=kid[0].loc.first_line,
                         col_start=kid[0].loc.col_start,
                         col_end=kid[0].loc.col_end,
@@ -3949,8 +3949,10 @@ class JacParser(Pass):
             if isinstance(ret, ast.Name):
                 if token.type == Tok.KWESC_NAME:
                     ret.is_kwesc = True
-                if ret.value in keyword.kwlist:
-                    err = jl.UnexpectedInput(f"Python keyword {ret.value} used as name")
+                if ret._value in keyword.kwlist:
+                    err = jl.UnexpectedInput(
+                        f"Python keyword {ret._value} used as name"
+                    )
                     err.line = ret.loc.first_line
                     err.column = ret.loc.col_start
                     raise err

@@ -141,7 +141,7 @@ class AstNode:
         }
         if isinstance(self, Token):
             ret["name"] = self.name
-            ret["value"] = self.value
+            ret["value"] = self._value
         return ret
 
     def pp(self, depth: Optional[int] = None) -> str:
@@ -694,7 +694,7 @@ class ModulePath(AstSymbolNode):
     def path_str(self) -> str:
         """Get path string."""
         return ("." * self.level) + ".".join(
-            [p.value for p in self.path] if self.path else ""
+            [p._value for p in self.path] if self.path else ""
         )
 
     def normalize(self, deep: bool = False) -> bool:
@@ -780,7 +780,7 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
-            sym_name=name.value,
+            sym_name=name._value,
             sym_name_node=name,
             sym_type=(
                 SymbolType.OBJECT_ARCH
@@ -918,7 +918,7 @@ class Enum(ArchSpec, AstAccessNode, AstImplNeedingNode, ArchBlockStmt):
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
-            sym_name=name.value,
+            sym_name=name._value,
             sym_name_node=name,
             sym_type=SymbolType.ENUM_ARCH,
         )
@@ -1069,9 +1069,7 @@ class Ability(
     def py_resolve_name(self) -> str:
         """Resolve name."""
         if isinstance(self.name_ref, Name):
-            return self.name_ref.value
-        elif isinstance(self.name_ref, (SpecialVarRef, ArchRef)):
-            return self.name_ref.py_resolve_name()
+            return self.name_ref.sym_name
         else:
             raise NotImplementedError
 
@@ -1290,8 +1288,8 @@ class ArchRefChain(AstNode):
         def get_tag(x: ArchRef) -> str:
             return (
                 "en"
-                if x.arch.value == "enum"
-                else "cls" if x.arch.value == "class" else x.arch.value[1]
+                if x.arch._value == "enum"
+                else "cls" if x.arch._value == "class" else x.arch._value[1]
             )
 
         return ".".join([f"({get_tag(x)}){x.sym_name}" for x in self.archs])
@@ -1322,7 +1320,7 @@ class ParamVar(AstSymbolNode, AstTypedVarNode, AstSemStrNode):
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
-            sym_name=name.value,
+            sym_name=name._value,
             sym_name_node=name,
             sym_type=SymbolType.VAR,
         )
@@ -1418,7 +1416,7 @@ class HasVar(AstSymbolNode, AstTypedVarNode, AstSemStrNode):
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
             self,
-            sym_name=name.value,
+            sym_name=name._value,
             sym_name_node=name,
             sym_type=SymbolType.HAS_VAR,
         )
@@ -2524,8 +2522,10 @@ class FString(AtomExpr):
         if self.parts:
             for i in self.parts.items:
                 if isinstance(i, String):
-                    i.value = (
-                        "{{" if i.value == "{" else "}}" if i.value == "}" else i.value
+                    i._value = (
+                        "{{"
+                        if i._value == "{"
+                        else "}}" if i._value == "}" else i._value
                     )
             new_kid.append(self.parts)
         self.set_kids(nodes=new_kid)
@@ -3675,7 +3675,7 @@ class Token(AstNode):
         """Initialize token."""
         self.file_path = file_path
         self.name = name
-        self.value = value
+        self._value = value
         self.line_no = line
         self.c_start = col_start
         self.c_end = col_end
@@ -3685,11 +3685,11 @@ class Token(AstNode):
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize token."""
-        return bool(self.value and self.name)
+        return bool(self._value and self.name)
 
     def unparse(self) -> str:
         """Unparse token."""
-        return self.value
+        return self._value
 
 
 class Name(Token, AtomExpr):
@@ -3734,7 +3734,7 @@ class Name(Token, AtomExpr):
     def unparse(self) -> str:
         """Unparse name."""
         super().unparse()
-        return (f"<>{self.value}" if self.is_kwesc else self.value) + (
+        return (f"<>{self._value}" if self.is_kwesc else self._value) + (
             ",\n" if self.is_enum_singleton else ""
         )
 
@@ -3752,7 +3752,7 @@ class SpecialVarRef(Name):
             self,
             file_path=var.file_path,
             name=var.name,
-            value=var.value,
+            value=var._value,
             line=var.line_no,
             col_start=var.c_start,
             col_end=var.c_end,
@@ -3794,7 +3794,7 @@ class ArchRef(Name):
             self,
             file_path=name_ref.file_path,
             name=name_ref.name,
-            value=name_ref.value,
+            value=name_ref._value,
             line=name_ref.line_no,
             col_start=name_ref.c_start,
             col_end=name_ref.c_end,
@@ -3908,9 +3908,9 @@ class BuiltinType(Name, Literal):  # TODO: Try to remove litteral from here
     @property
     def lit_value(self) -> Callable[[], Any]:
         """Return literal value in its python type."""
-        if self.value not in Literal.type_map:
-            raise TypeError(f"ICE: {self.value} is not a callable builtin")
-        return Literal.type_map[self.value]
+        if self._value not in Literal.type_map:
+            raise TypeError(f"ICE: {self._value} is not a callable builtin")
+        return Literal.type_map[self._value]
 
 
 class Float(Literal):
@@ -3921,7 +3921,7 @@ class Float(Literal):
     @property
     def lit_value(self) -> float:
         """Return literal value in its python type."""
-        return float(self.value)
+        return float(self._value)
 
 
 class Int(Literal):
@@ -3932,7 +3932,7 @@ class Int(Literal):
     @property
     def lit_value(self) -> int:
         """Return literal value in its python type."""
-        return int(self.value)
+        return int(self._value)
 
 
 class String(Literal):
@@ -3943,31 +3943,31 @@ class String(Literal):
     @property
     def lit_value(self) -> str:
         """Return literal value in its python type."""
-        if isinstance(self.value, bytes):
-            return self.value
-        prefix_len = 3 if self.value.startswith(("'''", '"""')) else 1
+        if isinstance(self._value, bytes):
+            return self._value
+        prefix_len = 3 if self._value.startswith(("'''", '"""')) else 1
         if any(
-            self.value.startswith(prefix)
-            and self.value[len(prefix) :].startswith(("'", '"'))
+            self._value.startswith(prefix)
+            and self._value[len(prefix) :].startswith(("'", '"'))
             for prefix in ["r", "b", "br", "rb"]
         ):
-            return eval(self.value)
+            return eval(self._value)
 
-        elif self.value.startswith(("'", '"')):
-            ret_str = self.value[prefix_len:-prefix_len]
+        elif self._value.startswith(("'", '"')):
+            ret_str = self._value[prefix_len:-prefix_len]
             return ret_str.encode().decode("unicode_escape", errors="backslashreplace")
         else:
-            return self.value
+            return self._value
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize string."""
-        self.value = r"%s" % self.value
+        self._value = r"%s" % self._value
         return True
 
     def unparse(self) -> str:
         """Unparse string."""
         super().unparse()
-        return repr(self.value)
+        return repr(self._value)
 
 
 class Bool(Literal):
@@ -3978,7 +3978,7 @@ class Bool(Literal):
     @property
     def lit_value(self) -> bool:
         """Return literal value in its python type."""
-        return self.value == "True"
+        return self._value == "True"
 
 
 class Null(Literal):

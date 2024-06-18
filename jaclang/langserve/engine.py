@@ -284,9 +284,9 @@ class JacLangServer(LanguageServer):
             if node.sym_info.clean_type:
                 node_info += f": {node.sym_info.clean_type}"
             if isinstance(node, ast.AstSemStrNode) and node.semstr:
-                node_info += f"\n{node.semstr.value}"
+                node_info += f"\n{node.semstr._value}"
             if isinstance(node, ast.AstDocNode) and node.doc:
-                node_info += f"\n{node.doc.value}"
+                node_info += f"\n{node.doc._value}"
             if isinstance(node, ast.Ability) and node.signature:
                 node_info += f"\n{node.signature.unparse()}"
             self.log_py(node.pp())
