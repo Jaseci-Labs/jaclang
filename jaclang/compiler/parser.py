@@ -569,25 +569,25 @@ class JacParser(Pass):
             else:
                 raise self.ice()
 
-        def any_ref(self, kid: list[ast.AstNode]) -> ast.NameSpec:
+        def any_ref(self, kid: list[ast.AstNode]) -> ast.Name:
             """Grammar rule.
 
             any_ref: named_ref
                     | arch_ref
             """
-            if isinstance(kid[0], ast.NameSpec):
+            if isinstance(kid[0], ast.Name):
                 return self.nu(kid[0])
             else:
                 raise self.ice()
 
-        def named_ref(self, kid: list[ast.AstNode]) -> ast.NameSpec:
+        def named_ref(self, kid: list[ast.AstNode]) -> ast.Name:
             """Grammar rule.
 
             named_ref: special_ref
                     | KWESC_NAME
                     | NAME
             """
-            if isinstance(kid[0], ast.NameSpec):
+            if isinstance(kid[0], ast.Name):
                 return self.nu(kid[0])
             else:
                 raise self.ice()
@@ -606,7 +606,6 @@ class JacParser(Pass):
                 return self.nu(
                     ast.SpecialVarRef(
                         var=kid[0],
-                        kid=kid,
                     )
                 )
             else:
@@ -691,55 +690,48 @@ class JacParser(Pass):
             enum_stmt: NAME (COLON STRING)? EQ expression
                     | NAME (COLON STRING)?
                     | py_code_block
+                    | free_code
             """
             if isinstance(kid[0], ast.PyInlineCode):
                 return self.nu(kid[0])
-            if isinstance(kid[0], (ast.Name)):
-                if (
-                    len(kid) >= 3
-                    and isinstance(kid[-1], ast.Expr)
-                    and not isinstance(kid[-1], ast.String)
-                ):
-                    semstr = (
-                        kid[2]
-                        if len(kid) > 3 and isinstance(kid[2], ast.String)
-                        else None
+            if isinstance(kid[0], (ast.AtomExpr)) and isinstance(kid[-1], (ast.Expr)):
+                semstr = (
+                    kid[2] if len(kid) > 3 and isinstance(kid[2], ast.String) else None
+                )
+                targ = ast.SubNodeList[ast.Expr](
+                    items=[kid[0]], delim=Tok.COMMA, kid=[kid[0]]
+                )
+                kid[0] = targ
+                return self.nu(
+                    ast.Assignment(
+                        target=targ,
+                        value=kid[-1],
+                        type_tag=None,
+                        kid=kid,
+                        semstr=semstr,
+                        is_enum_stmt=True,
                     )
-                    targ = ast.SubNodeList[ast.Expr](
-                        items=[kid[0]], delim=Tok.COMMA, kid=[kid[0]]
+                )
+            elif isinstance(kid[0], (ast.AtomExpr)):
+                semstr = (
+                    kid[2] if len(kid) == 3 and isinstance(kid[2], ast.String) else None
+                )
+                targ = ast.SubNodeList[ast.Expr](
+                    items=[kid[0]], delim=Tok.COMMA, kid=[kid[0]]
+                )
+                kid[0] = targ
+                return self.nu(
+                    ast.Assignment(
+                        target=targ,
+                        value=None,
+                        type_tag=None,
+                        kid=kid,
+                        semstr=semstr,
+                        is_enum_stmt=True,
                     )
-                    kid[0] = targ
-                    return self.nu(
-                        ast.Assignment(
-                            target=targ,
-                            value=kid[-1],
-                            type_tag=None,
-                            kid=kid,
-                            semstr=semstr,
-                            is_enum_stmt=True,
-                        )
-                    )
-                else:
-                    semstr = (
-                        kid[2]
-                        if len(kid) == 3 and isinstance(kid[2], ast.String)
-                        else None
-                    )
-                    targ = ast.SubNodeList[ast.Expr](
-                        items=[kid[0]], delim=Tok.COMMA, kid=[kid[0]]
-                    )
-                    kid[0] = targ
-                    return self.nu(
-                        ast.Assignment(
-                            target=targ,
-                            value=None,
-                            type_tag=None,
-                            kid=kid,
-                            semstr=semstr,
-                            is_enum_stmt=True,
-                        )
-                    )
-
+                )
+            elif isinstance(kid[0], ast.EnumBlockStmt):
+                return self.nu(kid[0])
             raise self.ice()
 
         def ability(
@@ -768,7 +760,7 @@ class JacParser(Pass):
             if isinstance(decorators, ast.SubNodeList):
                 for dec in decorators.items:
                     if (
-                        isinstance(dec, ast.NameSpec)
+                        isinstance(dec, ast.Name)
                         and dec.sym_name == "staticmethod"
                         and isinstance(ability, (ast.Ability))
                     ):
@@ -805,7 +797,7 @@ class JacParser(Pass):
             signature = chomp[0]
             chomp = chomp[1:]
             body = chomp[0] if isinstance(chomp[0], ast.SubNodeList) else None
-            if isinstance(name, ast.NameSpec) and isinstance(
+            if isinstance(name, ast.Name) and isinstance(
                 signature, (ast.FuncSignature, ast.EventSignature)
             ):
                 return self.nu(
@@ -872,7 +864,7 @@ class JacParser(Pass):
             chomp = chomp[1:]
             signature = chomp[0]
             chomp = chomp[1:]
-            if isinstance(name, ast.NameSpec) and isinstance(
+            if isinstance(name, ast.Name) and isinstance(
                 signature, (ast.FuncSignature, ast.EventSignature)
             ):
                 return self.nu(
@@ -919,7 +911,7 @@ class JacParser(Pass):
             has_by = isinstance(chomp[0], ast.Token) and chomp[0].name == Tok.KW_BY
             chomp = chomp[1:] if has_by else chomp
             if (
-                isinstance(name, ast.NameSpec)
+                isinstance(name, ast.Name)
                 and isinstance(signature, (ast.FuncSignature, ast.EventSignature))
                 and isinstance(chomp[0], ast.FuncCall)
                 and has_by
@@ -2734,7 +2726,7 @@ class JacParser(Pass):
             """
             if (
                 len(kid) == 3
-                and isinstance(kid[0], ast.NameSpec)
+                and isinstance(kid[0], ast.Name)
                 and isinstance(kid[2], ast.Expr)
             ):
                 return self.nu(
@@ -3031,7 +3023,7 @@ class JacParser(Pass):
 
             node_ref: NODE_OP NAME
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3047,7 +3039,7 @@ class JacParser(Pass):
 
             edge_ref: EDGE_OP NAME
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3063,7 +3055,7 @@ class JacParser(Pass):
 
             walker_ref: WALKER_OP NAME
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3079,7 +3071,7 @@ class JacParser(Pass):
 
             class_ref: CLASS_OP name_ref
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3095,7 +3087,7 @@ class JacParser(Pass):
 
             object_ref: OBJECT_OP name_ref
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3111,7 +3103,7 @@ class JacParser(Pass):
 
             type_ref: TYPE_OP name_ref
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3127,7 +3119,7 @@ class JacParser(Pass):
 
             enum_ref: ENUM_OP NAME
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3143,7 +3135,7 @@ class JacParser(Pass):
 
             ability_ref: ABILITY_OP (special_ref | name_ref)
             """
-            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.NameSpec):
+            if isinstance(kid[0], ast.Token) and isinstance(kid[1], ast.Name):
                 return self.nu(
                     ast.ArchRef(
                         arch=kid[0],
@@ -3600,9 +3592,7 @@ class JacParser(Pass):
 
             as_pattern: pattern KW_AS NAME
             """
-            if isinstance(kid[0], ast.MatchPattern) and isinstance(
-                kid[2], ast.NameSpec
-            ):
+            if isinstance(kid[0], ast.MatchPattern) and isinstance(kid[2], ast.Name):
                 return self.nu(
                     ast.MatchAs(
                         pattern=kid[0],
@@ -3672,7 +3662,7 @@ class JacParser(Pass):
                         kid=kid,
                     )
                 )
-            if isinstance(kid[0], ast.NameSpec):
+            if isinstance(kid[0], ast.Name):
                 return self.nu(
                     ast.MatchAs(
                         name=kid[0],
@@ -3784,7 +3774,7 @@ class JacParser(Pass):
                         chomp = chomp[2:]
                     else:
                         raise self.ice()
-                elif isinstance(cur_element, ast.NameSpec):
+                elif isinstance(cur_element, ast.Name):
                     chomp = chomp[1:]
                 else:
                     break
@@ -3815,7 +3805,7 @@ class JacParser(Pass):
                     else None
                 )
             )
-            if isinstance(name, (ast.NameSpec, ast.AtomTrailer)):
+            if isinstance(name, (ast.Name, ast.AtomTrailer)):
                 kid_nodes = [name, lparen]
                 if arg:
                     kid_nodes.append(arg)
@@ -3878,7 +3868,7 @@ class JacParser(Pass):
                 name = kid[2]
                 eq = kid[3]
                 value = kid[4]
-                if not isinstance(name, ast.NameSpec) or not isinstance(
+                if not isinstance(name, ast.Name) or not isinstance(
                     value, ast.MatchPattern
                 ):
                     raise self.ice()
@@ -3891,14 +3881,14 @@ class JacParser(Pass):
                 name = kid[0]
                 eq = kid[1]
                 value = kid[2]
-                if not isinstance(name, ast.NameSpec) or not isinstance(
+                if not isinstance(name, ast.Name) or not isinstance(
                     value, ast.MatchPattern
                 ):
                     raise self.ice()
                 new_kid = [
                     ast.MatchKVPair(key=name, value=value, kid=[name, eq, value])
                 ]
-            if isinstance(name, ast.NameSpec) and isinstance(value, ast.MatchPattern):
+            if isinstance(name, ast.Name) and isinstance(value, ast.MatchPattern):
                 valid_kid = [i for i in new_kid if isinstance(i, ast.MatchKVPair)]
                 return ast.SubNodeList[ast.MatchKVPair](
                     items=valid_kid,

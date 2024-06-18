@@ -64,6 +64,7 @@ enum_block: LBRACE ((enum_stmt COMMA)* enum_stmt)? RBRACE
 enum_stmt: NAME (COLON STRING)? EQ expression
          | NAME (COLON STRING)?
          | py_code_block
+         | free_code
 
 // Abilities
 ability: decorators? ability_def

@@ -1030,7 +1030,7 @@ class PyastGenPass(Pass):
         node.gen.py_ast = [
             self.sync(
                 func_type(
-                    name=node.name_ref.sym_name,
+                    name=node.sym_name,
                     args=node.signature.gen.py_ast[0] if node.signature else [],
                     body=body,
                     decorator_list=decorator_list,
@@ -1116,7 +1116,7 @@ class PyastGenPass(Pass):
             action = (
                 node.semstr.gen.py_ast[0]
                 if node.semstr
-                else self.sync(ast3.Constant(value=node.name_ref.sym_name))
+                else self.sync(ast3.Constant(value=node.sym_name))
             )
             return [
                 self.sync(
@@ -1422,10 +1422,7 @@ class PyastGenPass(Pass):
         arch: Token,
         """
         if node.arch.name == Tok.TYPE_OP:
-            if (
-                isinstance(node.name_ref, ast.SpecialVarRef)
-                and node.name_ref.var.name == Tok.KW_ROOT
-            ):
+            if isinstance(node, ast.SpecialVarRef) and node.var.name == Tok.KW_ROOT:
                 node.gen.py_ast = [
                     self.sync(
                         ast3.Attribute(
@@ -1443,13 +1440,13 @@ class PyastGenPass(Pass):
                     self.sync(
                         ast3.Attribute(
                             value=self.sync(ast3.Name(id="_jac_typ", ctx=ast3.Load())),
-                            attr=node.name_ref.sym_name,
+                            attr=node.sym_name,
                             ctx=ast3.Load(),
                         )
                     )
                 ]
         else:
-            node.gen.py_ast = node.name_ref.gen.py_ast
+            node.gen.py_ast = node.gen.py_ast
 
     def exit_arch_ref_chain(self, node: ast.ArchRefChain) -> None:
         """Sub objects.
@@ -1467,7 +1464,7 @@ class PyastGenPass(Pass):
             attr = self.sync(
                 ast3.Attribute(
                     value=make_attr_chain(arch[:-1]),
-                    attr=cur.name_ref.sym_name,
+                    attr=cur.sym_name,
                     ctx=ast3.Load(),
                 ),
                 jac_node=cur,
@@ -3581,7 +3578,7 @@ class PyastGenPass(Pass):
                         [
                             x.key.sym_name
                             for x in node.kw_patterns.items
-                            if isinstance(x.key, ast.NameSpec)
+                            if isinstance(x.key, ast.Name)
                         ]
                         if node.kw_patterns
                         else []

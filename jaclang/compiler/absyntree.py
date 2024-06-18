@@ -182,7 +182,7 @@ class AstSymbolNode(AstNode):
         self.sym: Optional[Symbol] = None
         self.sym_name: str = sym_name
         self.sym_name_node = sym_name_node
-        if isinstance(self.sym_name_node, NameSpec):
+        if isinstance(self.sym_name_node, Name):
             self.sym_name_node.name_of = self
         self.sym_type: SymbolType = sym_type
         self.sym_info: SymbolInfo = SymbolInfo()
@@ -308,14 +308,6 @@ class EnumBlockStmt(AstNode):
 
 class CodeBlockStmt(AstNode):
     """CodeBlockStmt node type for Jac Ast."""
-
-
-class NameSpec(AtomExpr, EnumBlockStmt):
-    """NameSpec node type for Jac Ast."""
-
-    def __init__(self) -> None:
-        """Initialize name spec node."""
-        self.name_of: AstSymbolNode = self
 
 
 class ArchSpec(ElementStmt, CodeBlockStmt, AstSymbolNode, AstDocNode, AstSemStrNode):
@@ -1031,7 +1023,7 @@ class Ability(
 
     def __init__(
         self,
-        name_ref: NameSpec,
+        name_ref: Name,
         is_async: bool,
         is_override: bool,
         is_static: bool,
@@ -1302,7 +1294,7 @@ class ArchRefChain(AstNode):
                 else "cls" if x.arch.value == "class" else x.arch.value[1]
             )
 
-        return ".".join([f"({get_tag(x)}){x.py_resolve_name()}" for x in self.archs])
+        return ".".join([f"({get_tag(x)}){x.sym_name}" for x in self.archs])
 
     def flat_name(self) -> str:
         """Resolve name for python gen."""
@@ -2192,7 +2184,7 @@ class GlobalStmt(CodeBlockStmt):
 
     def __init__(
         self,
-        target: SubNodeList[NameSpec],
+        target: SubNodeList[Name],
         kid: Sequence[AstNode],
     ) -> None:
         """Initialize global statement node."""
@@ -2726,7 +2718,7 @@ class KWPair(AstNode):
 
     def __init__(
         self,
-        key: Optional[NameSpec],  # is **value if blank
+        key: Optional[Name],  # is **value if blank
         value: Expr,
         kid: Sequence[AstNode],
     ) -> None:
@@ -3081,92 +3073,6 @@ class IndexSlice(AtomExpr):
         return res
 
 
-class ArchRef(NameSpec):
-    """ArchRef node type for Jac Ast."""
-
-    def __init__(
-        self,
-        name_ref: NameSpec,
-        arch: Token,
-        kid: Sequence[AstNode],
-    ) -> None:
-        """Initialize architype reference expression node."""
-        self.name_ref = name_ref
-        self.arch = arch
-        AstNode.__init__(self, kid=kid)
-        AstSymbolNode.__init__(
-            self,
-            sym_name=self.py_resolve_name(),
-            sym_name_node=name_ref,
-            sym_type=SymbolType.TYPE,
-        )
-        NameSpec.__init__(self)
-
-    def normalize(self, deep: bool = False) -> bool:
-        """Normalize ast node."""
-        res = True
-        if deep:
-            res = self.name_ref.normalize(deep)
-        new_kid: list[AstNode] = [self.arch, self.name_ref]
-        self.set_kids(nodes=new_kid)
-        return res
-
-    def py_resolve_name(self) -> str:
-        """Resolve name."""
-        if isinstance(self.name_ref, Name):
-            return self.name_ref.value
-        elif isinstance(self.name_ref, SpecialVarRef):
-            return self.name_ref.py_resolve_name()
-        else:
-            raise NotImplementedError
-
-
-class SpecialVarRef(NameSpec):
-    """HereRef node type for Jac Ast."""
-
-    def __init__(
-        self,
-        var: Name,
-        kid: Sequence[AstNode],
-    ) -> None:
-        """Initialize special var reference expression node."""
-        self.var = var
-        AstNode.__init__(self, kid=kid)
-        AstSymbolNode.__init__(
-            self,
-            sym_name=self.py_resolve_name(),
-            sym_name_node=var,
-            sym_type=SymbolType.VAR,
-        )
-        NameSpec.__init__(self)
-
-    def normalize(self, deep: bool = False) -> bool:
-        """Normalize ast node."""
-        res = True
-        if deep:
-            res = self.var.normalize(deep)
-        new_kid: list[AstNode] = [self.var]
-        self.set_kids(nodes=new_kid)
-        return res
-
-    def py_resolve_name(self) -> str:
-        """Resolve name."""
-        if self.var.name == Tok.KW_SELF:
-            return "self"
-        elif self.var.name == Tok.KW_SUPER:
-            return "super()"
-        elif self.var.name == Tok.KW_ROOT:
-            return Con.ROOT.value
-        elif self.var.name == Tok.KW_HERE:
-            return Con.HERE.value
-        elif self.var.name == Tok.KW_INIT:
-            return "__init__"
-        elif self.var.name == Tok.KW_POST_INIT:
-            return "__post_init__"
-        else:
-            raise NotImplementedError("ICE: Special var reference not implemented")
-
-
 class EdgeRefTrailer(Expr):
     """EdgeRefTrailer node type for Jac Ast."""
 
@@ -3515,7 +3421,7 @@ class MatchAs(MatchPattern):
 
     def __init__(
         self,
-        name: NameSpec,
+        name: Name,
         pattern: Optional[MatchPattern],
         kid: Sequence[AstNode],
     ) -> None:
@@ -3663,7 +3569,7 @@ class MatchKVPair(MatchPattern):
 
     def __init__(
         self,
-        key: MatchPattern | NameSpec,
+        key: MatchPattern | Name,
         value: MatchPattern,
         kid: Sequence[AstNode],
     ) -> None:
@@ -3691,7 +3597,7 @@ class MatchStar(MatchPattern):
 
     def __init__(
         self,
-        name: NameSpec,
+        name: Name,
         is_list: bool,
         kid: Sequence[AstNode],
     ) -> None:
@@ -3718,7 +3624,7 @@ class MatchArch(MatchPattern):
 
     def __init__(
         self,
-        name: AtomTrailer | NameSpec,
+        name: AtomTrailer | Name,
         arg_patterns: Optional[SubNodeList[MatchPattern]],
         kw_patterns: Optional[SubNodeList[MatchKVPair]],
         kid: Sequence[AstNode],
@@ -3786,7 +3692,7 @@ class Token(AstNode):
         return self.value
 
 
-class Name(Token, NameSpec):
+class Name(Token, AtomExpr):
     """Name node type for Jac Ast."""
 
     def __init__(
@@ -3801,10 +3707,12 @@ class Name(Token, NameSpec):
         pos_end: int,
         is_enum_singleton: bool = False,
         is_kwesc: bool = False,
+        special_name_str: Optional[str] = None,
     ) -> None:
         """Initialize token."""
         self.is_enum_singleton = is_enum_singleton
         self.is_kwesc = is_kwesc
+        self.name_of: AstSymbolNode = self
         Token.__init__(
             self,
             file_path=file_path,
@@ -3818,17 +3726,85 @@ class Name(Token, NameSpec):
         )
         AstSymbolNode.__init__(
             self,
-            sym_name=value,
+            sym_name=special_name_str if special_name_str else value,
             sym_name_node=self,
             sym_type=SymbolType.VAR,
         )
-        NameSpec.__init__(self)
 
     def unparse(self) -> str:
         """Unparse name."""
         super().unparse()
         return (f"<>{self.value}" if self.is_kwesc else self.value) + (
             ",\n" if self.is_enum_singleton else ""
+        )
+
+
+class SpecialVarRef(Name):
+    """HereRef node type for Jac Ast."""
+
+    def __init__(
+        self,
+        var: Name,
+    ) -> None:
+        """Initialize special var reference expression node."""
+        self.var = var
+        Name.__init__(
+            self,
+            file_path=var.file_path,
+            name=var.name,
+            value=var.value,
+            line=var.line_no,
+            col_start=var.c_start,
+            col_end=var.c_end,
+            pos_start=var.pos_start,
+            pos_end=var.pos_end,
+            special_name_str=self.py_resolve_name(),
+        )
+
+    def py_resolve_name(self) -> str:
+        """Resolve name."""
+        if self.var.name == Tok.KW_SELF:
+            return "self"
+        elif self.var.name == Tok.KW_SUPER:
+            return "super()"
+        elif self.var.name == Tok.KW_ROOT:
+            return Con.ROOT.value
+        elif self.var.name == Tok.KW_HERE:
+            return Con.HERE.value
+        elif self.var.name == Tok.KW_INIT:
+            return "__init__"
+        elif self.var.name == Tok.KW_POST_INIT:
+            return "__post_init__"
+        else:
+            raise NotImplementedError("ICE: Special var reference not implemented")
+
+
+class ArchRef(Name):
+    """ArchRef node type for Jac Ast."""
+
+    def __init__(
+        self,
+        name_ref: Name | SpecialVarRef,
+        arch: Token,
+        kid: Sequence[AstNode],
+    ) -> None:
+        """Initialize architype reference expression node."""
+        self.arch = arch
+        Name.__init__(
+            self,
+            file_path=name_ref.file_path,
+            name=name_ref.name,
+            value=name_ref.value,
+            line=name_ref.line_no,
+            col_start=name_ref.c_start,
+            col_end=name_ref.c_end,
+            pos_start=name_ref.pos_start,
+            pos_end=name_ref.pos_end,
+            special_name_str=(
+                name_ref.py_resolve_name()
+                if isinstance(name_ref, SpecialVarRef)
+                else None
+            ),
         )
 
 
@@ -3924,7 +3900,7 @@ class TokenSymbol(Token, AstSymbolNode):
         )
 
 
-class BuiltinType(Name, Literal, NameSpec):
+class BuiltinType(Name, Literal):  # TODO: Try to remove litteral from here
     """Type node type for Jac Ast."""
 
     SYMBOL_TYPE = SymbolType.VAR
