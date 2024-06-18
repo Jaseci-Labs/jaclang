@@ -16,9 +16,11 @@ from jaclang.compiler.passes.main.schedules import type_checker_sched
 from jaclang.compiler.passes.tool import FuseCommentsPass, JacFormatPass
 from jaclang.compiler.passes.transform import Alert
 from jaclang.langserve.utils import (
+    collect_semantic_tokens,
     collect_symbols,
     create_range,
     find_deepest_symbol_node_at_pos,
+    sort_chunks_relative_to_previous,
 )
 from jaclang.vendor.pygls import uris
 from jaclang.vendor.pygls.server import LanguageServer
@@ -297,6 +299,7 @@ class JacLangServer(LanguageServer):
 
     def get_document_symbols(self, file_path: str) -> list[lspt.DocumentSymbol]:
         """Return document symbols for a file."""
+        self.log_py("comeshere1")
         root_node = self.modules[file_path].ir.sym_tab
         if root_node:
             return collect_symbols(root_node)
@@ -338,6 +341,26 @@ class JacLangServer(LanguageServer):
         else:
             self.log_info("No declaration found for the selected node.")
             return None
+
+    def get_semantic_tokens(self, file_path: str) -> lspt.SemanticTokens:
+        """Return semantic tokens for a file."""
+        self.log_py("comeshere2")
+        root_symtab = self.modules[file_path].ir.sym_tab
+        if root_symtab:
+            symbols = collect_semantic_tokens(root_symtab)
+        self.log_py("symbols: " + str(symbols))
+        data = []
+        for symbol in symbols:
+            data.append(symbol.defn)
+        sorted_chunks = sort_chunks_relative_to_previous(
+            data
+        )  # Fixme: something wrong in this function
+        flatten_chunks: list[int] = []
+        for chunk in sorted_chunks:
+            flatten_chunks.extend(
+                chunk
+            )  # Even if i give before sorting, it says circular reference detected
+        return lspt.SemanticTokens(data=flatten_chunks)
 
     def log_error(self, message: str) -> None:
         """Log an error message."""

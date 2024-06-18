@@ -99,6 +99,24 @@ def position_within_node(node: ast.AstNode, line: int, character: int) -> bool:
     return False
 
 
+def collect_semantic_tokens(node: SymbolTable) -> list[Symbol]:
+    """Recursively collect symbols from the AST."""
+    symbols = []
+    if node is None:
+        return symbols
+
+    for key, item in node.tab.items():
+        if key in dir(builtins):
+            continue
+        symbols.append(item)
+
+    for sub_tab in node.kid:
+        sub_symbols = collect_semantic_tokens(sub_tab)
+        symbols.extend(sub_symbols)
+
+    return symbols
+
+
 def collect_symbols(node: SymbolTable) -> list[lspt.DocumentSymbol]:
     """Recursively collect symbols from the AST."""
     symbols = []
@@ -178,3 +196,33 @@ def kind_map(sub_tab: ast.AstNode) -> lspt.SymbolKind:
             )
         )
     )
+
+
+def sort_chunks_by_first_then_second_value(chunks: list[list[int]]) -> list[list[int]]:
+    def custom_sort_key(chunk: list[int]) -> tuple[int, int]:
+        return (chunk[0], chunk[1])
+
+    sorted_chunks = sorted(chunks, key=custom_sort_key)
+    return sorted_chunks
+
+
+def sort_chunks_relative_to_previous(chunks: list[list[int]]) -> list[list[int]]:
+    # Sort the chunks based on line number and then start position
+    sorted_chunks = sort_chunks_by_first_then_second_value(chunks)
+
+    relative_chunks: list[list[int]] = []
+
+    for i, chunk in enumerate(sorted_chunks):
+        if i == 0:
+            relative_chunks.append(chunk)  # First chunk of a line remains as is
+        else:
+            prev_chunk = sorted_chunks[i - 1]
+            delta_line = chunk[0] - prev_chunk[0]
+            if delta_line == 0:
+                delta_start = chunk[1] - prev_chunk[1]
+            else:
+                delta_start = chunk[1]
+            relative_chunk = [delta_line, delta_start, chunk[2], chunk[3], chunk[4]]
+            relative_chunks.append(relative_chunk)
+
+    return relative_chunks
