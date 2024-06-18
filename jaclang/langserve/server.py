@@ -10,6 +10,8 @@ from jaclang.langserve.utils import debounce
 
 import lsprotocol.types as lspt
 
+from .constants import SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES
+
 server = JacLangServer()
 analysis_thread: Optional[threading.Thread] = None
 analysis_stop_event = threading.Event()
@@ -139,6 +141,21 @@ def hover(
     return ls.get_hover_info(params.text_document.uri, params.position)
 
 
+@server.feature(
+    lspt.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL,
+    lspt.SemanticTokensLegend(
+        token_types=SEMANTIC_TOKEN_TYPES, token_modifiers=SEMANTIC_TOKEN_MODIFIERS
+    ),
+)
+async def semantic_tokens_full(
+    ls: JacLangServer, params: lspt.SemanticTokensParams
+) -> lspt.SemanticTokens:
+    """Provide semantic tokens."""
+    stop_analysis()
+    analyze_and_publish(ls, params.text_document.uri)
+    return ls.get_semantic_tokens(params.text_document.uri)
+
+
 @server.feature(lspt.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
 async def document_symbol(
     ls: JacLangServer, params: lspt.DocumentSymbolParams
@@ -157,14 +174,6 @@ async def definition(
     stop_analysis()
     analyze_and_publish(ls, params.text_document.uri, level=1)
     return ls.get_definition(params.text_document.uri, params.position)
-
-
-@server.feature(lspt.TEXT_DOCUMENT_SEMANTIC_TOKENS_FULL)
-async def semantic_tokens_full(
-    ls: JacLangServer, params: lspt.SemanticTokensParams
-) -> lspt.SemanticTokens:
-    """Provide semantic tokens."""
-    return ls.get_semantic_tokens(params.text_document.uri)
 
 
 def run_lang_server() -> None:

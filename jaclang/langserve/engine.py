@@ -297,6 +297,7 @@ class JacLangServer(LanguageServer):
 
     def get_document_symbols(self, file_path: str) -> list[lspt.DocumentSymbol]:
         """Return document symbols for a file."""
+        self.log_py("comeshere1")
         root_node = self.modules[file_path].ir.sym_tab
         if root_node:
             return collect_symbols(root_node)
@@ -341,12 +342,18 @@ class JacLangServer(LanguageServer):
 
     def get_semantic_tokens(self, file_path: str) -> lspt.SemanticTokens:
         """Return semantic tokens for a file."""
-        document = self.workspace.get_text_document(file_path)
-        tokens = []
-        for line in document.lines:
-            for token in line.split():
-                tokens.append(token)
-        return lspt.SemanticTokens(data=tokens)
+        self.log_py("comeshere2")
+        root_node = self.modules[file_path].ir.sym_tab
+        # self.log_py("Root node: " + str(root_node))
+        if root_node:
+            symbols = collect_symbols(root_node)
+        self.log_py("symbols: " + str(symbols))
+        # data = []
+        # for symbol in symbols:
+        #     data.append(symbol.semantic_token) #fixME:'DocumentSymbol'object has no attribute 'semantic_token'
+        # sorted_chunks = sort_chunks_relative_to_previous(data)
+        # sementic_tokens = flatten_chunks(sorted_chunks)
+        return lspt.SemanticTokens(data=symbols)
 
     def log_error(self, message: str) -> None:
         """Log an error message."""
