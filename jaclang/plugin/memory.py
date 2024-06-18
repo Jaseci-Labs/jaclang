@@ -1,16 +1,8 @@
 """Memory abstraction for jaseci plugin."""
 
+from dataclasses import dataclass, field
 from shelve import Shelf, open
-from types import TracebackType
-from typing import (
-    Callable,
-    Generator,
-    MutableMapping,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Callable, Generator, Literal, Optional, TypeVar, Union, overload
 from uuid import UUID
 
 from jaclang.core.construct import Architype
@@ -21,88 +13,143 @@ A = TypeVar("A", bound=Architype)
 IDS = Union[UUID, list[UUID]]
 
 
+@dataclass
 class Memory:
     """Generic Memory Handler."""
 
-    ##################################################
-    #     NO INTIALIZATION JUST FOR TYPE HINTING     #
-    ##################################################
-
-    __ses__: Optional[str]
-    __mem__: MutableMapping[str, Architype]
-
-    # ---------------------------------------------- #
-
-    def __init__(self, session: Optional[str] = None) -> None:
-        """Initialize memory handler."""
-        self.__ses__ = session
-
-    def open(self: M) -> M:
-        """Open memory handler."""
-        if self.__ses__:
-            self.__mem__ = open(self.__ses__)  # noqa: SIM115
-        else:
-            self.__mem__ = {}
-
-        return self
+    __mem__: dict[str, Architype] = field(default_factory=dict)
 
     def close(self) -> None:
         """Close memory handler."""
-        if isinstance(self.__mem__, Shelf):
-            self.__mem__.close()
-        else:
-            self.__mem__.clear()
-
-    def __enter__(self: M) -> M:
-        """Open memory handler via context handler."""
-        return self.open()
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        """Close memory handler via context handler."""
-        self.close()
+        self.__mem__.clear()
 
     def __del__(self) -> None:
         """On garbage collection cleanup."""
         self.close()
 
+    @overload
+    def find(
+        self, ids: IDS, filter: Optional[Callable[[Architype], Architype]]
+    ) -> Generator[Architype, None, None]:
+        pass
+
+    @overload
     def find(
         self,
         ids: IDS,
         filter: Optional[Callable[[Architype], Architype]],
+        extended: Literal[True],
+    ) -> Generator[Union[UUID, Architype], None, None]:
+        pass
+
+    @overload
+    def find(
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Architype], Architype]],
+        extended: Literal[False],
     ) -> Generator[Architype, None, None]:
+        pass
+
+    def find(
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Architype], Architype]] = None,
+        extended: Optional[bool] = False,
+    ) -> Generator[Union[UUID, Architype], None, None]:
         """Temporary."""
         if not isinstance(ids, list):
             ids = [ids]
 
-        return (
-            filter(obj) if filter else obj
-            for id in ids
-            if (obj := self.__mem__.get(str(id)))
-        )
+        for id in ids:
+            if (obj := self.__mem__.get(str(id))) and (not filter or filter(obj)):
+                yield obj
+            elif extended:
+                yield id
 
     def find_one(
-        self, ids: IDS, filter: Optional[Callable[[Architype], Architype]]
-    ) -> Architype:
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Architype], Architype]] = None,
+    ) -> Optional[Architype]:
         """Temporary."""
-        return next(self.find(ids, filter))
+        return next(self.find(ids, filter), None)
 
     def set(self, data: Union[Architype, list[Architype]]) -> None:
         """Temporary."""
-        if not isinstance(data, list):
-            data = [data]
-
-        for d in data:
-            self.__mem__[str(d._jac_.id)] = d
+        if isinstance(data, list):
+            for d in data:
+                self.__mem__[str(d._jac_.id)] = d
+        else:
+            self.__mem__[str(data._jac_.id)] = data
 
     def remove(self, data: Union[Architype, list[Architype]]) -> None:
         """Temporary."""
-        if not isinstance(data, list):
-            data = [data]
+        if isinstance(data, list):
+            for d in data:
+                self.__mem__.pop(str(d._jac_.id), None)
+        else:
+            self.__mem__.pop(str(data._jac_.id), None)
 
-        for d in data:
-            self.__mem__.pop(str(d._jac_.id))
+
+@dataclass
+class ShelfMemory(Memory):
+    """Generic Memory Handler."""
+
+    __shelf__: Optional[Shelf[Architype]] = None
+
+    def __init__(self, session: Optional[str] = None) -> None:
+        """Initialize memory handler."""
+        super().__init__()
+        self.__shelf__ = open(session) if session else None  # noqa: SIM115
+
+    def close(self) -> None:
+        """Close memory handler."""
+        super().close()
+        if self.__shelf__:
+            self.__shelf__.close()
+
+    def find(
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Architype], Architype]],
+        extended: Optional[bool] = None,
+    ) -> Generator[Architype, None, None]:
+        """Temporary."""
+        objs = super().find(ids, filter, True)
+
+        if self.__shelf__:
+            for obj in objs:
+                if isinstance(obj, UUID):
+                    if arch := self.__shelf__.get(str(obj)):
+                        super().set(arch)
+                        if not filter or filter(arch):
+                            yield arch
+                else:
+                    yield obj
+        else:
+            for obj in objs:
+                if isinstance(obj, Architype):
+                    yield obj
+
+    def set(self, data: Union[Architype, list[Architype]]) -> None:
+        """Temporary."""
+        super().set(data)
+
+        if self.__shelf__:
+            if isinstance(data, list):
+                for d in data:
+                    self.__shelf__[str(d._jac_.id)] = d
+            else:
+                self.__shelf__[str(data._jac_.id)] = data
+
+    def remove(self, data: Union[Architype, list[Architype]]) -> None:
+        """Temporary."""
+        super().remove(data)
+
+        if self.__shelf__:
+            if isinstance(data, list):
+                for d in data:
+                    self.__shelf__.pop(str(d._jac_.id), None)
+            else:
+                self.__shelf__.pop(str(data._jac_.id), None)

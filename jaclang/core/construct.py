@@ -121,70 +121,51 @@ class ObjectAnchor:
             )
         return None
 
-    def connect(self, node: Optional["NodeArchitype"] = None) -> Optional[Architype]:
+    def architype(self, node: Optional["NodeAnchor"] = None) -> Optional[Architype]:
         """Retrieve the Architype from db and return."""
         if self.obj:
             return self.obj
 
-        jmem = Jac.context().memory
+        jsrc = Jac.context().datasource
 
-        if obj := jmem.find(self.id):
-            self.arch = obj
-            return obj
+        arch = jsrc.find_one(self.id)
 
-        cls = self.class_ref()
-        if (
-            cls
-            and (data := await cls.Collection.find_by_id(self.id))
-            and isinstance(data, (NodeArchitype, EdgeArchitype))
-            and (
-                await jctx.root.is_allowed(data)
-                or (node and await node.is_allowed(data))
-            )
-        ):
-            self.arch = data
-            jctx.set(data._jac_doc_.id, data)
+        if arch and (node or self).is_allowed(arch):
+            self.obj = arch
+            return arch
 
-        if isinstance(data, (NodeArchitype, EdgeArchitype)):
-            return data
         return None
 
-    async def is_allowed(self, to: DA, jctx: Optional["JacContext"] = None) -> bool:
+    async def is_allowed(self, to: Union[ObjectAnchor, Architype]) -> bool:
         """Access validation."""
-        if not jctx:
-            jctx = JacContext.get_context()
-        if (
-            not jctx
-            or not (from_jd := self._jac_doc_).connected
-            or not (to_jd := to._jac_doc_).connected
-            or not (from_root := from_jd.root)
-            or not (to_root := to_jd.root)
-        ):
-            return False
+        jctx = Jac.context()
+        jsrc = jctx.datasource
+        jroot = jctx.root
+        to = to._jac_ if isinstance(to, Architype) else to
 
-        if (isinstance(self, Root) and from_jd.id == to_root) or from_root == to_root:
-            to_jd.current_access_level = 1
+        if jroot == ROOT or jroot == to.root:
+            to.current_access_level = 1
             return True
 
-        if (to_access := to_jd.access).all:
-            to_jd.current_access_level = to_access.all - 1
+        if (to_access := to.access).all:
+            to.current_access_level = to_access.all - 1
             return True
 
-        for i in range(1, -1, -1):
-            if from_jd.id in to_access.nodes[i] or from_root in to_access.roots[i]:
-                to_jd.current_access_level = i
-                return True
-
-        if isinstance(
-            to_root_access := await jctx.check_root_access(to_root),
-            DocAccess,
-        ) and (cur_root_id := jctx.get_root_id()):
+        if jroot == self.root:
             for i in range(1, -1, -1):
-                if cur_root_id in to_root_access.roots[i]:
-                    to_jd.current_access_level = i
+                if self.id in to_access.nodes[i] or self.root in to_access.roots[i]:
+                    to.current_access_level = i
                     return True
 
-        to_jd.current_access_level = None
+            if to.root and (to_root := jsrc.find_one(to.root)):
+                to_root_access = to_root._jac_.access
+                from_root_access = jroot._jac_.id
+                for i in range(1, -1, -1):
+                    if from_root_access in to_root_access.roots[i]:
+                        to.current_access_level = i
+                        return True
+
+        to.current_access_level = None
         return False
 
     def __eq__(self, other: object) -> bool:
@@ -231,6 +212,12 @@ class NodeAnchor(ObjectAnchor):
 
     def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> NodeArchitype:
         """Connect a node with given edge."""
+        if not self.obj:
+            self.architype()
+
+        if not self.obj:
+            raise Exception(f"Invalid Reference {self.ref_id}")
+
         edg._jac_.attach(self.obj, nd)
         return self.obj
 
@@ -503,15 +490,13 @@ class Architype:
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
 
-    def __pre_init__(self, **kwargs) -> None:
+    def __pre_init__(self, **kwargs) -> None:  # noqa: ANN003
+        """Pre initialization architype."""
         pass
 
     def __init__(self) -> None:
         """Create default architype."""
         self._jac_: ObjectAnchor = ObjectAnchor(obj=self)
-
-    def __hash__(self) -> int:
-        return hash(self._jac_.id)
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
@@ -523,7 +508,8 @@ class Architype:
         return False
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
+        """Return string representation."""
+        return self._jac_.ref_id
 
 
 class NodeArchitype(Architype):
@@ -606,9 +592,9 @@ class ExecutionContext:
         entry: Optional[str] = None,
     ) -> None:
         """Create JacContext."""
-        from jaclang.plugin.memory import Memory
+        from jaclang.plugin.memory import ShelfMemory
 
-        self.memory: Memory = Memory(session)
+        self.datasource: ShelfMemory = ShelfMemory(session)
         self.reports: list[Any] = []
         self.root: NodeArchitype
 
@@ -627,11 +613,8 @@ class ExecutionContext:
         else:
             self.entry = self.root
 
-    def open(self) -> None:
-        self.memory.open()
-
     def close(self) -> None:
-        self.memory.close()
+        self.datasource.close()
 
 
 class JacTestResult(unittest.TextTestResult):
