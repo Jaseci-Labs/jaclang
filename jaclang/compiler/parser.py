@@ -573,8 +573,11 @@ class JacParser(Pass):
             """Grammar rule.
 
             any_ref: named_ref
-                    | arch_ref
+                | type_ref
             """
+            print(kid[0].loc.mod_path)
+            print(kid[0])
+            print(type(kid[0]))
             if isinstance(kid[0], ast.Name):
                 return self.nu(kid[0])
             else:
@@ -694,7 +697,11 @@ class JacParser(Pass):
             """
             if isinstance(kid[0], ast.PyInlineCode):
                 return self.nu(kid[0])
-            if isinstance(kid[0], (ast.AtomExpr)) and isinstance(kid[-1], (ast.Expr)):
+            if (
+                len(kid) >= 3
+                and isinstance(kid[0], (ast.AtomExpr))
+                and isinstance(kid[-1], (ast.Expr))
+            ):
                 semstr = (
                     kid[2] if len(kid) > 3 and isinstance(kid[2], ast.String) else None
                 )
