@@ -9,15 +9,16 @@ from typing import Any, Callable, Optional, TYPE_CHECKING, Type, TypeVar, Union
 from jaclang.compiler.absyntree import Module
 
 if TYPE_CHECKING:
-    from jaclang.core.construct import EdgeArchitype, NodeArchitype
-    from jaclang.plugin.default import (
+    from jaclang.core.construct import (
         Architype,
+        ContextOptions,
+        EdgeArchitype,
         EdgeDir,
         ExecutionContext,
+        NodeArchitype,
         WalkerArchitype,
         Root,
     )
-    from jaclang.core.memory import Memory
 
 import pluggy
 
@@ -45,20 +46,10 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Get the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
         raise NotImplementedError
 
     @staticmethod

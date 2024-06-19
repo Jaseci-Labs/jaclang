@@ -8,8 +8,7 @@ import os
 import pickle
 import shutil
 import types
-from typing import Optional
-from uuid import UUID
+from typing import Any, Optional
 
 import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
@@ -19,7 +18,7 @@ from jaclang.compiler.constant import Constants
 from jaclang.compiler.passes.main.pyast_load_pass import PyastBuildPass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
-from jaclang.core.construct import Architype
+from jaclang.core.construct import ObjectAnchor
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
@@ -73,6 +72,7 @@ def run(
     cache: bool = True,
     walker: str = "",
     node: str = "",
+    root: str = "",
 ) -> None:
     """Run the specified .jac file."""
     # if no session specified, check if it was defined when starting the command shell
@@ -86,7 +86,7 @@ def run(
             else ""
         )
 
-    Jac.context().init_memory(session)
+    jctx = Jac.context(session, {"root": root, "entry": node})
 
     base, mod = os.path.split(filename)
     base = base if base else "./"
@@ -112,47 +112,35 @@ def run(
         print("Not a .jac file.")
         return
 
-    if not node or node == "root":
-        entrypoint: Architype = Jac.get_root()
-    else:
-        obj = Jac.context().get_obj(UUID(node))
-        if obj is None:
-            print(f"Entrypoint {node} not found.")
-            return
-        entrypoint = obj
-
     # TODO: handle no override name
     if walker:
         walker_module = dict(inspect.getmembers(loaded_mod)).get(walker)
-        if walker_module:
-            Jac.spawn_call(entrypoint, walker_module())
+        if walker_module and (architype := jctx.entry.architype):
+            Jac.spawn_call(architype, walker_module())
         else:
             print(f"Walker {walker} not found.")
 
-    Jac.reset_context()
+    jctx.close()
 
 
 @cmd_registry.register
-def get_object(id: str, session: str = "") -> dict:
+def get_object(id: str, session: str = "") -> dict[str, Any]:
     """Get the object with the specified id."""
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    Jac.context().init_memory(session)
+    jctx = Jac.context(session)
 
     if id == "root":
-        id_uuid = UUID(int=0)
-    else:
-        id_uuid = UUID(id)
+        return jctx.root.__dict__
 
-    obj = Jac.context().get_obj(id_uuid)
-    if obj is None:
-        print(f"Object with id {id} not found.")
-        Jac.reset_context()
-        return {}
-    else:
-        Jac.reset_context()
-        return obj.__getstate__()
+    obj = {}
+    if (of := ObjectAnchor.ref(id)) and (oa := of.sync()):
+        obj = oa.__dict__
+
+    jctx.close()
+
+    return obj
 
 
 @cmd_registry.register
@@ -347,7 +335,7 @@ def dot(
             else ""
         )
 
-    Jac.context().init_memory(session)
+    jctx = Jac.context(session)
 
     base, mod = os.path.split(filename)
     base = base if base else "./"
@@ -370,21 +358,20 @@ def dot(
                 edge_limit=edge_limit,
                 node_limit=node_limit,
             )
+
+            file_name = saveto if saveto else f"{mod}.dot"
+            with open(file_name, "w") as file:
+                file.write(graph)
+            print(f">>> Graph content saved to {os.path.join(os.getcwd(), file_name)}")
         except Exception as e:
             print(f"Error while generating graph: {e}")
             import traceback
 
             traceback.print_exc()
-            Jac.reset_context()
-            return
-        file_name = saveto if saveto else f"{mod}.dot"
-        with open(file_name, "w") as file:
-            file.write(graph)
-        print(f">>> Graph content saved to {os.path.join(os.getcwd(), file_name)}")
     else:
         print("Not a .jac file.")
 
-    Jac.reset_context()
+    jctx.close()
 
 
 @cmd_registry.register

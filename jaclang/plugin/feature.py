@@ -8,13 +8,13 @@ from typing import Any, Callable, Optional, Type, TypeAlias, Union
 from jaclang.compiler.absyntree import Module
 from jaclang.core.construct import (
     Architype,
+    ContextOptions,
     EdgeArchitype,
-    Memory,
+    ExecutionContext,
     NodeArchitype,
     Root,
     WalkerArchitype,
 )
-from jaclang.plugin.default import ExecutionContext
 from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, T
 
 
@@ -40,19 +40,11 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Create execution context."""
         return pm.hook.context(session=session)
-
-    @staticmethod
-    def reset_context() -> None:
-        """Reset execution context."""
-        return pm.hook.reset_context()
-
-    @staticmethod
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
-        return pm.hook.memory_hook()
 
     @staticmethod
     def make_architype(
