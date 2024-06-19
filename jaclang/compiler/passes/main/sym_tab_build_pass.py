@@ -439,7 +439,7 @@ class SymTabBuildPass(SymTabPass):
         base_classes: BaseClasses,
         body: Optional[ArchBlock],
         """
-        self.sync_node_to_scope(node)
+        self.sync_node_to_scope(node.name)
         self.def_insert(node.name, access_spec=node, single_decl="architype")
         self.push_scope(node.name.value, node)
         self.sync_node_to_scope(node)
@@ -466,9 +466,9 @@ class SymTabBuildPass(SymTabPass):
         decorators: Optional[SubNodeList[Expr]] = None,
         decl_link: Optional[Architype] = None,
         """
-        self.sync_node_to_scope(node)
-        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
-        self.push_scope(node.target.py_resolve_name(), node)
+        self.sync_node_to_scope(faux_node := node.create_impl_name_node())
+        self.def_insert(faux_node, single_decl="arch def")
+        self.push_scope(faux_node.sym_name, node)
         self.sync_node_to_scope(node)
 
     def exit_arch_def(self, node: ast.ArchDef) -> None:
@@ -494,7 +494,7 @@ class SymTabBuildPass(SymTabPass):
         signature: Optional[FuncSignature | TypeSpec | EventSignature],
         body: Optional[CodeBlock],
         """
-        self.sync_node_to_scope(node)
+        self.sync_node_to_scope(node.name_ref)
         self.def_insert(node.name_ref, access_spec=node, single_decl="ability")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
@@ -522,9 +522,9 @@ class SymTabBuildPass(SymTabPass):
         signature: FuncSignature | EventSignature,
         body: CodeBlock,
         """
-        self.sync_node_to_scope(node)
-        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
-        self.push_scope(node.target.py_resolve_name(), node)
+        self.sync_node_to_scope(faux_node := node.create_impl_name_node())
+        self.def_insert(faux_node, single_decl="ability def")
+        self.push_scope(faux_node.sym_name, node)
         self.sync_node_to_scope(node)
 
     def exit_ability_def(self, node: ast.AbilityDef) -> None:
@@ -582,7 +582,7 @@ class SymTabBuildPass(SymTabPass):
         base_classes: 'BaseClasses',
         body: Optional['EnumBlock'],
         """
-        self.sync_node_to_scope(node)
+        self.sync_node_to_scope(node.name)
         self.def_insert(node.name, access_spec=node, single_decl="enum")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
@@ -606,9 +606,9 @@ class SymTabBuildPass(SymTabPass):
         target: list[ArchRef],
         body: EnumBlock,
         """
-        self.sync_node_to_scope(node)
-        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
-        self.push_scope(node.sym_name, node)
+        self.sync_node_to_scope(faux_node := node.create_impl_name_node())
+        self.def_insert(faux_node, single_decl="enum def")
+        self.push_scope(faux_node.sym_name, node)
         self.sync_node_to_scope(node)
 
     def exit_enum_def(self, node: ast.EnumDef) -> None:
