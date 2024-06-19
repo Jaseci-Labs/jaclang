@@ -19,6 +19,7 @@ from jaclang.compiler.constant import Constants
 from jaclang.compiler.passes.main.pyast_load_pass import PyastBuildPass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
+from jaclang.core.construct import ObjectAnchor
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
@@ -112,8 +113,8 @@ def run(
     # TODO: handle no override name
     if walker:
         walker_module = dict(inspect.getmembers(sys.modules["__main__"])).get(walker)
-        if walker_module:
-            Jac.spawn_call(jctx.entry, walker_module())
+        if walker_module and (architype := jctx.entry.architype):
+            Jac.spawn_call(architype, walker_module())
         else:
             print(f"Walker {walker} not found.")
 
@@ -131,15 +132,14 @@ def get_object(id: str, session: str = "") -> dict[str, Any]:
         )
 
     jctx = Jac.context(session)
-    jsrc = jctx.datasource
 
-    obj = jsrc.find_one(id)
+    obj = {}
+    if (of := ObjectAnchor.ref(id)) and (oa := of.sync()):
+        obj = oa.__dict__
 
     jctx.close()
 
-    if obj:
-        return obj.__getstate__()
-    return {}
+    return obj
 
 
 @cmd_registry.register

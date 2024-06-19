@@ -389,9 +389,6 @@ class JacFeatureDefaults:
             for j in right:
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
-                import pdb
-
-                pdb.set_trace()
                 i._jac_.connect_node(j, conn_edge)
         return right if not edges_only else edges
 
@@ -408,25 +405,42 @@ class JacFeatureDefaults:
         left = [left] if isinstance(left, NodeArchitype) else left
         right = [right] if isinstance(right, NodeArchitype) else right
         for i in left:
-            for j in right:
-                edge_list: list[EdgeArchitype] = [*i._jac_.edges]
-                edge_list = filter_func(edge_list) if filter_func else edge_list
-                for e in edge_list:
-                    if e._jac_.target and e._jac_.source:
-                        if (
-                            dir in ["OUT", "ANY"]  # TODO: Not ideal
-                            and i._jac_.architype == e._jac_.source
-                            and e._jac_.target == j._jac_.architype
-                        ):
-                            e._jac_.detach(i._jac_.architype, e._jac_.target)
-                            disconnect_occurred = True
-                        if (
-                            dir in ["IN", "ANY"]
-                            and i._jac_.architype == e._jac_.target
-                            and e._jac_.source == j._jac_.architype
-                        ):
-                            e._jac_.detach(i._jac_.architype, e._jac_.source)
-                            disconnect_occurred = True
+            left_anchor = i._jac_
+            for idx, anchor in enumerate(left_anchor.edges):
+                if (_anchor := anchor.sync()) and _anchor is not anchor:
+                    left_anchor.edges[idx] = anchor = _anchor
+
+                if (
+                    (architype := anchor.architype)
+                    and (source := anchor.source)
+                    and (target := anchor.target)
+                    and (not filter_func or filter_func([architype]))
+                ):
+                    if (_source := source.sync()) and _source is not source:
+                        anchor.source = source = _source
+
+                    if (_target := target.sync()) and _target is not target:
+                        anchor.target = target = _target
+
+                    if (
+                        dir in [EdgeDir.OUT, EdgeDir.ANY]
+                        and i == source
+                        and (target_arch := target.architype)
+                        and target_arch in right
+                        and source.is_allowed(target)
+                    ):
+                        anchor.detach(left_anchor, target_arch)
+                        disconnect_occurred = True
+                    if (
+                        dir in [EdgeDir.IN, EdgeDir.ANY]
+                        and i == target
+                        and (source_arch := source.architype)
+                        and source_arch in right
+                        and target.is_allowed(source)
+                    ):
+                        anchor.detach(left_anchor, source_arch)
+                        disconnect_occurred = True
+
         return disconnect_occurred
 
     @staticmethod
@@ -445,7 +459,10 @@ class JacFeatureDefaults:
     @hookimpl
     def get_root() -> NodeArchitype:
         """Jac's assign comprehension feature."""
-        return Jac.context().root
+        jroot = Jac.context().root
+        if architype := jroot.architype:
+            return architype
+        raise Exception(f"Invalid Reference {jroot.ref_id}")
 
     @staticmethod
     @hookimpl
