@@ -7,6 +7,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from enum import Enum
 from os import getenv
+from pickle import dumps
 from re import IGNORECASE, compile
 from typing import (
     Any,
@@ -63,7 +64,13 @@ class ObjectAnchor:
     architype: Optional[Architype] = None
     connected: bool = False
     current_access_level: Optional[int] = None
-    persistent: Optional[bool] = field(default=ENABLE_MANUAL_SAVE)
+    persistent: Optional[bool] = field(default=not ENABLE_MANUAL_SAVE)
+    hash: int = 0
+
+    def __post_init__(self) -> None:
+        """Populate on memory."""
+        self.hash = hash(dumps(self))
+        ExecutionContext.get().datasource.set(self, True)
 
     @property
     def ref_id(self) -> str:
@@ -82,6 +89,10 @@ class ObjectAnchor:
         return None
 
     def save(self) -> None:
+        """Save Anchor."""
+        raise Exception(f"Invalid Reference {self.ref_id}")
+
+    def destroy(self) -> None:
         """Save Anchor."""
         raise Exception(f"Invalid Reference {self.ref_id}")
 
@@ -178,6 +189,33 @@ class NodeAnchor(ObjectAnchor):
             )
         return None
 
+    def _save(self) -> None:
+        jsrc = ExecutionContext.get().datasource
+
+        for edge in self.edges:
+            edge.save()
+
+        jsrc.set(self)
+
+    def save(self) -> None:
+        """Save Anchor."""
+        if self.architype:
+            if self.connected:
+                self.connected = True
+                self._save()
+            elif self.hash != (_hash := hash(dumps(self))):
+                self.hash = _hash
+                self._save()
+
+    def destroy(self) -> None:
+        """Delete Anchor."""
+        if self.architype:
+            jsrc = ExecutionContext.get().datasource
+            for edge in self.edges:
+                edge.destroy()
+
+            jsrc.remove(self)
+
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeAnchor]:
         """Retrieve the Architype from db and return."""
         return cast(Optional[NodeAnchor], super().sync(node))
@@ -186,9 +224,9 @@ class NodeAnchor(ObjectAnchor):
         """Generate unlinked anchor."""
         return NodeAnchor(name=self.name, id=self.id)
 
-    def connect_node(self, nd: NodeArchitype, edg: EdgeArchitype) -> None:
+    def connect_node(self, nd: NodeAnchor, edg: EdgeAnchor) -> None:
         """Connect a node with given edge."""
-        edg._jac_.attach(self, nd)
+        edg.attach(self, nd)
 
     def get_edges(
         self,
@@ -295,12 +333,9 @@ class NodeAnchor(ObjectAnchor):
                 f.write(dot_content + "}")
         return dot_content + "}"
 
-    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
+    def spawn_call(self, walk: WalkerAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
-        if architype := self.architype:
-            return walk._jac_.spawn_call(architype)
-        else:
-            raise Exception(f"Invalid Reference {self.ref_id}")
+        return walk.spawn_call(self)
 
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
@@ -318,7 +353,6 @@ class EdgeAnchor(ObjectAnchor):
     source: Optional[NodeAnchor] = None
     target: Optional[NodeAnchor] = None
     is_undirected: bool = False
-    persistent: bool = False
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
@@ -330,6 +364,43 @@ class EdgeAnchor(ObjectAnchor):
             )
         return None
 
+    def _save(self) -> None:
+        jsrc = ExecutionContext.get().datasource
+
+        if source := self.source:
+            source.save()
+
+        if target := self.target:
+            target.save()
+
+        jsrc.set(self)
+
+    def save(self) -> None:
+        """Save Anchor."""
+        if self.architype:
+            if self.connected:
+                self.connected = True
+                self._save()
+            elif self.hash != (_hash := hash(dumps(self))):
+                self.hash = _hash
+                self._save()
+
+    def destroy(self) -> None:
+        """Delete Anchor."""
+        if self.architype:
+            jsrc = ExecutionContext.get().datasource
+
+            source = self.source
+            target = self.target
+            self.detach()
+
+            if source:
+                source.save()
+            if target:
+                target.save()
+
+            jsrc.remove(self)
+
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeAnchor]:
         """Retrieve the Architype from db and return."""
         return cast(Optional[EdgeAnchor], super().sync(node))
@@ -339,31 +410,30 @@ class EdgeAnchor(ObjectAnchor):
         return EdgeAnchor(name=self.name, id=self.id)
 
     def attach(
-        self, src: NodeAnchor, trg: NodeArchitype, is_undirected: bool = False
+        self, src: NodeAnchor, trg: NodeAnchor, is_undirected: bool = False
     ) -> EdgeAnchor:
         """Attach edge to nodes."""
         self.source = src
-        self.target = trg._jac_
+        self.target = trg
         self.is_undirected = is_undirected
         src.edges.append(self)
-        trg._jac_.edges.append(self)
+        trg.edges.append(self)
         return self
 
-    def detach(
-        self, src: NodeAnchor, trg: NodeArchitype, is_undirected: bool = False
-    ) -> None:
+    def detach(self) -> None:
         """Detach edge from nodes."""
-        self.is_undirected = is_undirected
-        src.edges.remove(self)
-        trg._jac_.edges.remove(self)
+        if source := self.source:
+            source.edges.remove(self)
+        if target := self.target:
+            target.edges.remove(self)
+
         self.source = None
         self.target = None
-        del self
 
-    def spawn_call(self, walk: WalkerArchitype) -> WalkerArchitype:
+    def spawn_call(self, walk: WalkerAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
-        if (target := self.target) and (architype := target.architype):
-            return walk._jac_.spawn_call(architype)
+        if target := self.target:
+            return walk.spawn_call(target)
         else:
             raise ValueError("Edge has no target.")
 
@@ -466,47 +536,47 @@ class WalkerAnchor(ObjectAnchor):
         """Disengage walker from traversal."""
         self.disengaged = True
 
-    def spawn_call(self, nd: Architype) -> WalkerArchitype:
+    def spawn_call(self, nd: ObjectAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
-        if architype := self.architype:
+        if (walker := self.architype) and (node := nd.architype):
             self.path = []
-            self.next = [nd]
+            self.next = [node]
             while len(self.next):
-                nd = self.next.pop(0)
-                for i in nd._jac_entry_funcs_:
-                    if not i.trigger or isinstance(self.architype, i.trigger):
+                node = self.next.pop(0)
+                for i in node._jac_entry_funcs_:
+                    if not i.trigger or isinstance(walker, i.trigger):
                         if i.func:
-                            i.func(nd, self.architype)
+                            i.func(node, walker)
                         else:
                             raise ValueError(f"No function {i.name} to call.")
                     if self.disengaged:
-                        return architype
-                for i in architype._jac_entry_funcs_:
-                    if not i.trigger or isinstance(nd, i.trigger):
+                        return walker
+                for i in walker._jac_entry_funcs_:
+                    if not i.trigger or isinstance(node, i.trigger):
                         if i.func:
-                            i.func(architype, nd)
+                            i.func(walker, node)
                         else:
                             raise ValueError(f"No function {i.name} to call.")
                     if self.disengaged:
-                        return architype
-                for i in architype._jac_exit_funcs_:
-                    if not i.trigger or isinstance(nd, i.trigger):
+                        return walker
+                for i in walker._jac_exit_funcs_:
+                    if not i.trigger or isinstance(node, i.trigger):
                         if i.func:
-                            i.func(architype, nd)
+                            i.func(walker, node)
                         else:
                             raise ValueError(f"No function {i.name} to call.")
                     if self.disengaged:
-                        return architype
-                for i in nd._jac_exit_funcs_:
-                    if not i.trigger or isinstance(architype, i.trigger):
+                        return walker
+                for i in node._jac_exit_funcs_:
+                    if not i.trigger or isinstance(walker, i.trigger):
                         if i.func:
-                            i.func(nd, architype)
+                            i.func(node, walker)
                         else:
                             raise ValueError(f"No function {i.name} to call.")
                     if self.disengaged:
-                        return architype
+                        return walker
             self.ignores = []
-            return architype
+            return walker
         raise Exception(f"Invalid Reference {self.ref_id}")
 
 
@@ -564,7 +634,6 @@ class EdgeArchitype(Architype):
     """Edge Architype Protocol."""
 
     _jac_: EdgeAnchor
-    persistent: bool = False
 
     def __init__(self) -> None:
         """Create edge architype."""

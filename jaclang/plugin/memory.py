@@ -1,6 +1,7 @@
 """Memory abstraction for jaseci plugin."""
 
 from dataclasses import dataclass, field
+from os import getenv
 from shelve import Shelf, open
 from typing import Callable, Generator, Literal, Optional, Union, overload
 from uuid import UUID
@@ -8,6 +9,7 @@ from uuid import UUID
 from jaclang.core.construct import ObjectAnchor
 
 IDS = Union[UUID, list[UUID]]
+ENABLE_MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 
 
 @dataclass
@@ -15,10 +17,12 @@ class Memory:
     """Generic Memory Handler."""
 
     __mem__: dict[str, ObjectAnchor] = field(default_factory=dict)
+    __trash__: set[str] = field(default_factory=set)
 
     def close(self) -> None:
         """Close memory handler."""
         self.__mem__.clear()
+        self.__trash__.clear()
 
     def __del__(self) -> None:
         """On garbage collection cleanup."""
@@ -76,17 +80,20 @@ class Memory:
         """Temporary."""
         if isinstance(data, list):
             for d in data:
-                self.__mem__[d.ref_id] = d
-        else:
-            self.__mem__[data.ref_id] = data
+                if str(d.id) not in self.__trash__:
+                    self.__mem__[str(d.id)] = d
+        elif str(data.id) not in self.__trash__:
+            self.__mem__[str(data.id)] = data
 
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         if isinstance(data, list):
             for d in data:
-                self.__mem__.pop(d.ref_id, None)
+                self.__mem__.pop(str(d.id), None)
+                self.__trash__.add(str(d.id))
         else:
-            self.__mem__.pop(data.ref_id, None)
+            self.__mem__.pop(str(data.id), None)
+            self.__trash__.add(str(data.id))
 
 
 @dataclass
@@ -102,9 +109,20 @@ class ShelfMemory(Memory):
 
     def close(self) -> None:
         """Close memory handler."""
-        super().close()
         if self.__shelf__:
+            for anchor in self.__mem__.values():
+                if not anchor.persistent:
+                    anchor.destroy()
+
+            if not ENABLE_MANUAL_SAVE:
+                for id in self.__trash__:
+                    self.__shelf__.pop(id, None)
+
+                for id in self.__mem__.keys():
+                    self.__shelf__.pop(id, None)
             self.__shelf__.close()
+
+        super().close()
 
     def find(
         self,
@@ -118,8 +136,10 @@ class ShelfMemory(Memory):
         if self.__shelf__:
             for obj in objs:
                 if isinstance(obj, UUID):
-                    if anchor := self.__shelf__.get(str(obj)):
-                        self.__mem__[anchor.ref_id] = anchor
+                    if str(obj) not in self.__trash__ and (
+                        anchor := self.__shelf__.get(str(obj))
+                    ):
+                        self.__mem__[str(anchor.id)] = anchor
                         if not filter or filter(anchor):
                             yield anchor
                 else:
@@ -129,11 +149,13 @@ class ShelfMemory(Memory):
                 if isinstance(obj, ObjectAnchor):
                     yield obj
 
-    def set(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
+    def set(
+        self, data: Union[ObjectAnchor, list[ObjectAnchor]], mem_only: bool = False
+    ) -> None:
         """Temporary."""
         super().set(data)
 
-        if self.__shelf__:
+        if not mem_only and self.__shelf__:
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__[str(d.id)] = d
@@ -143,8 +165,7 @@ class ShelfMemory(Memory):
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         super().remove(data)
-
-        if self.__shelf__:
+        if self.__shelf__ and ENABLE_MANUAL_SAVE:
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__.pop(str(d.id), None)

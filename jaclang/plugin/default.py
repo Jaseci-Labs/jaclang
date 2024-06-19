@@ -304,9 +304,9 @@ class JacFeatureDefaults:
     def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype:
         """Jac's spawn operator feature."""
         if isinstance(op1, WalkerArchitype):
-            return op1._jac_.spawn_call(op2)
+            return op1._jac_.spawn_call(op2._jac_)
         elif isinstance(op2, WalkerArchitype):
-            return op2._jac_.spawn_call(op1)
+            return op2._jac_.spawn_call(op1._jac_)
         else:
             raise TypeError("Invalid walker object")
 
@@ -406,7 +406,7 @@ class JacFeatureDefaults:
             for j in right:
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
-                i._jac_.connect_node(j, conn_edge)
+                i._jac_.connect_node(j._jac_, conn_edge._jac_)
         return right if not edges_only else edges
 
     @staticmethod
@@ -446,7 +446,7 @@ class JacFeatureDefaults:
                         and target_arch in right
                         and source.is_allowed(target)
                     ):
-                        anchor.detach(left_anchor, target_arch)
+                        anchor.detach()
                         disconnect_occurred = True
                     if (
                         dir in [EdgeDir.IN, EdgeDir.ANY]
@@ -455,7 +455,7 @@ class JacFeatureDefaults:
                         and source_arch in right
                         and target.is_allowed(source)
                     ):
-                        anchor.detach(left_anchor, source_arch)
+                        anchor.detach()
                         disconnect_occurred = True
 
         return disconnect_occurred
