@@ -28,11 +28,14 @@ class DeclImplMatchPass(Pass):
         """Rebuild sub node table."""
         self.ir = SubNodeTabPass(input_ir=self.ir, prior=self).ir
 
-    def defn_lookup(self, lookup: Symbol) -> ast.AstImplNeedingNode | None:
+    def defn_lookup(self, lookup: Symbol) -> ast.NameSpec | None:
         """Lookup a definition in a symbol table."""
         for defn in range(len(lookup.defn)):
             candidate = lookup.defn[len(lookup.defn) - (defn + 1)]
-            if isinstance(candidate, ast.AstImplNeedingNode) and candidate.needs_impl:
+            if (
+                isinstance(candidate.parent, ast.AstImplNeedingNode)
+                and candidate.parent.needs_impl
+            ):
                 return candidate
         return None
 
