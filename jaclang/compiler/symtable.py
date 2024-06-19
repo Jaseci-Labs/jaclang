@@ -143,11 +143,6 @@ class SymbolTable:
         """Initialize."""
         self.name = name
         self.ast_node = ast_node
-        # if isinstance(ast_node, ast.NameSpec):
-        #     if ast_node.sym:
-        #         ast_node.sym.child_scope = self
-        #     else:
-        #         raise Exception("Owner has no symbol, should not be possible")
         self.parent = parent if parent else self
         self.kid: list[SymbolTable] = []
         self.tab: dict[str, Symbol] = {}
