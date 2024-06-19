@@ -25,6 +25,7 @@ from jaclang.vendor.pygls.server import LanguageServer
 
 import lsprotocol.types as lspt
 
+x =1
 
 class ALev(IntEnum):
     """Analysis Level."""
@@ -56,7 +57,7 @@ class ModuleInfo:
     @property
     def uri(self) -> str:
         """Return uri."""
-        return uris.from_fs_path(self.ir.loc.mod_path)
+        r   urn uris.from_fs_path(self.ir.loc.mod_path)
 
     @property
     def has_syntax_error(self) -> bool:
@@ -200,20 +201,80 @@ class JacLangServer(LanguageServer):
             self.log_error(f"Error during type check: {e}")
         self.update_modules(file_path, build, ALev.TYPE)
 
+    # def get_completion(
+    #     self, file_path: str, position: lspt.Position
+    # ) -> lspt.CompletionList:
+    #     """Return completion for a file."""
+    #     self.log_py(f'file_path: {file_path} , position: {position}')
+    #     items = []
+    #     document = self.workspace.get_text_document(file_path)
+    #     current_line = document.lines[position.line].strip()
+    #     # if current_line.endswith("hello."):
+    #     # first , lets give all the available symbols as completion with out logic  # will refine it 
+    #     items = [
+    #         lspt.CompletionItem(label="world"),
+    #         lspt.CompletionItem(label="world112"),
+    #         lspt.CompletionItem(label="werwerwworld112"),
+    #         lspt.CompletionItem(label="friend"),
+    #         lspt.CompletionItem(label="worfrienssssd"),
+    #         lspt.CompletionItem(label="worfriendfsdssssd"),
+    #         lspt.CompletionItem(label="worfriesssnd"),
+    #         lspt.CompletionItem(label="worfriendss"),
+    #         lspt.CompletionItem(label="world"),
+    #         lspt.CompletionItem(label="world112"),
+    #         lspt.CompletionItem(label="werwerwworld112"),
+    #         lspt.CompletionItem(label="friend"),
+    #         lspt.CompletionItem(label="worfrienssssd"),
+    #         lspt.CompletionItem(label="worfriendfsdssssd"),
+    #         lspt.CompletionItem(label="worfriesssnd"),
+    #         lspt.CompletionItem(label="worfriendss"),
+    #     ]
+    #     return lspt.CompletionList(is_incomplete=False, items=items)
+
+
+
+
     def get_completion(
         self, file_path: str, position: lspt.Position
     ) -> lspt.CompletionList:
         """Return completion for a file."""
+        self.log_py(f'file_path: {file_path} , position: {position}')
         items = []
-        document = self.workspace.get_text_document(file_path)
-        current_line = document.lines[position.line].strip()
-        if current_line.endswith("hello."):
+        file_path = str('file:///home/acer/Desktop/jac_kug/jaclang/jaclang/langserve/tests/fixtures/circle_ori.jac')
+        node_selected = find_deepest_symbol_node_at_pos(
+            self.modules[file_path].ir, position.line, position.character - 2,
+        )
+        self.log_py(f"{position.line + 1, position.character} {node_selected.sym_tab} \n            node_selected: {node_selected}")
+        # i need to get the all symbols from this symbol nodes and i need to get all the symbols in parents and traverse upward and collect all symbols
+        from jaclang.compiler.symtable import Symbol, SymbolTable
+        import builtins
+        def get_all_symbols(sym_tab: SymbolTable):
+            symbols = []
+            visited = set()
+            current_tab = sym_tab
+            
+            while current_tab is not None and current_tab not in visited:
+                visited.add(current_tab)
+                for name, symbol in current_tab.tab.items():
+                    if name not in dir(builtins):
+                        symbols.append(name)
+                current_tab = current_tab.parent if current_tab.parent != current_tab else None
 
-            items = [
-                lspt.CompletionItem(label="world"),
-                lspt.CompletionItem(label="friend"),
-            ]
-        return lspt.CompletionList(is_incomplete=False, items=items)
+            self.log_py(f'symbols: {symbols}')
+            return symbols
+
+        if node_selected is not None:
+            symbols = get_all_symbols(node_selected.sym_tab)
+            try:
+                if node_selected.parent_of_type(ast.Architype):
+                    symbols.append("self")
+            except:
+                pass
+            self.log_py(f'symbols: {symbols}')
+            for symbol in symbols:
+                items.append(lspt.CompletionItem(label=symbol))
+            return lspt.CompletionList(is_incomplete=False, items=items)
+
 
     def rename_module(self, old_path: str, new_path: str) -> None:
         """Rename module."""

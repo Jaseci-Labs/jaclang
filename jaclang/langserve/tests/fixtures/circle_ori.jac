@@ -10,8 +10,6 @@ glob RAD = 5;
 
 """Function to calculate the area of a circle."""
 can calculate_area(radius: float) -> float {
-    
-
     return math.pi * radius * radius;
 }
 #* (This is multiline comments in Jac)
@@ -21,16 +19,14 @@ Below we have the demonstration of a class to calculate the area of a circle.
 
 """Enum for shape types"""
 enum ShapeType  {
-    CIRCLE="Circle",    
+    CIRCLE="Circle",
     UNKNOWN="Unknown"
-
-
 }
 
 """Base class for a shape."""
 obj Shape {
     has shape_type: ShapeType;
-    
+
     """Abstract method to calculate the area of a shape."""
     can area -> float abs;
 }
@@ -40,7 +36,9 @@ obj Circle :Shape: {
     can init(radius: float) {
         super.init(ShapeType.CIRCLE);
         self.radius = radius;
-        # 
+         
+
+        
     }
 
     """Overridden method to calculate the area of the circle."""
@@ -51,8 +49,10 @@ obj Circle :Shape: {
 
 with entry {
     ccccccccccc = Circle(RAD);
-    # hell
-    #hello.
+    # hello.
+
+
+
 }
 # Global also works here
 
@@ -66,20 +66,15 @@ print(f"Area of a {ccccccccccc.shape_type.value} with radius {RAD} using class: 
 glob expected_area = 78.53981633974483;
 
 test calc_area   {
-
     check.assertAlmostEqual(calculate_area(RAD), expected_area);
 }
 
 test circle_area   {
-
-
     c = Circle(RAD);
     check.assertAlmostEqual(c.area(), expected_area);
 }
 
 test circle_type   {
-
-    
     c = Circle(RAD);
     check.assertEqual(c.shape_type, ShapeType.CIRCLE);
 }

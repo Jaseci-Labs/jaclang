@@ -65,8 +65,8 @@ def find_deepest_symbol_node_at_pos(
     last_symbol_node = None
 
     if position_within_node(node, line, character):
-        if isinstance(node, ast.AstSymbolNode):
-            last_symbol_node = node
+        # if isinstance(node, ast.AstSymbolNode):
+        last_symbol_node = node
 
         for child in node.kid:
             if position_within_node(child, line, character):

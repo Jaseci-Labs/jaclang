@@ -36,6 +36,7 @@ class Shape(ABC):
 
     def __init__(self, shape_type: ShapeType):
         self.shape_type = shape_type
+        
 
     @abstractmethod
     def area(self) -> float:

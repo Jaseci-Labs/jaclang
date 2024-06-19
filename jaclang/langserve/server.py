@@ -18,16 +18,17 @@ analysis_stop_event = threading.Event()
 def analyze_and_publish(ls: JacLangServer, uri: str, level: int = 2) -> None:
     """Analyze and publish diagnostics."""
     global analysis_thread, analysis_stop_event
-
+    ls.log_py(f"Analyzing {uri}")
     def run_analysis() -> None:
-        ls.quick_check(uri)
-        ls.push_diagnostics(uri)
-        if not analysis_stop_event.is_set() and level > 0:
-            ls.deep_check(uri)
+        if uri != "file:///home/acer/Desktop/jac_kug/jaclang/jaclang/langserve/tests/fixtures/circle.jac":
+            ls.quick_check(uri)
             ls.push_diagnostics(uri)
-            if not analysis_stop_event.is_set() and level > 1:
-                ls.type_check(uri)
+            if not analysis_stop_event.is_set() and level > 0:
+                ls.deep_check(uri)
                 ls.push_diagnostics(uri)
+                if not analysis_stop_event.is_set() and level > 1:
+                    ls.type_check(uri)
+                    ls.push_diagnostics(uri)
 
     analysis_thread = threading.Thread(target=run_analysis)
     analysis_thread.start()
@@ -112,14 +113,17 @@ async def did_delete_files(ls: JacLangServer, params: lspt.DeleteFilesParams) ->
         ls.delete_module(file.uri)
 
 
+# trigger at . and : and alphanumeric
 @server.feature(
     lspt.TEXT_DOCUMENT_COMPLETION,
-    lspt.CompletionOptions(trigger_characters=[".", ":", ""]),
+    lspt.CompletionOptions(trigger_characters=[".", ":", "a-zA-Z0-9"])
 )
 async def completion(
     ls: JacLangServer, params: lspt.CompletionParams
 ) -> lspt.CompletionList:
     """Provide completion."""
+    stop_analysis()
+    analyze_and_publish(ls, params.text_document.uri)
     return ls.get_completion(params.text_document.uri, params.position)
 
 
@@ -131,32 +135,32 @@ def formatting(
     return ls.formatted_jac(params.text_document.uri)
 
 
-@server.feature(lspt.TEXT_DOCUMENT_HOVER, lspt.HoverOptions(work_done_progress=True))
-def hover(
-    ls: JacLangServer, params: lspt.TextDocumentPositionParams
-) -> Optional[lspt.Hover]:
-    """Provide hover information for the given hover request."""
-    return ls.get_hover_info(params.text_document.uri, params.position)
+# @server.feature(lspt.TEXT_DOCUMENT_HOVER, lspt.HoverOptions(work_done_progress=True))
+# def hover(
+#     ls: JacLangServer, params: lspt.TextDocumentPositionParams
+# ) -> Optional[lspt.Hover]:
+#     """Provide hover information for the given hover request."""
+#     return ls.get_hover_info(params.text_document.uri, params.position)
 
 
-@server.feature(lspt.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
-async def document_symbol(
-    ls: JacLangServer, params: lspt.DocumentSymbolParams
-) -> list[lspt.DocumentSymbol]:
-    """Provide document symbols."""
-    stop_analysis()
-    analyze_and_publish(ls, params.text_document.uri)
-    return ls.get_document_symbols(params.text_document.uri)
+# @server.feature(lspt.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
+# async def document_symbol(
+#     ls: JacLangServer, params: lspt.DocumentSymbolParams
+# ) -> list[lspt.DocumentSymbol]:
+#     """Provide document symbols."""
+#     stop_analysis()
+#     analyze_and_publish(ls, params.text_document.uri)
+#     return ls.get_document_symbols(params.text_document.uri)
 
 
-@server.feature(lspt.TEXT_DOCUMENT_DEFINITION)
-async def definition(
-    ls: JacLangServer, params: lspt.TextDocumentPositionParams
-) -> Optional[lspt.Location]:
-    """Provide definition."""
-    stop_analysis()
-    analyze_and_publish(ls, params.text_document.uri, level=1)
-    return ls.get_definition(params.text_document.uri, params.position)
+# @server.feature(lspt.TEXT_DOCUMENT_DEFINITION)
+# async def definition(
+#     ls: JacLangServer, params: lspt.TextDocumentPositionParams
+# ) -> Optional[lspt.Location]:
+#     """Provide definition."""
+#     stop_analysis()
+#     analyze_and_publish(ls, params.text_document.uri, level=1)
+#     return ls.get_definition(params.text_document.uri, params.position)
 
 
 def run_lang_server() -> None:
