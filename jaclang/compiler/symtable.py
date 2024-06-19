@@ -77,21 +77,21 @@ class Symbol:
 
     def __init__(
         self,
-        defn: ast.AstSymbolNode,
+        defn: ast.NameSpec,
         access: SymbolAccess,
         parent_tab: SymbolTable,
     ) -> None:
         """Initialize."""
-        self.defn: list[ast.AstSymbolNode] = [defn]
-        self.uses: list[ast.AstSymbolNode] = []
+        self.defn: list[ast.NameSpec] = [defn]
+        self.uses: list[ast.NameSpec] = []
         defn.sym = self
         self.access = access
         self.parent_tab = parent_tab
-        self.scope_tab_link: Optional[SymbolTable] = None
+        self.child_scope: Optional[SymbolTable] = None
         self.type_tab_link: Optional[SymbolTable] = None
 
     @property
-    def decl(self) -> ast.AstSymbolNode:
+    def decl(self) -> ast.NameSpec:
         """Get decl."""
         return self.defn[0]
 
@@ -119,12 +119,12 @@ class Symbol:
         out.reverse()
         return ".".join(out)
 
-    def add_defn(self, node: ast.AstSymbolNode) -> None:
+    def add_defn(self, node: ast.NameSpec) -> None:
         """Add defn."""
         self.defn.append(node)
         node.sym = self
 
-    def add_use(self, node: ast.AstSymbolNode) -> None:
+    def add_use(self, node: ast.NameSpec) -> None:
         """Add use."""
         self.uses.append(node)
         node.sym = self
@@ -143,6 +143,11 @@ class SymbolTable:
         """Initialize."""
         self.name = name
         self.owner = owner
+        if isinstance(owner, ast.NameSpec):
+            if owner.sym:
+                owner.sym.child_scope = self
+            else:
+                raise Exception("Owner has no symbol, should not be possible")
         self.parent = parent if parent else self
         self.kid: list[SymbolTable] = []
         self.tab: dict[str, Symbol] = {}
@@ -167,7 +172,7 @@ class SymbolTable:
 
     def insert(
         self,
-        node: ast.AstSymbolNode,
+        node: ast.NameSpec,
         access_spec: Optional[ast.AstAccessNode] | SymbolAccess = None,
         single: bool = False,
     ) -> Optional[ast.AstNode]:
