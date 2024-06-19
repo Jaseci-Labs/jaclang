@@ -2,23 +2,19 @@
 
 from dataclasses import dataclass, field
 from shelve import Shelf, open
-from typing import Callable, Generator, Literal, Optional, TypeVar, Union, overload
+from typing import Callable, Generator, Literal, Optional, Union, overload
 from uuid import UUID
 
-from jaclang.core.construct import Architype
+from jaclang.core.construct import ObjectAnchor
 
-
-M = TypeVar("M", bound="Memory")
-A = TypeVar("A", bound=Architype)
-ID = Union[str, UUID]
-IDS = Union[ID, list[ID]]
+IDS = Union[UUID, list[UUID]]
 
 
 @dataclass
 class Memory:
     """Generic Memory Handler."""
 
-    __mem__: dict[str, Architype] = field(default_factory=dict)
+    __mem__: dict[str, ObjectAnchor] = field(default_factory=dict)
 
     def close(self) -> None:
         """Close memory handler."""
@@ -30,74 +26,74 @@ class Memory:
 
     @overload
     def find(
-        self, ids: IDS, filter: Optional[Callable[[Architype], Architype]]
-    ) -> Generator[Architype, None, None]:
+        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]]
+    ) -> Generator[ObjectAnchor, None, None]:
         pass
 
     @overload
     def find(
         self,
         ids: IDS,
-        filter: Optional[Callable[[Architype], Architype]],
+        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]],
         extended: Literal[True],
-    ) -> Generator[Union[UUID, Architype], None, None]:
+    ) -> Generator[Union[UUID, ObjectAnchor], None, None]:
         pass
 
     @overload
     def find(
         self,
         ids: IDS,
-        filter: Optional[Callable[[Architype], Architype]],
+        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]],
         extended: Literal[False],
-    ) -> Generator[Architype, None, None]:
+    ) -> Generator[ObjectAnchor, None, None]:
         pass
 
     def find(
         self,
         ids: IDS,
-        filter: Optional[Callable[[Architype], Architype]] = None,
+        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
         extended: Optional[bool] = False,
-    ) -> Generator[Union[UUID, Architype], None, None]:
+    ) -> Generator[Union[UUID, ObjectAnchor], None, None]:
         """Temporary."""
         if not isinstance(ids, list):
             ids = [ids]
 
         for id in ids:
-            if (obj := self.__mem__.get(str(id))) and (not filter or filter(obj)):
-                yield obj
+            if (anchor := self.__mem__.get(str(id))) and (not filter or filter(anchor)):
+                yield anchor
             elif extended:
-                yield UUID(id) if isinstance(id, str) else id
+                yield id
 
     def find_one(
         self,
         ids: IDS,
-        filter: Optional[Callable[[Architype], Architype]] = None,
-    ) -> Optional[Architype]:
+        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
+    ) -> Optional[ObjectAnchor]:
         """Temporary."""
         return next(self.find(ids, filter), None)
 
-    def set(self, data: Union[Architype, list[Architype]]) -> None:
+    def set(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         if isinstance(data, list):
             for d in data:
-                self.__mem__[str(d._jac_.id)] = d
+                self.__mem__[d.ref_id] = d
         else:
-            self.__mem__[str(data._jac_.id)] = data
+            self.__mem__[data.ref_id] = data
 
-    def remove(self, data: Union[Architype, list[Architype]]) -> None:
+    def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         if isinstance(data, list):
             for d in data:
-                self.__mem__.pop(str(d._jac_.id), None)
+                self.__mem__.pop(d.ref_id, None)
         else:
-            self.__mem__.pop(str(data._jac_.id), None)
+            self.__mem__.pop(data.ref_id, None)
 
 
 @dataclass
 class ShelfMemory(Memory):
     """Generic Memory Handler."""
 
-    __shelf__: Optional[Shelf[Architype]] = None
+    __shelf__: Optional[Shelf[ObjectAnchor]] = None
 
     def __init__(self, session: Optional[str] = None) -> None:
         """Initialize memory handler."""
@@ -113,44 +109,44 @@ class ShelfMemory(Memory):
     def find(
         self,
         ids: IDS,
-        filter: Optional[Callable[[Architype], Architype]],
+        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
         extended: Optional[bool] = None,
-    ) -> Generator[Architype, None, None]:
+    ) -> Generator[ObjectAnchor, None, None]:
         """Temporary."""
         objs = super().find(ids, filter, True)
 
         if self.__shelf__:
             for obj in objs:
                 if isinstance(obj, UUID):
-                    if arch := self.__shelf__.get(str(obj)):
-                        super().set(arch)
-                        if not filter or filter(arch):
-                            yield arch
+                    if anchor := self.__shelf__.get(str(obj)):
+                        self.__mem__[anchor.ref_id] = anchor
+                        if not filter or filter(anchor):
+                            yield anchor
                 else:
                     yield obj
         else:
             for obj in objs:
-                if isinstance(obj, Architype):
+                if isinstance(obj, ObjectAnchor):
                     yield obj
 
-    def set(self, data: Union[Architype, list[Architype]]) -> None:
+    def set(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         super().set(data)
 
         if self.__shelf__:
             if isinstance(data, list):
                 for d in data:
-                    self.__shelf__[str(d._jac_.id)] = d
+                    self.__shelf__[str(d.id)] = d
             else:
-                self.__shelf__[str(data._jac_.id)] = data
+                self.__shelf__[str(data.id)] = data
 
-    def remove(self, data: Union[Architype, list[Architype]]) -> None:
+    def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         super().remove(data)
 
         if self.__shelf__:
             if isinstance(data, list):
                 for d in data:
-                    self.__shelf__.pop(str(d._jac_.id), None)
+                    self.__shelf__.pop(str(d.id), None)
             else:
-                self.__shelf__.pop(str(data._jac_.id), None)
+                self.__shelf__.pop(str(data.id), None)

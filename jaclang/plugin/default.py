@@ -82,7 +82,7 @@ class JacFeatureDefaults:
         session: str = "", options: Optional[ContextOptions] = None
     ) -> ExecutionContext:
         """Get the execution context."""
-        if not isinstance(ctx := ExecContext.get(), ExecutionContext):
+        if not isinstance(ctx := ExecContext.get(None), ExecutionContext):
             ExecContext.set(ctx := ExecutionContext(session, **options or {}))
         return ctx
 
@@ -389,6 +389,9 @@ class JacFeatureDefaults:
             for j in right:
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
+                import pdb
+
+                pdb.set_trace()
                 i._jac_.connect_node(j, conn_edge)
         return right if not edges_only else edges
 
@@ -412,17 +415,17 @@ class JacFeatureDefaults:
                     if e._jac_.target and e._jac_.source:
                         if (
                             dir in ["OUT", "ANY"]  # TODO: Not ideal
-                            and i._jac_.obj == e._jac_.source
-                            and e._jac_.target == j._jac_.obj
+                            and i._jac_.architype == e._jac_.source
+                            and e._jac_.target == j._jac_.architype
                         ):
-                            e._jac_.detach(i._jac_.obj, e._jac_.target)
+                            e._jac_.detach(i._jac_.architype, e._jac_.target)
                             disconnect_occurred = True
                         if (
                             dir in ["IN", "ANY"]
-                            and i._jac_.obj == e._jac_.target
-                            and e._jac_.source == j._jac_.obj
+                            and i._jac_.architype == e._jac_.target
+                            and e._jac_.source == j._jac_.architype
                         ):
-                            e._jac_.detach(i._jac_.obj, e._jac_.source)
+                            e._jac_.detach(i._jac_.architype, e._jac_.source)
                             disconnect_occurred = True
         return disconnect_occurred
 
@@ -708,14 +711,14 @@ class JacBuiltin:
         for source, target, edge in connections:
             dot_content += (
                 f"{visited_nodes.index(source)} -> {visited_nodes.index(target)} "
-                f' [label="{html.escape(str(edge._jac_.obj.__class__.__name__))} "];\n'
+                f' [label="{html.escape(str(edge._jac_.architype.__class__.__name__))} "];\n'
             )
         for node_ in visited_nodes:
             color = (
                 colors[node_depths[node_]] if node_depths[node_] < 25 else colors[24]
             )
             dot_content += (
-                f'{visited_nodes.index(node_)} [label="{html.escape(str(node_._jac_.obj))}"'
+                f'{visited_nodes.index(node_)} [label="{html.escape(str(node_._jac_.architype))}"'
                 f'fillcolor="{color}"];\n'
             )
         if dot_file:

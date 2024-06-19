@@ -40,7 +40,11 @@ def collect_node_connections(
             target = edge_._jac_.target
             if target:
                 connections.add(
-                    (current_node.obj, target._jac_.obj, edge_.__class__.__name__)
+                    (
+                        current_node.architype,
+                        target._jac_.architype,
+                        edge_.__class__.__name__,
+                    )
                 )
                 collect_node_connections(target._jac_, visited_nodes, connections)
 
@@ -64,7 +68,9 @@ def traverse_graph(
     for edge in node._jac_.edges:
         is_self_loop = id(edge._jac_.source) == id(edge._jac_.target)
         is_in_edge = edge._jac_.target == node
-        if (traverse and is_in_edge) or edge._jac_.obj.__class__.__name__ in edge_type:
+        if (
+            traverse and is_in_edge
+        ) or edge._jac_.architype.__class__.__name__ in edge_type:
             continue
         if is_self_loop:
             continue  # lets skip self loop for a while, need to handle it later
