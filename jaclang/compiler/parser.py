@@ -9,7 +9,7 @@ from typing import Callable, TypeAlias
 
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler import jac_lark as jl  # type: ignore
+from jaclang.compiler import jac_lark as jl
 from jaclang.compiler.constant import EdgeDir, Tokens as Tok
 from jaclang.compiler.passes.ir_pass import Pass
 from jaclang.vendor.lark import Lark, Transformer, Tree, logger
@@ -108,7 +108,7 @@ class JacParser(Pass):
 
     comment_cache: list[jl.Token] = []
 
-    parser = jl.Lark_StandAlone(lexer_callbacks={"COMMENT": _comment_callback})  # type: ignore
+    parser = jl.Lark_StandAlone(lexer_callbacks={"COMMENT": _comment_callback})
     JacTransformer: TypeAlias = jl.Transformer[jl.Tree[str], ast.AstNode]
 
     class TreeToAST(JacTransformer):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from setuptools import find_packages, setup  # type: ignore
+from setuptools import find_packages, setup
 
 
 VERSION = "0.0.1"

@@ -27,7 +27,7 @@ def generate_static_parser(force: bool = False) -> None:
             os.path.join(cur_dir, "generated", "jac_parser.py"),
             "-c",
         ]
-        standalone.main()  # type: ignore
+        standalone.main()
         sys.argv = save_argv
         try:
             auto_generate_refs()
