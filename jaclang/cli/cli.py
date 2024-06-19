@@ -131,16 +131,21 @@ def get_object(id: str, session: str = "") -> dict[str, Any]:
 
     jctx = Jac.context(session)
 
-    if id == "root":
-        return jctx.root.__dict__
+    state = {}
+    architype = None
 
-    obj = {}
-    if (of := ObjectAnchor.ref(id)) and (oa := of.sync()):
-        obj = oa.__dict__
+    if id == "root":
+        state = jctx.root.__getstate__()
+        architype = state["architype"] = jctx.root.architype.__getstate__()
+    elif (of := ObjectAnchor.ref(id)) and (oa := of.sync()):
+        state = oa.__getstate__()
+        architype = state["architype"] = oa.architype.__getstate__()
+
+    if isinstance(architype, dict):
+        architype.pop("_jac_", None)
 
     jctx.close()
-
-    return obj
+    return state
 
 
 @cmd_registry.register

@@ -81,6 +81,10 @@ class ObjectAnchor:
             )
         return None
 
+    def save(self) -> None:
+        """Save Anchor."""
+        raise Exception(f"Invalid Reference {self.ref_id}")
+
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[ObjectAnchor]:
         """Retrieve the Architype from db and return."""
         if self.architype:
@@ -130,6 +134,14 @@ class ObjectAnchor:
         to.current_access_level = None
         return False
 
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        return self.__dict__.copy()
+
+    def __setstate__(self, state: dict) -> None:
+        """Override setstate for pickle and shelve."""
+        self.__dict__.update(state)
+
     def __hash__(self) -> int:
         """Override hash for anchor."""
         return hash(self.ref_id)
@@ -155,14 +167,6 @@ class NodeAnchor(ObjectAnchor):
     type: ObjectType = ObjectType.node
     architype: Optional[NodeArchitype] = None
     edges: list[EdgeAnchor] = field(default_factory=list)
-
-    def __getstate__(self) -> object:
-        """Override getstate for pickle and shelve."""
-        _edges = self.edges
-        self.edges = [edge.unsync() for edge in self.edges]
-        state = super().__getstate__()
-        self.edges = _edges
-        return state
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[NodeAnchor]:
@@ -298,6 +302,12 @@ class NodeAnchor(ObjectAnchor):
         else:
             raise Exception(f"Invalid Reference {self.ref_id}")
 
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        state = self.__dict__.copy()
+        state["edges"] = [edge.unsync() for edge in self.edges]
+        return state
+
 
 @dataclass(eq=False)
 class EdgeAnchor(ObjectAnchor):
@@ -309,18 +319,6 @@ class EdgeAnchor(ObjectAnchor):
     target: Optional[NodeAnchor] = None
     is_undirected: bool = False
     persistent: bool = False
-
-    def __getstate__(self) -> object:
-        """Override getstate for pickle and shelve."""
-        if _source := self.source:
-            self.source = _source.unsync()
-        if _target := self.target:
-            self.target = _target.unsync()
-
-        state = super().__getstate__()
-        self.source = _source
-        self.target = _target
-        return state
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
@@ -368,6 +366,15 @@ class EdgeAnchor(ObjectAnchor):
             return walk._jac_.spawn_call(architype)
         else:
             raise ValueError("Edge has no target.")
+
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        state = self.__dict__.copy()
+        if self.source:
+            state["source"] = self.source.unsync()
+        if self.target:
+            state["target"] = self.target.unsync()
+        return state
 
 
 @dataclass(eq=False)
@@ -509,14 +516,19 @@ class Architype:
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
 
-    def __getstate__(self) -> object:
-        """Override getstate for pickle and shelve."""
-        delattr(self, "_jac_")
-        return super().__getstate__()
-
     def __init__(self) -> None:
         """Create default architype."""
         self._jac_: ObjectAnchor = ObjectAnchor(architype=self)
+
+    def __getstate__(self) -> dict[str, Any]:
+        """Override getstate for pickle and shelve."""
+        state = self.__dict__.copy()
+        state["_jac_"] = self._jac_.unsync()
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """Override setstate for pickle and shelve."""
+        self.__dict__.update(state)
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
@@ -578,6 +590,10 @@ class GenericEdge(EdgeArchitype):
 
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
+
+    def __init__(self) -> None:
+        """Create walker architype."""
+        self._jac_: EdgeAnchor = EdgeAnchor(architype=self)
 
 
 class Root(NodeArchitype):
