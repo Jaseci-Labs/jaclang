@@ -509,7 +509,7 @@ class SymTabBuildPass(SymTabPass):
         body: Optional[CodeBlock],
         """
         self.sync_node_to_scope(node)
-        self.def_insert(node, access_spec=node, single_decl="ability")
+        self.def_insert(node.name_ref, access_spec=node, single_decl="ability")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
@@ -537,8 +537,7 @@ class SymTabBuildPass(SymTabPass):
         body: CodeBlock,
         """
         self.sync_node_to_scope(node)
-        self.def_insert(node, single_decl="ability def")
-        self.push_scope(node.sym_name, node)
+        self.push_scope(node.target.py_resolve_name(), node)
         self.sync_node_to_scope(node)
 
     def exit_ability_def(self, node: ast.AbilityDef) -> None:
@@ -597,7 +596,7 @@ class SymTabBuildPass(SymTabPass):
         body: Optional['EnumBlock'],
         """
         self.sync_node_to_scope(node)
-        self.def_insert(node, access_spec=node, single_decl="enum")
+        self.def_insert(node.name, access_spec=node, single_decl="enum")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 
@@ -621,7 +620,6 @@ class SymTabBuildPass(SymTabPass):
         body: EnumBlock,
         """
         self.sync_node_to_scope(node)
-        self.def_insert(node, single_decl="enum def")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 

@@ -73,7 +73,7 @@ class DefUsePass(SymTabPass):
         type_tag: SubTag[ExprType],
         value: Optional[ExprType],
         """
-        self.def_insert(node)
+        self.def_insert(node.name)
 
     def enter_has_var(self, node: ast.HasVar) -> None:
         """Sub objects.
@@ -86,7 +86,7 @@ class DefUsePass(SymTabPass):
             node.parent.parent, ast.ArchHas
         ):
             self.def_insert(
-                node,
+                node.name,
                 single_decl="has var",
                 access_spec=node.parent.parent,
             )
@@ -105,7 +105,7 @@ class DefUsePass(SymTabPass):
         for i in node.target.items:
             if isinstance(i, ast.AtomTrailer):
                 self.chain_def_insert(self.unwind_atom_trailer(i))
-            elif isinstance(i, ast.AstSymbolNode):
+            elif isinstance(i, ast.NameSpec):
                 self.def_insert(i)
             else:
                 self.error("Assignment target not valid")
@@ -120,7 +120,7 @@ class DefUsePass(SymTabPass):
         """
         if isinstance(node.target, ast.AtomTrailer):
             self.chain_def_insert(self.unwind_atom_trailer(node.target))
-        elif isinstance(node.target, ast.AstSymbolNode):
+        elif isinstance(node.target, ast.NameSpec):
             self.def_insert(node.target)
         else:
             self.error("Named target not valid")
@@ -208,7 +208,6 @@ class DefUsePass(SymTabPass):
         pos_start: int,
         pos_end: int,
         """
-        self.use_lookup(node)
 
     def enter_int(self, node: ast.Int) -> None:
         """Sub objects.
@@ -221,7 +220,6 @@ class DefUsePass(SymTabPass):
         pos_start: int,
         pos_end: int,
         """
-        self.use_lookup(node)
 
     def enter_string(self, node: ast.String) -> None:
         """Sub objects.
@@ -234,7 +232,6 @@ class DefUsePass(SymTabPass):
         pos_start: int,
         pos_end: int,
         """
-        self.use_lookup(node)
 
     def enter_bool(self, node: ast.Bool) -> None:
         """Sub objects.
@@ -247,7 +244,6 @@ class DefUsePass(SymTabPass):
         pos_start: int,
         pos_end: int,
         """
-        self.use_lookup(node)
 
     def enter_builtin_type(self, node: ast.BuiltinType) -> None:
         """Sub objects.
@@ -286,7 +282,7 @@ class DefUsePass(SymTabPass):
         """
         if isinstance(node.target, ast.AtomTrailer):
             self.chain_def_insert(self.unwind_atom_trailer(node.target))
-        elif isinstance(node.target, ast.AstSymbolNode):
+        elif isinstance(node.target, ast.NameSpec):
             self.def_insert(node.target)
         else:
             self.error("For loop assignment target not valid")
@@ -304,7 +300,7 @@ class DefUsePass(SymTabPass):
         for i in items:
             if isinstance(i, ast.AtomTrailer):
                 self.unwind_atom_trailer(i)[-1].py_ctx_func = ast3.Del
-            elif isinstance(i, ast.AstSymbolNode):
+            elif isinstance(i, ast.NameSpec):
                 i.py_ctx_func = ast3.Del
             else:
                 self.error("Delete target not valid")
@@ -318,7 +314,7 @@ class DefUsePass(SymTabPass):
         if node.alias:
             if isinstance(node.alias, ast.AtomTrailer):
                 self.chain_def_insert(self.unwind_atom_trailer(node.alias))
-            elif isinstance(node.alias, ast.AstSymbolNode):
+            elif isinstance(node.alias, ast.NameSpec):
                 self.def_insert(node.alias)
             else:
                 self.error("For expr as target not valid")
