@@ -1,0 +1,79 @@
+{
+    "numpy": {
+        "lib_mem_size_req": "100MB",
+        "dependency": [
+            "math",
+            "mkl"
+        ],
+        "lib_cpu_req": "500m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    },
+    "pandas": {
+        "lib_mem_size_req": "200MB",
+        "dependency": [
+            "numpy",
+            "pytz",
+            "dateutil"
+        ],
+        "lib_cpu_req": "700m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    },
+    "scipy": {
+        "lib_mem_size_req": "150MB",
+        "dependency": [
+            "numpy"
+        ],
+        "lib_cpu_req": "600m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    },
+    "matplotlib": {
+        "lib_mem_size_req": "250MB",
+        "dependency": [
+            "numpy",
+            "pyparsing",
+            "kiwisolver",
+            "cycler"
+        ],
+        "lib_cpu_req": "400m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    },
+    "requests": {
+        "lib_mem_size_req": "50MB",
+        "dependency": [
+            "urllib3",
+            "chardet",
+            "certifi",
+            "idna"
+        ],
+        "lib_cpu_req": "200m",
+        "load_type": "local",
+        "remote_load_type": ""
+    },
+    "math": {
+        "lib_mem_size_req": "50MB",
+        "dependency": [],
+        "lib_cpu_req": "200m",
+        "load_type": "local",
+        "remote_load_type": ""
+    },
+    "time": {
+        "lib_mem_size_req": "10MB",
+        "dependency": [],
+        "lib_cpu_req": "100m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    },
+    "transformers": {
+        "lib_mem_size_req": "1G",
+        "dependency": [
+            "torch"
+        ],
+        "lib_cpu_req": "1500m",
+        "load_type": "remote",
+        "remote_load_type": "isolated"
+    }
+}
