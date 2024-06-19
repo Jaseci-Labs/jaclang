@@ -19,30 +19,41 @@ from jaclang.utils.log import logging
 base_mod_path: str = ""
 
 
-def resolve_sys_mod_name(target: str, base_path) -> str:
-    """Resolve system module name."""
-    # Get the relative path from the base module path
-    rel_path = os.path.relpath(target, base_path)
-    print(
-        f"Resolving system module name: {target}, base path: {base_path}, name: {rel_path}"
-    )
-    # Normalize path to remove OS-specific characters and '.jac' extension
-    normalized_path = rel_path.replace(os.sep, ".").replace(".jac", "")
-    # Handling '__init__' suffix properly
-    if normalized_path.endswith(".__init__"):
-        normalized_path = normalized_path[:-9]  # Strip the '.__init__' suffix
+def get_full_target(target: str, base_path: str) -> str:
+    global caller_dir, dir_path, file_name, base_mod_path
+    target_path = path.join(*(target.split(".")))
+    dir_path, file_name = path.split(target_path)
+    caller_dir = get_caller_dir(target, base_path, dir_path)
+    full_target = path.normpath(path.join(caller_dir, target_path))
+    full_target = smart_join(caller_dir, target_path)
+    if not base_mod_path:
+        if not os.path.isdir(base_path):
+            base_mod_path = os.path.dirname(base_path)
+        else:
+            base_mod_path = base_path
+    base_mod_path = base_mod_path
+    # print(f"base_mod_path: {base_mod_path}")
+    return full_target
 
-    # Handling excessive dots
-    parts = normalized_path.split(".")
-    parts = [part for part in parts if part and part != ".."]
-    normalized_path = ".".join(parts)
 
-    # Ensure there are no leading dots
-    normalized_path = normalized_path.lstrip(".")
+def resolve_sys_mod_name(target: str, full_path: str) -> str:
+    """Resolve system module name from the given full path of a file and the base module path."""
+    global base_mod_path
+    full_path = os.path.abspath(full_path)
+    if not full_path.startswith(base_mod_path):
+        return
+    # base_mod_path = os.path.abspath(base_mod_path)
+    rel_path = os.path.relpath(full_path, base_mod_path)
+    if rel_path.endswith(".jac"):
+        rel_path = rel_path[:-4]
+    mod_name = rel_path.replace(os.sep, ".").strip(".")
+    if mod_name.endswith(".__init__"):
+        mod_name = mod_name[:-9]  # Remove the '.__init__' suffix
     # print(
-    #     f"Resolving system module name: {target}, base path: {base_mod_path}, name: {normalized_path}"
+    #     f"Resolving system module name: {mod_name}, full_path: {full_path}, basepath: {base_mod_path} ,rel_name: {rel_path}, target_path: {target}"
     # )
-    return normalized_path
+    # print(f"return: {mod_name}")
+    return mod_name
 
 
 def smart_join(base_path: str, target_path: str) -> str:
@@ -58,7 +69,7 @@ def smart_join(base_path: str, target_path: str) -> str:
     return path.normpath(full_path)
 
 
-def process_items(module, items, target, caller_dir, cachable, mod_bundle):
+def process_items(module, items, lng, caller_dir, cachable, mod_bundle):
     """Extracts items from a module, renaming them if specified, and handles missing attributes."""
     unique_loaded_items = []
     module_dir = (
@@ -74,7 +85,6 @@ def process_items(module, items, target, caller_dir, cachable, mod_bundle):
             if alias and alias != name:
                 setattr(module, alias, item)
         except AttributeError:
-            # Attempt to load the item as a .jac file
             jac_file_path = os.path.join(module_dir, f"{name}.jac")
             if hasattr(module, "__path__") and os.path.isfile(jac_file_path):
                 item = load_jac_file(module, name, jac_file_path, mod_bundle, cachable)
@@ -83,6 +93,11 @@ def process_items(module, items, target, caller_dir, cachable, mod_bundle):
                     unique_loaded_items.append(item)
                     if alias and alias != name:
                         setattr(module, alias, item)
+            elif lng == "py":
+                if hasattr(module, "__path__"):
+                    item = importlib.import_module(f"{module.__name__}.{name}")
+                    if item not in unique_loaded_items:
+                        unique_loaded_items.append(item)
             else:
                 # Attempt to load the item from the module's file directly
                 jac_file_path = module.__file__
@@ -100,6 +115,7 @@ def process_items(module, items, target, caller_dir, cachable, mod_bundle):
 
 
 def load_jac_file(module, name, jac_file_path, mod_bundle, cachable):
+    global full_target
     try:
         # print(f"Loading {name} from {jac_file_path} in {module.__name__} package.")
         package_name = (
@@ -109,6 +125,7 @@ def load_jac_file(module, name, jac_file_path, mod_bundle, cachable):
         )
         if package_name not in sys.modules:
             full_target = jac_file_path
+            # print(f"Handing load_jac_file: {full_target}")
             new_module = create_jac_py_module(
                 mod_bundle, name, module.__name__, full_target
             )
@@ -175,22 +192,21 @@ def handle_directory(
     return module
 
 
-def get_full_target(target: str, base_path: str) -> str:
-    global caller_dir, dir_path, file_name, base_mod_path
-    target_path = path.join(*(target.split(".")))
-    dir_path, file_name = path.split(target_path)
-    caller_dir = get_caller_dir(target, base_path, dir_path)
-    # print(f"caller_dir: {caller_dir}")
-    full_target = path.normpath(path.join(caller_dir, target_path))
-    # print(
-    #     f"full_target: {full_target}, target_path: {target_path}, dir_path: {dir_path}, file_name: {file_name}, target: {target}"
-    # )
-    full_target = smart_join(caller_dir, target_path)
-    if not base_mod_path:
-        base_mod_path = os.path.dirname(full_target)
-    base_mod_path = base_mod_path
-    # print(f"base_mod_path: {base_mod_path}")
-    return full_target
+# def get_full_target(target: str, base_path: str) -> str:
+#     global caller_dir, dir_path, file_name, base_mod_path
+#     target_path = path.join(*(target.split(".")))
+#     dir_path, file_name = path.split(target_path)
+#     caller_dir = get_caller_dir(target, base_path, dir_path)
+#     full_target = path.normpath(path.join(caller_dir, target_path))
+#     full_target = smart_join(caller_dir, target_path)
+#     if not base_mod_path:
+#         if not os.path.isdir(base_path):
+#             base_mod_path = os.path.dirname(base_path)
+#         else:
+#             base_mod_path = base_path
+#     base_mod_path = base_mod_path
+#     # print(f"base_mod_path: {base_mod_path}")
+#     return full_target
 
 
 def jac_importer(
@@ -205,7 +221,7 @@ def jac_importer(
     items: Optional[dict[str, Union[str, bool]]] = None,
 ) -> Optional[Tuple[types.ModuleType, ...]]:
     """Core Import Process."""
-    global caller_dir, dir_path, file_name, base_mod_path
+    # global caller_dir, dir_path, file_name, base_mod_path
     # print(f"resolving: {target} in {base_path} relpath {resolve_sys_mod_name(target)})")
     full_target = get_full_target(target, base_path)
 
@@ -223,7 +239,6 @@ def jac_importer(
         module = sys.modules.get(
             f"{package_path}.{module_name}" if package_path else module_name
         )
-
         if not module:
             if lng == "py":
                 module, *loaded_items = py_import(
@@ -254,15 +269,16 @@ def jac_importer(
             parent_module = ensure_parent_module(
                 parent_module_name, full_target, mod_bundle
             )
+            # print(f"parent_module: {parent_module}, module: {module}, items: {items}")
             setattr(parent_module, submodule_name, module)
             if items:
                 return process_items(
-                    module, items, target, caller_dir, cachable, mod_bundle
+                    module, items, lng, caller_dir, cachable, mod_bundle
                 )
-            return (parent_module,)
-
+            # print(f"module: {module}, module_dicle: {module.__dict__.keys()}")
+            return (parent_module,) if not mdl_alias else (module,)
     unique_loaded_items = (
-        process_items(module, items, target, caller_dir, cachable, mod_bundle)
+        process_items(module, items, lng, caller_dir, cachable, mod_bundle)
         if items
         else []
     )
@@ -276,6 +292,7 @@ def exec_init_file(init_file: str, module: types.ModuleType, caller_dir: str) ->
         if spec is None:
             raise ImportError(f"Cannot create spec for {init_file}")
         init_module = importlib.util.module_from_spec(spec)
+        # print(f"adding module {module.__name__} to sys.modules")
         sys.modules[module.__name__] = init_module
         if spec.loader is None:
             raise ImportError(f"Cannot load module from spec for {init_file}")
@@ -303,7 +320,9 @@ def ensure_parent_module(
             # print(f"module_name in ensure: {module_name}")
             module = types.ModuleType(module_name)
             module.__dict__["__jac_mod_bundle__"] = mod_bundle
-            sys.modules[module_name] = module
+
+            if hasattr(module_name, "__name__"):
+                sys.modules[module_name] = module
         module_directory = path.dirname(full_target)
         if path.isdir(module_directory):
             module.__path__ = [module_directory]
@@ -330,20 +349,15 @@ def create_jac_py_module(
         f"{package_path}.{module_name}" if package_path else module_name
     )
     if not module:
-        print(f"module_name: {module_name}, in create, full_target: {full_target}")
         module_name = resolve_sys_mod_name(module_name, full_target)
-        # print(f"module_name: {module_name}, after resolve_sys_mod_name")
         module = types.ModuleType(module_name)
         module.__name__ = module_name
     module.__dict__["__jac_mod_bundle__"] = mod_bundle
 
-    # Determine if the target is a directory and set path attributes accordingly.
     if os.path.isdir(full_target):
         # print(f"module_name: {module}, full_target: {full_target} is directory")
         module.__path__ = [full_target]
-        init_file = os.path.join(
-            full_target, "__init__.py"
-        )  # Adjust based on expected init file type (.py or .jac)
+        init_file = os.path.join(full_target, "__init__.jac")
         if os.path.isfile(init_file):
             module.__file__ = init_file
     else:
@@ -357,6 +371,7 @@ def create_jac_py_module(
         if constructed_path not in sys.modules:
             interim_module = types.ModuleType(constructed_path)
             interim_module.__package__ = ".".join(constructed_path.split(".")[:-1])
+            interim_module.__dict__["__jac_mod_bundle__"] = mod_bundle
             if os.path.isdir(os.path.dirname(full_target)):
                 interim_module.__path__ = [os.path.dirname(full_target)]
             if i == len(namespace_parts) - 1 and not os.path.isdir(
@@ -365,12 +380,13 @@ def create_jac_py_module(
                 # if hasattr(module, "__file__"):
                 # print(f"interim_module: {interim_module}, module: {module}")
                 interim_module.__file__ = module.__file__
+            # print(f"create adding module {constructed_path} to sys.modules")
             sys.modules[constructed_path] = interim_module
         if i > 0:
             parent_path = ".".join(namespace_parts[:i])
             parent_module = sys.modules[parent_path]
             setattr(parent_module, part, sys.modules[constructed_path])
-    # print(f"module_name: {module}, full_target: {full_target}")
+    # print(f"Returning from JAC, module_name: {module}, full_target: {full_target}")
     return module
 
 
@@ -404,6 +420,7 @@ def py_import(
             spec = importlib.util.spec_from_file_location(target, full_target + ".py")
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
+                # print(f"adding module {spec.name} to sys.modules")
                 sys.modules[spec.name] = module
                 spec.loader.exec_module(module)
             else:
@@ -448,7 +465,7 @@ def py_import(
                 mdl_alias if isinstance(mdl_alias, str) else target,
                 module,
             )
-
+        # print(f"loaded_items: {loaded_items}, module: {module}")
         return (module, *loaded_items)
 
     except ImportError as e:
