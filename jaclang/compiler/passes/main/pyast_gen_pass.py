@@ -1024,7 +1024,10 @@ class PyastGenPass(Pass):
                 0, self.sync(ast3.Name(id="staticmethod", ctx=ast3.Load()))
             )
         if not body and not isinstance(node.body, ast.FuncCall):
-            self.error("Ability has no body. Perhaps an impl must be imported.", node)
+            self.error(
+                f"Ability {node.sym_name} has no body. Perhaps an impl must be imported.",
+                node,
+            )
             body = [self.sync(ast3.Pass(), node)]
 
         node.gen.py_ast = [

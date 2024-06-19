@@ -77,11 +77,17 @@ class DeclImplMatchPass(Pass):
                         decl_node,
                     )
                     continue
-                decl_node.body = sym.decl.parent
+                if not isinstance(
+                    valid_decl := decl_node.parent, ast.AstImplNeedingNode
+                ) or not (valid_decl.sym_tab and sym.decl.sym_tab):
+                    raise self.ice(
+                        f"Expected AstImplNeedingNode, got {valid_decl.__class__.__name__}. Not possible."
+                    )
+                valid_decl.body = sym.decl.parent
                 sym.decl.parent.decl_link = decl_node
                 for idx, a in enumerate(sym.decl.parent.target.archs):
                     if isinstance(a.name_ref.sym_name_node, ast.NameSpec):
                         a.name_ref.sym_name_node.name_of = name_of_links[idx]
-                decl_node.sym_tab.tab = sym.decl.sym_tab.tab
+                valid_decl.sym_tab.tab = sym.decl.sym_tab.tab
         for i in sym_tab.kid:
             self.connect_def_impl(i)

@@ -22,7 +22,7 @@ class Alert:
     def __str__(self) -> str:
         """Return string representation of alert."""
         return (
-            f"{self.loc.mod_path}, line {self.loc.first_line},"
+            f" {self.loc.mod_path}, line {self.loc.first_line},"
             f" col {self.loc.col_start}: {self.msg}"
         )
 
