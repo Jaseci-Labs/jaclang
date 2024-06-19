@@ -48,8 +48,8 @@ def sym_tab_list(sym_tab: SymbolTable, file_path: str) -> list[SymbolTable]:
     sym_tabs = (
         [sym_tab]
         if not (
-            isinstance(sym_tab.owner, ast.Module)
-            and sym_tab.owner.loc.mod_path != file_path
+            isinstance(sym_tab.ast_node, ast.Module)
+            and sym_tab.ast_node.loc.mod_path != file_path
         )
         else []
     )
@@ -126,15 +126,15 @@ def collect_symbols(node: SymbolTable) -> list[lspt.DocumentSymbol]:
         sub_symbols = collect_symbols(sub_tab)
 
         if isinstance(
-            sub_tab.owner,
+            sub_tab.ast_node,
             (ast.IfStmt, ast.ElseStmt, ast.WhileStmt, ast.IterForStmt, ast.InForStmt),
         ):
             symbols.extend(sub_symbols)
         else:
-            sub_pos = create_range(sub_tab.owner.loc)
+            sub_pos = create_range(sub_tab.ast_node.loc)
             symbol = lspt.DocumentSymbol(
                 name=sub_tab.name,
-                kind=kind_map(sub_tab.owner),
+                kind=kind_map(sub_tab.ast_node),
                 range=sub_pos,
                 selection_range=sub_pos,
                 children=sub_symbols,
@@ -146,8 +146,8 @@ def collect_symbols(node: SymbolTable) -> list[lspt.DocumentSymbol]:
 
 def owner_sym(table: SymbolTable) -> Optional[Symbol]:
     """Get owner sym."""
-    if table.has_parent() and isinstance(table.owner, ast.AstSymbolNode):
-        return table.parent.lookup(table.owner.sym_name)
+    if table.has_parent() and isinstance(table.ast_node, ast.AstSymbolNode):
+        return table.parent.lookup(table.ast_node.sym_name)
     return None
 
 

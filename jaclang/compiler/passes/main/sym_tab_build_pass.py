@@ -476,12 +476,14 @@ class SymTabBuildPass(SymTabPass):
     def enter_arch_def(self, node: ast.ArchDef) -> None:
         """Sub objects.
 
-        doc: Optional[Token],
-        mod: Optional[DottedNameList],
-        arch: ArchRef,
-        body: ArchBlock,
+        target: ArchRefChain,
+        body: SubNodeList[ArchBlockStmt],
+        doc: Optional[String] = None,
+        decorators: Optional[SubNodeList[Expr]] = None,
+        decl_link: Optional[Architype] = None,
         """
         self.sync_node_to_scope(node)
+        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
         self.push_scope(node.target.py_resolve_name(), node)
         self.sync_node_to_scope(node)
 
@@ -537,6 +539,7 @@ class SymTabBuildPass(SymTabPass):
         body: CodeBlock,
         """
         self.sync_node_to_scope(node)
+        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
         self.push_scope(node.target.py_resolve_name(), node)
         self.sync_node_to_scope(node)
 
@@ -620,6 +623,7 @@ class SymTabBuildPass(SymTabPass):
         body: EnumBlock,
         """
         self.sync_node_to_scope(node)
+        self.def_insert(node.create_impl_name_node(), single_decl="arch def")
         self.push_scope(node.sym_name, node)
         self.sync_node_to_scope(node)
 

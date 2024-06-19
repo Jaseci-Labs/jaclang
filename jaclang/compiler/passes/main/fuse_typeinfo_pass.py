@@ -190,7 +190,7 @@ class FuseTypeInfoPass(Pass):
             if isinstance(target_node, ast.AstSymbolNode):
                 parent_symbol_table = target_node.type_info.type_tab_link
                 if isinstance(parent_symbol_table, ast.SymbolTable):
-                    owner = parent_symbol_table.owner
+                    owner = parent_symbol_table.ast_node
                     if isinstance(owner, ast.AstSymbolNode):
                         target_node.sym = owner.sym
                         node.sym = parent_symbol_table.lookup(node.sym_name)

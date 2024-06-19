@@ -232,7 +232,7 @@ def _build_symbol_tree_common(
     node: SymbolTable, parent_node: Optional[SymbolTree] = None
 ) -> SymbolTree:
     root = SymbolTree(
-        node_name=f"SymTable::{node.owner.__class__.__name__}({node.name})",
+        node_name=f"SymTable::{node.ast_node.__class__.__name__}({node.name})",
         parent=parent_node,
     )
     symbols = SymbolTree(node_name="Symbols", parent=root)

@@ -273,6 +273,24 @@ class AstImplOnlyNode(AstNode):
         self.body = body
         self.decl_link = decl_link
 
+    # Used to generate symbol entry for symbol table
+    def create_impl_name_node(self) -> Name:
+        """Create impl name."""
+        ret = Name(
+            file_path=self.target.archs[-1].loc.mod_path,
+            name=Tok.NAME.value,
+            value=self.target.py_resolve_name(),
+            col_start=self.target.archs[0].loc.col_start,
+            col_end=self.target.archs[-1].loc.col_end,
+            line=self.target.archs[0].loc.first_line,
+            end_line=self.target.archs[-1].loc.last_line,
+            pos_start=self.target.archs[0].loc.pos_start,
+            pos_end=self.target.archs[-1].loc.pos_end,
+        )
+        ret.parent = self.parent
+        ret.sym_tab = self.sym_tab
+        return ret
+
 
 class AstImplNeedingNode(AstSymbolNode, Generic[T]):
     """Impl needing node type for Jac Ast."""
@@ -523,7 +541,7 @@ class Test(AstSymbolNode, ElementStmt):
             if isinstance(name, Name)
             else Name(
                 file_path=name.file_path,
-                name="NAME",
+                name=Tok.NAME.value,
                 value=f"test_t{Test.TEST_COUNT}",
                 col_start=name.loc.col_start,
                 col_end=name.loc.col_end,
