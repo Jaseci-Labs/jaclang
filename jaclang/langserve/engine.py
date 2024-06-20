@@ -305,8 +305,8 @@ class JacLangServer(LanguageServer):
                 node_info += f"\n{node.doc.value}"
             if isinstance(node, ast.Ability) and node.signature:
                 node_info += f"\n{node.signature.unparse()}"
-            self.log_py(node.pp())
-            self.log_py(f"mypy_node: {node.gen.mypy_ast}")
+            # self.log_py(node.pp())
+            # self.log_py(f"mypy_node: {node.gen.mypy_ast}")
         except AttributeError as e:
             self.log_warning(f"Attribute error when accessing node attributes: {e}")
         return node_info.strip()
@@ -339,7 +339,7 @@ class JacLangServer(LanguageServer):
                     else node_selected
                 )
             )
-            self.log_py(f"{node_selected}, {decl_node}")
+            # self.log_py(f"{node_selected}, {decl_node}")
             decl_uri = uris.from_fs_path(decl_node.loc.mod_path)
             try:
                 decl_range = create_range(decl_node.loc)
@@ -354,6 +354,26 @@ class JacLangServer(LanguageServer):
         else:
             self.log_info("No declaration found for the selected node.")
             return None
+
+    def get_references(
+        self, file_path: str, position: lspt.Position
+    ) -> list[lspt.Location]:
+        """Return references for a file."""
+        node_selected = find_deepest_symbol_node_at_pos(
+            self.modules[file_path].ir, position.line, position.character
+        )
+        self.log_py(f"Node selected: refe {node_selected}")
+        if node_selected and node_selected.sym:
+            list_of_references: list[lspt.Location] = [
+                lspt.Location(
+                    uri=uris.from_fs_path(node.loc.mod_path),
+                    range=create_range(node.loc),
+                )
+                for node in node_selected.sym.uses
+            ]
+            self.log_py(f"References: {list_of_references}")
+            return list_of_references
+        return []
 
     def log_error(self, message: str) -> None:
         """Log an error message."""
