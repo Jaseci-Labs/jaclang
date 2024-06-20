@@ -64,7 +64,7 @@ class TestJaseciPlugin(TestCase):
         cli.run(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            node=str(obj["_jac_"]["id"]),
+            node=f"n::{obj['id']}",
             walker="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
@@ -81,12 +81,13 @@ class TestJaseciPlugin(TestCase):
         )
         obj = cli.get_object(session=session, id="root")
         edge_obj = cli.get_object(session=session, id=obj["edges"][0].ref_id)
-        a_obj = cli.get_object(session=session, id=str(edge_obj))
+        a_obj = cli.get_object(session=session, id=edge_obj["target"].ref_id)
+
         self._output2buffer()
         cli.run(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            node=str(a_obj["_jac_"]["id"]),
+            node=f"n:a:{a_obj['id']}",
             walker="traverse",
         )
         output = self.capturedOutput.getvalue().strip()

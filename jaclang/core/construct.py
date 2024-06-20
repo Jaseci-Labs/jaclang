@@ -27,10 +27,22 @@ from jaclang.plugin.spec import DSFunc
 
 
 T = TypeVar("T")
-GENERIC_ID_REGEX = compile(r"^(g|n|e|w):([^:]*):([a-f\d]{24})$", IGNORECASE)
-NODE_ID_REGEX = compile(r"^n:([^:]*):([a-f\d]{24})$", IGNORECASE)
-EDGE_ID_REGEX = compile(r"^e:([^:]*):([a-f\d]{24})$", IGNORECASE)
-WALKER_ID_REGEX = compile(r"^w:([^:]*):([a-f\d]{24})$", IGNORECASE)
+GENERIC_ID_REGEX = compile(
+    r"^(g|n|e|w):([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    IGNORECASE,
+)
+NODE_ID_REGEX = compile(
+    r"^n:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    IGNORECASE,
+)
+EDGE_ID_REGEX = compile(
+    r"^e:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    IGNORECASE,
+)
+WALKER_ID_REGEX = compile(
+    r"^w:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    IGNORECASE,
+)
 ENABLE_MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 
 
@@ -151,6 +163,7 @@ class ObjectAnchor:
         """Override getstate for pickle and shelve."""
         state = self.__dict__.copy()
         state["hash"] = 0
+        state["current_access_level"] = None
         return state
 
     def __setstate__(self, state: dict) -> None:
@@ -169,6 +182,8 @@ class ObjectAnchor:
                 self.type == other.type
                 and self.name == other.name
                 and self.id == other.id
+                and self.connected == other.connected
+                and self.architype == self.architype
             )
         elif isinstance(other, Architype):
             return self == other._jac_
@@ -208,14 +223,8 @@ class NodeAnchor(ObjectAnchor):
             if not self.connected:
                 self.connected = True
                 self.hash = hash(dumps(self))
-                print(self.ref_id)
-                print(self.hash)
-                print(hash(dumps(self)))
                 self._save()
             elif self.hash != (_hash := hash(dumps(self))):
-                print(self.ref_id)
-                print(self.hash)
-                print(_hash)
                 self.hash = _hash
                 self._save()
 
@@ -551,7 +560,11 @@ class WalkerAnchor(ObjectAnchor):
 
     def spawn_call(self, nd: ObjectAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
-        if (walker := self.architype) and (node := nd.architype):
+        if (
+            (walker := self.architype)
+            and (_nd := nd.sync())
+            and (node := _nd.architype)
+        ):
             self.path = []
             self.next = [node]
             while len(self.next):
@@ -607,7 +620,7 @@ class Architype:
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
         state = self.__dict__.copy()
-        state["_jac_"] = self._jac_.unsync()
+        state["_jac_"] = None
         return state
 
     def __setstate__(self, state: dict) -> None:
@@ -617,7 +630,7 @@ class Architype:
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
         if isinstance(other, Architype):
-            return self._jac_.id == other._jac_.id
+            return super().__eq__(other)
         elif isinstance(other, ObjectAnchor):
             return self._jac_ == other
 

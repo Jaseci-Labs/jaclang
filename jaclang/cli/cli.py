@@ -86,7 +86,7 @@ def run(
             else ""
         )
 
-    jctx = Jac.context(session, {"root": root, "entry": node})
+    jctx = Jac.context("test.session", {"root": root, "entry": node})
 
     base, mod = os.path.split(filename)
     base = base if base else "./"

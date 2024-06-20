@@ -118,7 +118,7 @@ class ShelfMemory(Memory):
                 for id in self.__trash__:
                     self.__shelf__.pop(id, None)
 
-                for anchor in self.__mem__.values():
+                for anchor in set(self.__mem__.values()):
                     anchor.save()
             self.__shelf__.sync()
 
@@ -139,6 +139,8 @@ class ShelfMemory(Memory):
                     if str(obj) not in self.__trash__ and (
                         anchor := self.__shelf__.get(str(obj))
                     ):
+                        if architype := anchor.architype:
+                            architype._jac_ = anchor
                         self.__mem__[str(anchor.id)] = anchor
                         if not filter or filter(anchor):
                             yield anchor
