@@ -64,13 +64,8 @@ class ObjectAnchor:
     architype: Optional[Architype] = None
     connected: bool = False
     current_access_level: Optional[int] = None
-    persistent: Optional[bool] = field(default=not ENABLE_MANUAL_SAVE)
+    persistent: bool = field(default=not ENABLE_MANUAL_SAVE)
     hash: int = 0
-
-    def __post_init__(self) -> None:
-        """Populate on memory."""
-        self.hash = hash(dumps(self))
-        ExecutionContext.get().datasource.set(self, True)
 
     @property
     def ref_id(self) -> str:
@@ -98,7 +93,7 @@ class ObjectAnchor:
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[ObjectAnchor]:
         """Retrieve the Architype from db and return."""
-        if self.architype:
+        if self.connected or self.architype:
             return self
 
         jsrc = ExecutionContext.get().datasource
@@ -113,6 +108,13 @@ class ObjectAnchor:
         """Generate unlinked anchor."""
         return ObjectAnchor(self.type, self.name, self.id)
 
+    def allocate(self) -> None:
+        """Allocate hashes and memory."""
+        self.hash = hash(dumps(self))
+        jctx = ExecutionContext.get()
+        jctx.datasource.set(self, True)
+        self.root = jctx.root.id
+
     def is_allowed(self, to: Union[ObjectAnchor, Architype]) -> bool:
         """Access validation."""
         jctx = ExecutionContext.get()
@@ -120,7 +122,7 @@ class ObjectAnchor:
         jroot = jctx.root
         to = to._jac_ if isinstance(to, Architype) else to
 
-        if jroot == ROOT or jroot == to.root:
+        if jroot == ROOT or jroot.id == to.root:
             to.current_access_level = 1
             return True
 
@@ -147,11 +149,14 @@ class ObjectAnchor:
 
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
-        return self.__dict__.copy()
+        state = self.__dict__.copy()
+        state["hash"] = 0
+        return state
 
     def __setstate__(self, state: dict) -> None:
         """Override setstate for pickle and shelve."""
         self.__dict__.update(state)
+        self.hash = hash(dumps(self))
 
     def __hash__(self) -> int:
         """Override hash for anchor."""
@@ -200,10 +205,17 @@ class NodeAnchor(ObjectAnchor):
     def save(self) -> None:
         """Save Anchor."""
         if self.architype:
-            if self.connected:
+            if not self.connected:
                 self.connected = True
+                self.hash = hash(dumps(self))
+                print(self.ref_id)
+                print(self.hash)
+                print(hash(dumps(self)))
                 self._save()
             elif self.hash != (_hash := hash(dumps(self))):
+                print(self.ref_id)
+                print(self.hash)
+                print(_hash)
                 self.hash = _hash
                 self._save()
 
@@ -339,7 +351,7 @@ class NodeAnchor(ObjectAnchor):
 
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
-        state = self.__dict__.copy()
+        state = super().__getstate__()
         state["edges"] = [edge.unsync() for edge in self.edges]
         return state
 
@@ -378,8 +390,9 @@ class EdgeAnchor(ObjectAnchor):
     def save(self) -> None:
         """Save Anchor."""
         if self.architype:
-            if self.connected:
+            if not self.connected:
                 self.connected = True
+                self.hash = hash(dumps(self))
                 self._save()
             elif self.hash != (_hash := hash(dumps(self))):
                 self.hash = _hash
@@ -439,7 +452,7 @@ class EdgeAnchor(ObjectAnchor):
 
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
-        state = self.__dict__.copy()
+        state = super().__getstate__()
         if self.source:
             state["source"] = self.source.unsync()
         if self.target:
@@ -589,6 +602,7 @@ class Architype:
     def __init__(self) -> None:
         """Create default architype."""
         self._jac_: ObjectAnchor = ObjectAnchor(architype=self)
+        self._jac_.allocate()
 
     def __getstate__(self) -> dict[str, Any]:
         """Override getstate for pickle and shelve."""
@@ -628,6 +642,7 @@ class NodeArchitype(Architype):
         self._jac_: NodeAnchor = NodeAnchor(
             name=self.__class__.__name__, architype=self
         )
+        self._jac_.allocate()
 
 
 class EdgeArchitype(Architype):
@@ -640,6 +655,7 @@ class EdgeArchitype(Architype):
         self._jac_: EdgeAnchor = EdgeAnchor(
             name=self.__class__.__name__, architype=self
         )
+        self._jac_.allocate()
 
 
 class WalkerArchitype(Architype):
@@ -663,6 +679,7 @@ class GenericEdge(EdgeArchitype):
     def __init__(self) -> None:
         """Create walker architype."""
         self._jac_: EdgeAnchor = EdgeAnchor(architype=self)
+        self._jac_.allocate()
 
 
 class Root(NodeArchitype):
@@ -676,6 +693,7 @@ class Root(NodeArchitype):
     def __init__(self) -> None:
         """Create walker architype."""
         self._jac_: NodeAnchor = NodeAnchor(architype=self)
+        self._jac_.allocate()
 
     def reset(self) -> None:
         """Reset the root."""
@@ -696,32 +714,41 @@ class ExecutionContext:
 
     def __init__(
         self,
-        session: Optional[str] = "",
-        root: Optional[str] = None,
-        entry: Optional[str] = None,
+        session: str = "",
+        root: str = "",
+        entry: str = "",
     ) -> None:
         """Create JacContext."""
         from jaclang.plugin.memory import ShelfMemory
 
+        self.__root__: Optional[NodeAnchor] = NodeAnchor.ref(root)
+        self.__entry__: Optional[NodeAnchor] = NodeAnchor.ref(entry)
+
         self.datasource: ShelfMemory = ShelfMemory(session)
         self.reports: list[Any] = []
-        self.root: NodeAnchor
-        self.entry: NodeAnchor
+        self.root: NodeAnchor = ROOT
+        self.entry: NodeAnchor = self.root
 
-        if (
-            root
-            and (rf := NodeAnchor.ref(root))
-            and (ra := rf.sync())
-            and isinstance(ra.architype, Root)
-        ):
-            self.root = ra
+    def initialize(self) -> None:
+        """Initialize anchors."""
+        if self.__root__ and (_root := self.__root__.sync()):
+            self.root = _root
         else:
-            self.root = ROOT
+            self.root = self.default_root()
 
-        if entry and (ef := NodeAnchor.ref(entry)) and (ea := ef.sync()):
-            self.entry = ea
+        if self.__entry__ and (_entry := self.__entry__.sync()):
+            self.entry = _entry
         else:
             self.entry = self.root
+
+    def default_root(self) -> NodeAnchor:
+        """Generate default root."""
+        if anchor := ROOT.sync():
+            return anchor
+        architype = ROOT.architype = object.__new__(Root)
+        architype._jac_ = ROOT
+        ROOT.allocate()
+        return ROOT
 
     def close(self) -> None:
         """Clean up context."""
@@ -734,6 +761,7 @@ class ExecutionContext:
         """Get or create execution context."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
             EXECUTION_CONTEXT.set(ctx := ExecutionContext(session, **options or {}))
+            ctx.initialize()
         return ctx
 
 
@@ -823,5 +851,3 @@ class JacTestCheck:
 
 EXECUTION_CONTEXT = ContextVar[ExecutionContext]("ExecutionContext")
 ROOT = NodeAnchor(id=UUID(int=0))
-ROOT_ARCH = ROOT.architype = object.__new__(Root)
-ROOT_ARCH._jac_ = ROOT

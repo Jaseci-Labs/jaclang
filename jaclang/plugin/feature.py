@@ -44,7 +44,7 @@ class JacFeature:
         session: str = "", options: Optional[ContextOptions] = None
     ) -> ExecutionContext:
         """Create execution context."""
-        return pm.hook.context(session=session)
+        return pm.hook.context(session=session, options=options)
 
     @staticmethod
     def make_architype(

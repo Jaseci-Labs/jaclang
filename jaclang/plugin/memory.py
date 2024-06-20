@@ -109,7 +109,7 @@ class ShelfMemory(Memory):
 
     def close(self) -> None:
         """Close memory handler."""
-        if self.__shelf__:
+        if isinstance(self.__shelf__, Shelf):
             for anchor in self.__mem__.values():
                 if not anchor.persistent:
                     anchor.destroy()
@@ -118,9 +118,9 @@ class ShelfMemory(Memory):
                 for id in self.__trash__:
                     self.__shelf__.pop(id, None)
 
-                for id in self.__mem__.keys():
-                    self.__shelf__.pop(id, None)
-            self.__shelf__.close()
+                for anchor in self.__mem__.values():
+                    anchor.save()
+            self.__shelf__.sync()
 
         super().close()
 
@@ -133,7 +133,7 @@ class ShelfMemory(Memory):
         """Temporary."""
         objs = super().find(ids, filter, True)
 
-        if self.__shelf__:
+        if isinstance(self.__shelf__, Shelf):
             for obj in objs:
                 if isinstance(obj, UUID):
                     if str(obj) not in self.__trash__ and (
@@ -155,7 +155,7 @@ class ShelfMemory(Memory):
         """Temporary."""
         super().set(data)
 
-        if not mem_only and self.__shelf__:
+        if not mem_only and isinstance(self.__shelf__, Shelf):
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__[str(d.id)] = d
@@ -165,7 +165,7 @@ class ShelfMemory(Memory):
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Temporary."""
         super().remove(data)
-        if self.__shelf__ and ENABLE_MANUAL_SAVE:
+        if isinstance(self.__shelf__, Shelf) and ENABLE_MANUAL_SAVE:
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__.pop(str(d.id), None)

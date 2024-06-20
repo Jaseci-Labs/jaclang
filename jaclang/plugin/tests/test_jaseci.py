@@ -80,7 +80,7 @@ class TestJaseciPlugin(TestCase):
             walker="create",
         )
         obj = cli.get_object(session=session, id="root")
-        edge_obj = cli.get_object(session=session, id=str(obj["edges"][0].ref_id))
+        edge_obj = cli.get_object(session=session, id=obj["edges"][0].ref_id)
         a_obj = cli.get_object(session=session, id=str(edge_obj))
         self._output2buffer()
         cli.run(

@@ -75,9 +75,7 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(
-        session: str = "", options: Optional[ContextOptions] = None
-    ) -> ExecutionContext:
+    def context(session: str, options: Optional[ContextOptions]) -> ExecutionContext:
         """Get the execution context."""
         return ExecutionContext.get(session, options)
 

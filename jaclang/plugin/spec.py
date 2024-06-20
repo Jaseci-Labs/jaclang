@@ -46,9 +46,7 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(
-        session: str = "", options: Optional[ContextOptions] = None
-    ) -> ExecutionContext:
+    def context(session: str, options: Optional[ContextOptions]) -> ExecutionContext:
         """Get the execution context."""
         raise NotImplementedError
 
