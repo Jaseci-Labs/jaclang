@@ -8,7 +8,7 @@ import os
 import pickle
 import shutil
 import types
-from typing import Any, Optional
+from typing import Optional
 
 import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
@@ -18,7 +18,7 @@ from jaclang.compiler.constant import Constants
 from jaclang.compiler.passes.main.pyast_load_pass import PyastBuildPass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
-from jaclang.core.constructs import ObjectAnchor
+from jaclang.core.constructs import NodeAnchor, ObjectAnchor
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
@@ -86,7 +86,9 @@ def run(
             else ""
         )
 
-    jctx = Jac.context("test.session", {"root": root, "entry": node})
+    jctx = Jac.context(
+        session, {"root": NodeAnchor.ref(root), "entry": NodeAnchor.ref(node)}
+    )
 
     base, mod = os.path.split(filename)
     base = base if base else "./"
@@ -124,7 +126,7 @@ def run(
 
 
 @cmd_registry.register
-def get_object(id: str, session: str = "") -> dict[str, Any]:
+def get_object(id: str, session: str = "") -> dict[str, object]:
     """Get the object with the specified id."""
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
@@ -135,11 +137,12 @@ def get_object(id: str, session: str = "") -> dict[str, Any]:
     architype = None
 
     if id == "root":
-        state = jctx.root.__getstate__()
-        architype = state["architype"] = jctx.root.architype.__getstate__()
-    elif (of := ObjectAnchor.ref(id)) and (oa := of.sync()):
-        state = oa.__getstate__()
-        architype = state["architype"] = oa.architype.__getstate__()
+        super_root = jctx.super_root
+        state = super_root.__getstate__()
+        architype = state["architype"] = super_root.architype.__getstate__()
+    elif (anchor := ObjectAnchor.ref(id)) and (architype := anchor.sync()):
+        state = anchor.__getstate__()
+        architype = state["architype"] = architype.__getstate__()
 
     if isinstance(architype, dict):
         architype.pop("_jac_", None)
@@ -423,7 +426,7 @@ def start_cli() -> None:
     if command:
         args_dict = vars(args)
         args_dict.pop("command")
-        if command not in ["run"]:
+        if command.func.__name__ != "run":
             args_dict.pop("session")
         ret = command.call(**args_dict)
         if ret:

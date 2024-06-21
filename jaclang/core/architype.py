@@ -52,12 +52,40 @@ class ObjectType(Enum):
 
 
 @dataclass
+class Access(Generic[T]):
+    """Access Structure."""
+
+    allow: bool = True  # whitelist or blacklist
+    level: tuple[set[T], set[T]] = field(
+        default_factory=lambda: (set(), set())
+    )  # index 0 == read access, 1 == write access
+
+    def check(
+        self, id: T
+    ) -> tuple[bool, bool, Optional[int]]:  # whitelist or blacklist, has_acces, level
+        """Validate access."""
+        if self.allow:
+            for i in range(1, -1, -1):
+                if id in self.level[i]:
+                    return self.allow, True, i
+            return self.allow, False, None
+        else:
+            access = None
+            for i in range(0, 2, 1):
+                if id in self.level[i]:
+                    return self.allow, bool(i), access
+                access = i
+            return self.allow, True, access
+
+
+@dataclass
 class AnchorAccess(Generic[T]):
     """Anchor Access Handler."""
 
     all: int = 0
-    nodes: tuple[set[T], set[T]] = field(default_factory=lambda: (set(), set()))
-    roots: tuple[set[T], set[T]] = field(default_factory=lambda: (set(), set()))
+    roots: Access[T] = field(default_factory=Access[T])
+    types: dict[type[Architype], Access[T]] = field(default_factory=dict)
+    nodes: Access[T] = field(default_factory=Access[T])
 
 
 @dataclass(eq=False)
@@ -82,8 +110,8 @@ class ObjectAnchor:
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[ObjectAnchor]:
-        """Return DocAnchor instance if ."""
-        if ref_id and (match := GENERIC_ID_REGEX.search(ref_id)):
+        """Return ObjectAnchor instance if ."""
+        if match := GENERIC_ID_REGEX.search(ref_id):
             return cls(
                 type=ObjectType(match.group(1)),
                 name=match.group(2),
@@ -99,10 +127,10 @@ class ObjectAnchor:
         """Save Anchor."""
         raise Exception(f"Invalid Reference {self.ref_id}")
 
-    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[ObjectAnchor]:
+    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[Architype]:
         """Retrieve the Architype from db and return."""
-        if self.connected or self.architype:
-            return self
+        if architype := self.architype:
+            return architype
 
         from .context import ExecutionContext
 
@@ -110,9 +138,9 @@ class ObjectAnchor:
         anchor = jsrc.find_one(self.id)
 
         if anchor and (node or self).is_allowed(anchor):
-            return anchor
+            self.__dict__.update(anchor.__dict__)
 
-        return None
+        return self.architype
 
     def unsync(self) -> ObjectAnchor:
         """Generate unlinked anchor."""
@@ -122,21 +150,20 @@ class ObjectAnchor:
         """Allocate hashes and memory."""
         from .context import ExecutionContext
 
-        self.hash = hash(dumps(self))
         jctx = ExecutionContext.get()
-        jctx.datasource.set(self, True)
         self.root = jctx.root.id
+        jctx.datasource.set(self, True)
 
     def is_allowed(self, to: Union[ObjectAnchor, Architype]) -> bool:
         """Access validation."""
         from .context import ExecutionContext
 
         jctx = ExecutionContext.get()
-        jsrc = jctx.datasource
         jroot = jctx.root
         to = to._jac_ if isinstance(to, Architype) else to
+        to.current_access_level = None
 
-        if jroot == jctx.ROOT or jroot.id == to.root:
+        if jroot == jctx.super_root or jroot.id == to.root:
             to.current_access_level = 1
             return True
 
@@ -144,24 +171,42 @@ class ObjectAnchor:
             to.current_access_level = to_access.all - 1
             return True
 
-        if jroot == self.root:
-            for i in range(1, -1, -1):
-                if self.id in to_access.nodes[i] or self.root in to_access.roots[i]:
-                    to.current_access_level = i
-                    return True
+        if self.current_access_level and self.current_access_level > -1:
+            whitelist, has_access, level = to_access.nodes.check(self.id)
+            if not whitelist and not has_access:
+                to.current_access_level = None
+                return False
+            elif whitelist and has_access and to.current_access_level is None:
+                to.current_access_level = level
 
-            if to.root and (to_root := jsrc.find_one(to.root)):
-                to_root_access = to_root.access
-                from_root_id = jroot.id
-                for i in range(1, -1, -1):
-                    if from_root_id in to_root_access.roots[i]:
-                        to.current_access_level = i
-                        return True
+            if (architype := self.architype) and (
+                access_type := to_access.types.get(architype.__class__)
+            ):
+                whitelist, has_access, level = access_type.check(self.id)
+                if not whitelist and not has_access:
+                    to.current_access_level = None
+                    return False
+                elif whitelist and has_access and to.current_access_level is None:
+                    to.current_access_level = level
 
-        to.current_access_level = None
-        return False
+            whitelist, has_access, level = to_access.roots.check(jroot.id)
+            if not whitelist and not has_access:
+                to.current_access_level = None
+                return False
+            elif whitelist and has_access and to.current_access_level is None:
+                to.current_access_level = level
 
-    def __getstate__(self) -> dict[str, Any]:
+            if to.root and (to_root := jctx.datasource.find_one(to.root)):
+                whitelist, has_access, level = to_root.access.roots.check(jroot.id)
+                if not whitelist and not has_access:
+                    to.current_access_level = None
+                    return False
+                elif whitelist and has_access and to.current_access_level is None:
+                    to.current_access_level = level
+
+        return to.current_access_level is not None
+
+    def __getstate__(self) -> dict[str, object]:
         """Override getstate for pickle and shelve."""
         state = self.__dict__.copy()
         state["hash"] = 0
@@ -204,10 +249,10 @@ class NodeAnchor(ObjectAnchor):
     @classmethod
     def ref(cls, ref_id: str) -> Optional[NodeAnchor]:
         """Return NodeAnchor instance if existing."""
-        if ref_id and (match := NODE_ID_REGEX.search(ref_id)):
+        if match := NODE_ID_REGEX.search(ref_id):
             return cls(
-                name=match.group(2),
-                id=UUID(match.group(3)),
+                name=match.group(1),
+                id=UUID(match.group(2)),
             )
         return None
 
@@ -228,13 +273,15 @@ class NodeAnchor(ObjectAnchor):
                 self.connected = True
                 self.hash = hash(dumps(self))
                 self._save()
-            elif self.hash != (_hash := hash(dumps(self))):
+            elif self.current_access_level == 1 and self.hash != (
+                _hash := hash(dumps(self))
+            ):
                 self.hash = _hash
                 self._save()
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype:
+        if self.architype and self.current_access_level == 1:
             from .context import ExecutionContext
 
             jsrc = ExecutionContext.get().datasource
@@ -243,9 +290,9 @@ class NodeAnchor(ObjectAnchor):
 
             jsrc.remove(self)
 
-    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeAnchor]:
+    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeArchitype]:
         """Retrieve the Architype from db and return."""
-        return cast(Optional[NodeAnchor], super().sync(node))
+        return cast(Optional[NodeArchitype], super().sync(node))
 
     def unsync(self) -> NodeAnchor:
         """Generate unlinked anchor."""
@@ -263,33 +310,29 @@ class NodeAnchor(ObjectAnchor):
     ) -> list[EdgeArchitype]:
         """Get edges connected to this node."""
         ret_edges: list[EdgeArchitype] = []
-        for idx, anchor in enumerate(self.edges):
-            if (_anchor := anchor.sync()) and _anchor is not anchor:
-                self.edges[idx] = anchor = _anchor
-
+        for anchor in self.edges:
             if (
-                (architype := anchor.architype)
+                (architype := anchor.sync())
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
             ):
-                if (_source := source.sync()) and _source is not source:
-                    anchor.source = source = _source
-
-                if (_target := target.sync()) and _target is not target:
-                    anchor.target = target = _target
+                src_arch = source.sync()
+                trg_arch = target.sync()
 
                 if (
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
-                    and (not target_obj or target.architype.__class__ in target_obj)
+                    and trg_arch
+                    and (not target_obj or trg_arch in target_obj)
                     and source.is_allowed(target)
                 ):
                     ret_edges.append(architype)
                 if (
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
-                    and (not target_obj or source.architype.__class__ in target_obj)
+                    and src_arch
+                    and (not target_obj or src_arch in target_obj)
                     and target.is_allowed(source)
                 ):
                     ret_edges.append(architype)
@@ -303,38 +346,32 @@ class NodeAnchor(ObjectAnchor):
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
         ret_edges: list[NodeArchitype] = []
-        for idx, anchor in enumerate(self.edges):
-            if (_anchor := anchor.sync()) and _anchor is not anchor:
-                self.edges[idx] = anchor = _anchor
-
+        for anchor in self.edges:
             if (
-                (architype := anchor.architype)
+                (architype := anchor.sync())
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
             ):
-                if (_source := source.sync()) and _source is not source:
-                    anchor.source = source = _source
-
-                if (_target := target.sync()) and _target is not target:
-                    anchor.target = target = _target
+                src_arch = source.sync()
+                trg_arch = target.sync()
 
                 if (
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
-                    and target.architype
-                    and (not target_obj or target.architype.__class__ in target_obj)
+                    and trg_arch
+                    and (not target_obj or trg_arch in target_obj)
                     and source.is_allowed(target)
                 ):
-                    ret_edges.append(target.architype)
+                    ret_edges.append(trg_arch)
                 if (
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
-                    and source.architype
-                    and (not target_obj or source.architype.__class__ in target_obj)
+                    and src_arch
+                    and (not target_obj or src_arch in target_obj)
                     and target.is_allowed(source)
                 ):
-                    ret_edges.append(source.architype)
+                    ret_edges.append(src_arch)
         return ret_edges
 
     def gen_dot(self, dot_file: Optional[str] = None) -> str:
@@ -364,7 +401,7 @@ class NodeAnchor(ObjectAnchor):
         """Invoke data spatial call."""
         return walk.spawn_call(self)
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> dict[str, object]:
         """Override getstate for pickle and shelve."""
         state = super().__getstate__()
         state["edges"] = [edge.unsync() for edge in self.edges]
@@ -384,10 +421,10 @@ class EdgeAnchor(ObjectAnchor):
     @classmethod
     def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
         """Return EdgeAnchor instance if existing."""
-        if ref_id and (match := EDGE_ID_REGEX.search(ref_id)):
+        if match := EDGE_ID_REGEX.search(ref_id):
             return cls(
-                name=match.group(2),
-                id=UUID(match.group(3)),
+                name=match.group(1),
+                id=UUID(match.group(2)),
             )
         return None
 
@@ -411,13 +448,15 @@ class EdgeAnchor(ObjectAnchor):
                 self.connected = True
                 self.hash = hash(dumps(self))
                 self._save()
-            elif self.hash != (_hash := hash(dumps(self))):
+            elif self.current_access_level == 1 and self.hash != (
+                _hash := hash(dumps(self))
+            ):
                 self.hash = _hash
                 self._save()
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype:
+        if self.architype and self.current_access_level == 1:
             from .context import ExecutionContext
 
             jsrc = ExecutionContext.get().datasource
@@ -433,9 +472,9 @@ class EdgeAnchor(ObjectAnchor):
 
             jsrc.remove(self)
 
-    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeAnchor]:
+    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeArchitype]:
         """Retrieve the Architype from db and return."""
-        return cast(Optional[EdgeAnchor], super().sync(node))
+        return cast(Optional[EdgeArchitype], super().sync(node))
 
     def unsync(self) -> EdgeAnchor:
         """Generate unlinked anchor."""
@@ -469,7 +508,7 @@ class EdgeAnchor(ObjectAnchor):
         else:
             raise ValueError("Edge has no target.")
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> dict[str, object]:
         """Override getstate for pickle and shelve."""
         state = super().__getstate__()
         if self.source:
@@ -489,20 +528,44 @@ class WalkerAnchor(ObjectAnchor):
     next: list[Architype] = field(default_factory=list)
     ignores: list[Architype] = field(default_factory=list)
     disengaged: bool = False
+    persistent: bool = False  # Disabled initially but can be adjusted
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[WalkerAnchor]:
         """Return EdgeAnchor instance if existing."""
         if ref_id and (match := WALKER_ID_REGEX.search(ref_id)):
             return cls(
-                name=match.group(2),
-                id=UUID(match.group(3)),
+                name=match.group(1),
+                id=UUID(match.group(2)),
             )
         return None
 
-    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerAnchor]:
+    def _save(self) -> None:
+        from .context import ExecutionContext
+
+        ExecutionContext.get().datasource.set(self)
+
+    def save(self) -> None:
+        """Save Anchor."""
+        if self.architype and self.current_access_level == 1:
+            if not self.connected:
+                self.connected = True
+                self.hash = hash(dumps(self))
+                self._save()
+            elif self.hash != (_hash := hash(dumps(self))):
+                self.hash = _hash
+                self._save()
+
+    def destroy(self) -> None:
+        """Delete Anchor."""
+        if self.architype and self.current_access_level == 1:
+            from .context import ExecutionContext
+
+            ExecutionContext.get().datasource.remove(self)
+
+    def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerArchitype]:
         """Retrieve the Architype from db and return."""
-        return cast(Optional[WalkerAnchor], super().sync(node))
+        return cast(Optional[WalkerArchitype], super().sync(node))
 
     def unsync(self) -> WalkerAnchor:
         """Generate unlinked anchor."""
@@ -570,11 +633,7 @@ class WalkerAnchor(ObjectAnchor):
 
     def spawn_call(self, nd: ObjectAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
-        if (
-            (walker := self.architype)
-            and (_nd := nd.sync())
-            and (node := _nd.architype)
-        ):
+        if (walker := self.sync()) and (node := nd.sync()):
             self.path = []
             self.next = [node]
             while len(self.next):
@@ -627,7 +686,7 @@ class Architype:
         self._jac_: ObjectAnchor = ObjectAnchor(architype=self)
         self._jac_.allocate()
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> dict[str, object]:
         """Override getstate for pickle and shelve."""
         state = self.__dict__.copy()
         state["_jac_"] = None
@@ -651,8 +710,8 @@ class Architype:
         return self._jac_.__hash__()
 
     def __repr__(self) -> str:
-        """Return string representation."""
-        return self._jac_.ref_id
+        """Override repr for architype."""
+        return f"{self.__class__.__name__}"
 
 
 class NodeArchitype(Architype):
@@ -691,6 +750,7 @@ class WalkerArchitype(Architype):
         self._jac_: WalkerAnchor = WalkerAnchor(
             name=self.__class__.__name__, architype=self
         )
+        self._jac_.allocate()
 
 
 class GenericEdge(EdgeArchitype):

@@ -40,7 +40,7 @@ class JacFeature:
 
     @staticmethod
     def context(
-        session: str = "", options: Optional[ContextOptions] = None
+        session: Optional[str] = "", options: Optional[ContextOptions] = None
     ) -> ExecutionContext:
         """Create execution context."""
         return pm.hook.context(session=session, options=options)

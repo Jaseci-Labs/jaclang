@@ -4,63 +4,62 @@ from __future__ import annotations
 
 import unittest
 from contextvars import ContextVar
-from typing import Any, Callable, Optional, TypedDict
+from typing import Any, Callable, Optional, TypedDict, Union
 from uuid import UUID
 
 from .architype import NodeAnchor, Root
 from .memory import ShelfMemory
 
 
-EXECUTION_CONTEXT = ContextVar["ExecutionContext"]("ExecutionContext")
+EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
 
 
 class ContextOptions(TypedDict, total=False):
     """Execution Context Options."""
 
-    root: str
-    entry: str
+    root: Optional[NodeAnchor]
+    entry: Optional[NodeAnchor]
 
 
 class ExecutionContext:
     """Execution Context."""
 
-    ROOT = NodeAnchor(id=UUID(int=0))
-
     def __init__(
         self,
-        session: str = "",
-        root: str = "",
-        entry: str = "",
+        session: Optional[str] = "",
+        root: Optional[NodeAnchor] = None,
+        entry: Optional[NodeAnchor] = None,
     ) -> None:
         """Create JacContext."""
-        self.__root__: Optional[NodeAnchor] = NodeAnchor.ref(root)
-        self.__entry__: Optional[NodeAnchor] = NodeAnchor.ref(entry)
-
         self.datasource: ShelfMemory = ShelfMemory(session)
         self.reports: list[Any] = []
-        self.root: NodeAnchor = self.ROOT
-        self.entry: NodeAnchor = self.ROOT
+        self.super_root = self.load(
+            NodeAnchor(id=UUID(int=0)), self.generate_super_root
+        )
+        self.root: NodeAnchor = self.load(root, self.super_root)
+        self.entry: NodeAnchor = self.load(entry, self.root)
 
-    def initialize(self) -> None:
-        """Initialize anchors."""
-        if self.__root__ and (_root := self.__root__.sync()):
-            self.root = _root
+    def generate_super_root(self) -> NodeAnchor:
+        """Generate default super root."""
+        super_root = NodeAnchor(id=UUID(int=0), current_access_level=1)
+        architype = super_root.architype = object.__new__(Root)
+        architype._jac_ = super_root
+        self.datasource.set(super_root, True)
+        return super_root
+
+    def load(
+        self,
+        anchor: Optional[NodeAnchor],
+        default: Union[NodeAnchor, Callable[[], NodeAnchor]],
+    ) -> NodeAnchor:
+        """Load initial anchors."""
+        if anchor and (_anchor := self.datasource.find_one(anchor.id)):
+            anchor.__dict__.update(_anchor.__dict__)
+            anchor.current_access_level = 1
         else:
-            self.root = self.default_root()
+            anchor = default() if callable(default) else default
 
-        if self.__entry__ and (_entry := self.__entry__.sync()):
-            self.entry = _entry
-        else:
-            self.entry = self.root
-
-    def default_root(self) -> NodeAnchor:
-        """Generate default root."""
-        if anchor := self.ROOT.sync():
-            return anchor
-        architype = self.ROOT.architype = object.__new__(Root)
-        architype._jac_ = self.ROOT
-        self.ROOT.allocate()
-        return self.ROOT
+        return anchor
 
     def close(self) -> None:
         """Clean up context."""
@@ -68,12 +67,11 @@ class ExecutionContext:
 
     @staticmethod
     def get(
-        session: str = "", options: Optional[ContextOptions] = None
+        session: Optional[str] = "", options: Optional[ContextOptions] = None
     ) -> ExecutionContext:
         """Get or create execution context."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
             EXECUTION_CONTEXT.set(ctx := ExecutionContext(session, **options or {}))
-            ctx.initialize()
         return ctx
 
 

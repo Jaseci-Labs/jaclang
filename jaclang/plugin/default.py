@@ -10,7 +10,7 @@ import types
 from collections import OrderedDict
 from dataclasses import field
 from functools import wraps
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Optional, Type, Union, cast
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, T, colors
@@ -73,7 +73,9 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(session: str, options: Optional[ContextOptions]) -> ExecutionContext:
+    def context(
+        session: Optional[str], options: Optional[ContextOptions]
+    ) -> ExecutionContext:
         """Get the execution context."""
         return ExecutionContext.get(session, options)
 
@@ -418,28 +420,20 @@ class JacFeatureDefaults:
         left = [left] if isinstance(left, NodeArchitype) else left
         right = [right] if isinstance(right, NodeArchitype) else right
         for i in left:
-            left_anchor = i._jac_
-            for idx, anchor in enumerate(left_anchor.edges):
-                if (_anchor := anchor.sync()) and _anchor is not anchor:
-                    left_anchor.edges[idx] = anchor = _anchor
-
+            for anchor in set(i._jac_.edges):
                 if (
-                    (architype := anchor.architype)
+                    (architype := anchor.sync())
                     and (source := anchor.source)
                     and (target := anchor.target)
                     and (not filter_func or filter_func([architype]))
                 ):
-                    if (_source := source.sync()) and _source is not source:
-                        anchor.source = source = _source
-
-                    if (_target := target.sync()) and _target is not target:
-                        anchor.target = target = _target
+                    src_arch = source.sync()
+                    trg_arch = target.sync()
 
                     if (
                         dir in [EdgeDir.OUT, EdgeDir.ANY]
                         and i == source
-                        and (target_arch := target.architype)
-                        and target_arch in right
+                        and trg_arch in right
                         and source.is_allowed(target)
                     ):
                         anchor.detach()
@@ -447,8 +441,7 @@ class JacFeatureDefaults:
                     if (
                         dir in [EdgeDir.IN, EdgeDir.ANY]
                         and i == target
-                        and (source_arch := source.architype)
-                        and source_arch in right
+                        and src_arch in right
                         and target.is_allowed(source)
                     ):
                         anchor.detach()
@@ -470,12 +463,11 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def get_root() -> NodeArchitype:
+    def get_root() -> Root:
         """Jac's assign comprehension feature."""
-        jroot = Jac.context().root
-        if architype := jroot.architype:
-            return architype
-        raise Exception(f"Invalid Reference {jroot.ref_id}")
+        if architype := Jac.context().root.sync():
+            return cast(Root, architype)
+        raise Exception("No Available Root!")
 
     @staticmethod
     @hookimpl

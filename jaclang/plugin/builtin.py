@@ -22,7 +22,7 @@ def dotgen(
     """Print the dot graph."""
     from jaclang.plugin.feature import pm
 
-    root = pm.hook.context().root.architype
+    root = pm.hook.get_root()
     node = node if node is not None else root
     depth = depth if depth is not None else -1
     traverse = traverse if traverse is not None else False
