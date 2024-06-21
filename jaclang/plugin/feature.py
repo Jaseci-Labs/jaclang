@@ -6,17 +6,16 @@ import types
 from typing import Any, Callable, Optional, Type, TypeAlias, Union
 
 from jaclang.compiler.absyntree import Module
+from jaclang.compiler.constant import T
 from jaclang.core.constructs import (
     Architype,
     EdgeArchitype,
-    Memory,
     NodeArchitype,
     Root,
     WalkerArchitype,
 )
-from jaclang.plugin.default import ExecutionContext
-from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, T
-
+from jaclang.core.context import ContextOptions, ExecutionContext
+from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec
 
 import pluggy
 
@@ -40,19 +39,11 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(session: str = "") -> ExecutionContext:
+    def context(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
         """Create execution context."""
-        return pm.hook.context(session=session)
-
-    @staticmethod
-    def reset_context() -> None:
-        """Reset execution context."""
-        return pm.hook.reset_context()
-
-    @staticmethod
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
-        return pm.hook.memory_hook()
+        return pm.hook.context(session=session, options=options)
 
     @staticmethod
     def make_architype(

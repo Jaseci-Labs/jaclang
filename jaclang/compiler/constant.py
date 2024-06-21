@@ -1,6 +1,9 @@
 """Constants across the project."""
 
 from enum import Enum
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
 class Constants(str, Enum):

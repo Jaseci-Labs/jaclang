@@ -4,73 +4,77 @@ from __future__ import annotations
 
 import unittest
 from contextvars import ContextVar
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, TypedDict
 from uuid import UUID
 
-from .architype import Architype, Root
-from .memory import Memory, ShelveStorage
+from .architype import NodeAnchor, Root
+from .memory import ShelfMemory
+
+
+EXECUTION_CONTEXT = ContextVar["ExecutionContext"]("ExecutionContext")
+
+
+class ContextOptions(TypedDict, total=False):
+    """Execution Context Options."""
+
+    root: str
+    entry: str
 
 
 class ExecutionContext:
-    """Default Execution Context implementation."""
+    """Execution Context."""
 
-    mem: Optional[Memory]
-    root: Optional[Root]
+    ROOT = NodeAnchor(id=UUID(int=0))
 
-    def __init__(self) -> None:
-        """Create execution context."""
-        super().__init__()
-        self.mem = ShelveStorage()
-        self.root = None
+    def __init__(
+        self,
+        session: str = "",
+        root: str = "",
+        entry: str = "",
+    ) -> None:
+        """Create JacContext."""
+        self.__root__: Optional[NodeAnchor] = NodeAnchor.ref(root)
+        self.__entry__: Optional[NodeAnchor] = NodeAnchor.ref(entry)
 
-    def init_memory(self, session: str = "") -> None:
-        """Initialize memory."""
-        if session:
-            self.mem = ShelveStorage(session)
+        self.datasource: ShelfMemory = ShelfMemory(session)
+        self.reports: list[Any] = []
+        self.root: NodeAnchor = self.ROOT
+        self.entry: NodeAnchor = self.ROOT
+
+    def initialize(self) -> None:
+        """Initialize anchors."""
+        if self.__root__ and (_root := self.__root__.sync()):
+            self.root = _root
         else:
-            self.mem = Memory()
+            self.root = self.default_root()
 
-    def get_root(self) -> Root:
-        """Get the root object."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
+        if self.__entry__ and (_entry := self.__entry__.sync()):
+            self.entry = _entry
+        else:
+            self.entry = self.root
 
-        if not self.root:
-            root = self.mem.get_obj(UUID(int=0))
-            if root is None:
-                self.root = Root()
-                self.mem.save_obj(self.root, persistent=self.root._jac_.persistent)
-            elif not isinstance(root, Root):
-                raise ValueError(f"Invalid root object: {root}")
-            else:
-                self.root = root
-        return self.root
+    def default_root(self) -> NodeAnchor:
+        """Generate default root."""
+        if anchor := self.ROOT.sync():
+            return anchor
+        architype = self.ROOT.architype = object.__new__(Root)
+        architype._jac_ = self.ROOT
+        self.ROOT.allocate()
+        return self.ROOT
 
-    def get_obj(self, obj_id: UUID) -> Architype | None:
-        """Get object from memory."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
+    def close(self) -> None:
+        """Clean up context."""
+        self.datasource.close()
 
-        return self.mem.get_obj(obj_id)
-
-    def save_obj(self, item: Architype, persistent: bool) -> None:
-        """Save object to memory."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
-
-        self.mem.save_obj(item, persistent)
-
-    def reset(self) -> None:
-        """Reset the execution context."""
-        if self.mem:
-            self.mem.close()
-        self.mem = None
-        self.root = None
-
-
-exec_context: ContextVar[ExecutionContext | None] = ContextVar(
-    "ExecutionContext", default=None
-)
+    @staticmethod
+    def get(
+        session: str = "", options: Optional[ContextOptions] = None
+    ) -> ExecutionContext:
+        """Get or create execution context."""
+        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
+            EXECUTION_CONTEXT.set(ctx := ExecutionContext(session, **options or {}))
+            ctx.initialize()
+        return ctx
 
 
 class JacTestResult(unittest.TextTestResult):

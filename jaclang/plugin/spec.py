@@ -3,27 +3,23 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Callable, Optional, TYPE_CHECKING, Type, TypeVar, Union
+from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
-
-if TYPE_CHECKING:
-    from jaclang.core.constructs import EdgeArchitype, NodeArchitype
-    from jaclang.plugin.default import (
-        Architype,
-        EdgeDir,
-        ExecutionContext,
-        WalkerArchitype,
-        Root,
-        DSFunc,
-    )
-    from jaclang.core.memory import Memory
+from jaclang.compiler.constant import EdgeDir, T
+from jaclang.core.constructs import (
+    Architype,
+    DSFunc,
+    EdgeArchitype,
+    NodeArchitype,
+    Root,
+    WalkerArchitype,
+)
+from jaclang.core.context import ContextOptions, ExecutionContext
 
 import pluggy
 
 hookspec = pluggy.HookspecMarker("jac")
-
-T = TypeVar("T")
 
 
 class JacFeatureSpec:
@@ -31,20 +27,8 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
+    def context(session: str, options: Optional[ContextOptions]) -> ExecutionContext:
         """Get the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
         raise NotImplementedError
 
     @staticmethod
