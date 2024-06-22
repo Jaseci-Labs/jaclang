@@ -234,6 +234,10 @@ class AstSymbolNode(AstNode):
         """Get type symbol table."""
         return self.name_spec.type_sym_tab
 
+    def make_store_ctx(self) -> None:
+        """Update python context for definition."""
+        self.name_spec.py_ctx_func = ast3.Store
+
 
 class AstSymbolStubNode(AstSymbolNode):
     """Nodes that have link to a symbol in symbol table."""
@@ -2700,6 +2704,11 @@ class ListVal(AtomExpr):
         AstNode.__init__(self, kid=kid)
         AstSymbolStubNode.__init__(self, sym_type=SymbolType.SEQUENCE)
 
+    def make_store_ctx(self) -> None:
+        """Update python context for definition."""
+        super().make_store_ctx()
+        make_collection_store_ctx(self)
+
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""
         res = True
@@ -2755,6 +2764,11 @@ class TupleVal(AtomExpr):
         self.values = values
         AstNode.__init__(self, kid=kid)
         AstSymbolStubNode.__init__(self, sym_type=SymbolType.SEQUENCE)
+
+    def make_store_ctx(self) -> None:
+        """Update python context for definition."""
+        super().make_store_ctx()
+        make_collection_store_ctx(self)
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize ast node."""
@@ -3043,6 +3057,22 @@ class AtomTrailer(Expr):
         self.is_null_ok = is_null_ok
         self.is_genai = is_genai
         AstNode.__init__(self, kid=kid)
+
+    @property
+    def unwind(self) -> list[AstSymbolNode]:
+        """Unwind the trailer."""
+        left = self.right if isinstance(self.right, AtomTrailer) else self.target
+        right = self.target if isinstance(self.right, AtomTrailer) else self.right
+        trag_list: list[AstSymbolNode] = (
+            [right] if isinstance(right, AstSymbolNode) else []
+        )
+        while isinstance(left, AtomTrailer) and left.is_attr:
+            if isinstance(left.right, AstSymbolNode):
+                trag_list.insert(0, left.right)
+            left = left.target
+        if isinstance(left, AstSymbolNode):
+            trag_list.insert(0, left)
+        return trag_list
 
     def normalize(self, deep: bool = True) -> bool:
         """Normalize ast node."""
@@ -4176,3 +4206,21 @@ class PythonModuleAst(EmptyToken):
         super().__init__()
         self.ast = ast
         self.file_path = mod_path
+
+
+def make_collection_store_ctx(item: TupleVal | ListVal | UnaryExpr) -> None:
+    """Make collection store context."""
+    # Handling of UnaryExpr case for item is only necessary for
+    # the generation of Starred nodes in the AST for examples
+    # like `(a, *b) = (1, 2, 3, 4)`.
+    if isinstance(item, UnaryExpr):
+        if isinstance(item.operand, AstSymbolNode):
+            item.operand.name_spec.py_ctx_func = ast3.Store
+    elif isinstance(item, (TupleVal, ListVal)):
+        for i in item.values.items if item.values else []:
+            if isinstance(i, AstSymbolNode):
+                i.name_spec.py_ctx_func = ast3.Store
+            elif isinstance(i, AtomTrailer) and i.sym_tab:
+                i.sym_tab.chain_def_insert(i.unwind)
+            if isinstance(i, (TupleVal, ListVal, UnaryExpr)):
+                make_collection_store_ctx(i)

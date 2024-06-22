@@ -7,7 +7,8 @@ import os
 from typing import Optional
 
 import jaclang.compiler.absyntree as ast
-from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass, SymbolAccess
+from jaclang.compiler.constant import SymbolAccess
+from jaclang.compiler.passes.main.sym_tab_build_pass import SymTabPass
 from jaclang.compiler.symtable import SymbolTable
 from jaclang.settings import settings
 

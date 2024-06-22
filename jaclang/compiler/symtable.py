@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
+import ast as ast3
+from typing import Optional, Sequence
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import SymbolAccess, SymbolType
@@ -149,6 +150,87 @@ class SymbolTable:
         """Push a new scope onto the symbol table."""
         self.kid.append(SymbolTable(name, key_node, self))
         return self.kid[-1]
+
+    def inherit_sym_tab(self, target_scope: SymbolTable, sym_tab: SymbolTable) -> None:
+        """Inherit symbol table."""
+        for i in sym_tab.tab.values():
+            self.def_insert(i.decl, access_spec=i.access, table_override=target_scope)
+
+    def def_insert(
+        self,
+        node: ast.AstSymbolNode,
+        access_spec: Optional[ast.AstAccessNode] | SymbolAccess = None,
+        single_decl: Optional[str] = None,
+        table_override: Optional[SymbolTable] = None,
+    ) -> Optional[Symbol]:
+        """Insert into symbol table."""
+        table = table_override if table_override else node.sym_tab
+        if node.sym and table == node.sym.parent_tab:
+            return node.sym
+        if table:
+            table.insert(
+                node=node, single=single_decl is not None, access_spec=access_spec
+            )
+        node.make_store_ctx()
+        return node.sym
+
+    def chain_def_insert(self, node_list: Sequence[ast.AstSymbolNode]) -> None:
+        """Link chain of containing names to symbol."""
+        if not node_list:
+            return
+        cur_sym_tab = node_list[0].sym_tab
+        node_list[-1].name_spec.py_ctx_func = ast3.Store
+        if isinstance(node_list[-1].name_spec, ast.AstSymbolNode):
+            node_list[-1].name_spec.py_ctx_func = ast3.Store
+
+        node_list = node_list[:-1]  # Just performs lookup mappings of pre assign chain
+        for i in node_list:
+            if cur_sym_tab is None:
+                break
+            cur_sym_tab = (
+                lookup.decl.sym_tab
+                if (
+                    lookup := self.use_lookup(
+                        i,
+                        sym_table=cur_sym_tab,
+                    )
+                )
+                else None
+            )
+
+    def use_lookup(
+        self,
+        node: ast.AstSymbolNode,
+        sym_table: Optional[SymbolTable] = None,
+    ) -> Optional[Symbol]:
+        """Link to symbol."""
+        if node.sym:
+            return node.sym
+        if not sym_table:
+            sym_table = node.sym_tab
+        if sym_table:
+            lookup = sym_table.lookup(name=node.sym_name, deep=True)
+            lookup.add_use(node.name_spec) if lookup else None
+        return node.sym
+
+    def chain_use_lookup(self, node_list: Sequence[ast.AstSymbolNode]) -> None:
+        """Link chain of containing names to symbol."""
+        if not node_list:
+            return
+        cur_sym_tab = node_list[0].sym_tab
+        for i in node_list:
+            if cur_sym_tab is None:
+                break
+            cur_sym_tab = (
+                lookup.decl.sym_tab
+                if (
+                    lookup := self.use_lookup(
+                        i,
+                        sym_table=cur_sym_tab,
+                    )
+                )
+                else None
+            )
 
     def pp(self, depth: Optional[int] = None) -> str:
         """Pretty print."""
