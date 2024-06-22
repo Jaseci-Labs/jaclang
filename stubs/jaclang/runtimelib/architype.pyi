@@ -30,13 +30,13 @@ class NodeAnchor(ObjectAnchor):
         self,
         dir: EdgeDir,
         filter_func: Callable[[list[EdgeArchitype]], list[EdgeArchitype]] | None,
-        target_obj: list[NodeArchitype] | None,
+        target_cls: list[NodeArchitype] | None,
     ) -> list[EdgeArchitype]: ...
     def edges_to_nodes(
         self,
         dir: EdgeDir,
         filter_func: Callable[[list[EdgeArchitype]], list[EdgeArchitype]] | None,
-        target_obj: list[NodeArchitype] | None,
+        target_cls: list[NodeArchitype] | None,
     ) -> list[NodeArchitype]: ...
     def gen_dot(self, dot_file: str | None = None) -> str: ...
     def __init__(

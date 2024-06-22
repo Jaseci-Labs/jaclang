@@ -3,37 +3,23 @@
 from __future__ import annotations
 
 import types
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    ParamSpec,
-    TYPE_CHECKING,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
-
-if TYPE_CHECKING:
-    from jaclang.runtimelib.constructs import EdgeArchitype, NodeArchitype
-    from jaclang.plugin.default import (
-        Architype,
-        EdgeDir,
-        ExecutionContext,
-        WalkerArchitype,
-        Root,
-        DSFunc,
-    )
-    from jaclang.runtimelib.memory import Memory
+from jaclang.compiler.constant import EdgeDir, P, T
+from jaclang.runtimelib.constructs import (
+    Architype,
+    DSFunc,
+    EdgeArchitype,
+    NodeArchitype,
+    Root,
+    WalkerArchitype,
+)
+from jaclang.runtimelib.context import ExecutionContext
 
 import pluggy
 
 hookspec = pluggy.HookspecMarker("jac")
-
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 class JacFeatureSpec:
@@ -41,20 +27,8 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
+    def context(options: Optional[dict[str, Any]]) -> ExecutionContext:
         """Get the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
         raise NotImplementedError
 
     @staticmethod
@@ -208,7 +182,7 @@ class JacFeatureSpec:
     @hookspec(firstresult=True)
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,
