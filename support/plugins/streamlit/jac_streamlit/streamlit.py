@@ -34,12 +34,13 @@ class JacCmd:
                 py_lines = [
                     "from jaclang import jac_import",
                     "from jaclang.plugin.feature import JacFeature as Jac",
-                    f"Jac.context().init_memory(base_path='{dirname}')",
+                    f'jctx = Jac.context({{"base_path":"{dirname}"}})',
                     f"(st_app,) = jac_import('{basename}', base_path='{dirname}')",
                     "if hasattr(st_app, 'main'):",
                     "    st_app.main()",
                     "else:",
                     "   print('No main function found. Please define a main function in your .jac file or put in a with entrypoint block.')",  # noqa: E501
+                    "jctx.close()",
                 ]
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".py", delete=False

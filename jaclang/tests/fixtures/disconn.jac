@@ -20,10 +20,10 @@ with entry{
     y++>z;
     apple: int;
     # print(x -:aaa:-> );
-    print([x-->y-->z]);
+    print([x-->b-->c]);
     print([x -->]);
     print(x del--> y);
     print([x -->]);
     print([i.__class__.__name__ for i in (x ++> y)]);
-    print([i.__class__.__name__ for i in (:e:[x[0] --> y])]);
+    print([i.__class__.__name__ for i in (:e:[x[0] --> b])]);
 }
