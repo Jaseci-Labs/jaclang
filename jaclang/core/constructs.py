@@ -8,7 +8,6 @@ from .architype import (
     DSFunc,
     EdgeAnchor,
     EdgeArchitype,
-    ElementAnchor,
     GenericEdge,
     NodeAnchor,
     NodeArchitype,
@@ -17,12 +16,11 @@ from .architype import (
     WalkerAnchor,
     WalkerArchitype,
 )
-from .context import ExecutionContext, exec_context
-from .memory import Memory, ShelveStorage
+from .context import ExecutionContext
+from .memory import Memory, ShelfMemory
 from .test import JacTestCheck, JacTestResult, JacTextTestRunner
 
 __all__ = [
-    "ElementAnchor",
     "ObjectAnchor",
     "NodeAnchor",
     "EdgeAnchor",
@@ -35,9 +33,8 @@ __all__ = [
     "Root",
     "DSFunc",
     "Memory",
-    "ShelveStorage",
+    "ShelfMemory",
     "ExecutionContext",
-    "exec_context",
     "JacTestResult",
     "JacTextTestRunner",
     "JacTestCheck",
