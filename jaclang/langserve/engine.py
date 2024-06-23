@@ -296,8 +296,10 @@ class JacLangServer(LanguageServer):
         # self.log_py(f'varsss \n\n{vars(node)}')
         # self.log_py(f'\ndecl {node.sym.decl}')
         try:
-            if node.parent and isinstance(node.parent,ast.ModulePath):
-                self.log_py(f"path of is {node.parent.get_path(node.parent.path.index(node),self)}")
+            if node.parent and isinstance(node.parent, ast.ModulePath):
+                self.log_py(
+                    f"path of is {node.parent.get_path(node.parent.path.index(node),self)}"
+                )
             if isinstance(node, ast.NameSpec):
                 node = node.name_of
             access = node.sym.access.value + " " if node.sym else None
@@ -334,8 +336,12 @@ class JacLangServer(LanguageServer):
         if node_selected:
             self.log_py(f"Node selected: {node_selected}")
             # self.log_py(f'varsss \n\n{vars(node_selected)}')
-            if node_selected.parent and isinstance(node_selected.parent,ast.ModulePath):
-                spec=node_selected.parent.get_path(node_selected.parent.path.index(node_selected),self)
+            if node_selected.parent and isinstance(
+                node_selected.parent, ast.ModulePath
+            ):
+                spec = node_selected.parent.get_path(
+                    node_selected.parent.path.index(node_selected), self
+                )
                 self.log_py(f"path of is in get defini\n\n\n {spec}\n\n")
                 if spec:
                     return lspt.Location(

@@ -780,6 +780,7 @@ class ModulePath(AstSymbolNode):
             if spec and spec.origin:
                 import math
                 import sys
+
                 if spec.origin == "frozen":
                     if self.path_str == "os":
                         return os.__file__
