@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import ast as ast3
+import importlib.util
 import os
 from hashlib import md5
 from types import EllipsisType
 from typing import Any, Callable, Generic, Optional, Sequence, Type, TypeVar
-
 from jaclang.compiler import TOKEN_MAP
 from jaclang.compiler.codeloc import CodeGenTarget, CodeLocInfo
 from jaclang.compiler.constant import Constants as Con, EdgeDir
@@ -20,6 +20,7 @@ from jaclang.compiler.symtable import (
     SymbolType,
     TypeInfo,
 )
+from jaclang.utils.helpers import import_target_to_relative_path
 from jaclang.utils.treeprinter import dotgen_ast_tree, print_ast_tree
 
 
@@ -758,6 +759,63 @@ class ModulePath(AstSymbolNode):
         """Get path string."""
         return ("." * self.level) + ".".join(
             [p.value for p in self.path] if self.path else ""
+        )
+
+    def get_path(self, i: int, ser) -> str:
+        if self.parent and (
+            (
+                isinstance(self.parent.parent, Import)
+                and self.parent.parent.hint.tag.value == "py"
+            )
+            or (
+                isinstance(self.parent, Import)
+                and self.parent.from_loc
+                and self.parent.hint.tag.value == "py"
+            )
+        ):
+            temp_path_str = ("." * self.level) + ".".join(
+                [p.value for p in self.path[: i + 1]] if self.path else ""
+            )
+            spec = importlib.util.find_spec(temp_path_str)
+            if spec and spec.origin:
+                import math
+                import sys
+                if spec.origin == "frozen":
+                    if self.path_str == "os":
+                        return os.__file__
+                if spec.origin == "built-in":
+                    return (
+                        math.__file__
+                        if self.path_str == "math"
+                        else sys.prefix if self.path_str == "sys" else spec.origin
+                    )
+                return spec.origin
+            return spec
+        elif self.parent and (
+            (
+                isinstance(self.parent.parent, Import)
+                and self.parent.parent.hint.tag.value == "jac"
+            )
+            or (
+                isinstance(self.parent, Import)
+                and self.parent.from_loc
+                and self.parent.hint.tag.value == "jac"
+            )
+        ):
+            ser.log_py(f"jac import1 --{self.path_str}")
+            mod_path = self.loc.mod_path
+            targ = import_target_to_relative_path(
+                level=self.level,
+                target=self.path_str,
+                base_path=os.path.dirname(mod_path),
+            )
+            ser.log_py(f"jac import --{targ}")
+            if os.path.isdir(targ):
+                self.log_py(f"Fixxx meee {targ}")
+            else:
+                return targ
+        ser.log_py(
+            f"jac \n\nhere\n\n -{self.parent}-{self.path_str} {self.path} {self.level} {self.alias}"
         )
 
     def normalize(self, deep: bool = False) -> bool:

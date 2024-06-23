@@ -290,7 +290,14 @@ class JacLangServer(LanguageServer):
 
     def get_node_info(self, node: ast.AstSymbolNode) -> Optional[str]:
         """Extract meaningful information from the AST node."""
+        self.log_py(f"Node selected: {node}")
+        self.log_py(f"Node selected parent: {node.parent}")
+
+        # self.log_py(f'varsss \n\n{vars(node)}')
+        # self.log_py(f'\ndecl {node.sym.decl}')
         try:
+            if node.parent and isinstance(node.parent,ast.ModulePath):
+                self.log_py(f"path of is {node.parent.get_path(node.parent.path.index(node),self)}")
             if isinstance(node, ast.NameSpec):
                 node = node.name_of
             access = node.sym.access.value + " " if node.sym else None
@@ -325,6 +332,19 @@ class JacLangServer(LanguageServer):
             self.modules[file_path].ir, position.line, position.character
         )
         if node_selected:
+            self.log_py(f"Node selected: {node_selected}")
+            # self.log_py(f'varsss \n\n{vars(node_selected)}')
+            if node_selected.parent and isinstance(node_selected.parent,ast.ModulePath):
+                spec=node_selected.parent.get_path(node_selected.parent.path.index(node_selected),self)
+                self.log_py(f"path of is in get defini\n\n\n {spec}\n\n")
+                if spec:
+                    return lspt.Location(
+                        uri=uris.from_fs_path(spec),
+                        range=lspt.Range(
+                            start=lspt.Position(line=0, character=0),
+                            end=lspt.Position(line=0, character=0),
+                        ),
+                    )
             if isinstance(node_selected, (ast.ElementStmt, ast.BuiltinType)):
                 return None
             decl_node = (
