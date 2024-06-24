@@ -315,7 +315,7 @@ class JacLanguageTests(TestCase):
         jac_import("deep_import", base_path=self.fixture_abs_path("./"))
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
-        self.assertEqual(stdout_value.split("\n")[0], "one level deeperslHello World!")
+        self.assertEqual(stdout_value.split("\n")[-2], "one level deeperslHello World!")
 
     def test_deep_imports_mods(self) -> None:
         """Parse micro jac file."""
@@ -331,7 +331,7 @@ class JacLanguageTests(TestCase):
         self.assertIn("deep_mods.mycode", mods)
         self.assertIn("deep_mods.deeper.snd_lev", mods)
         self.assertIn("deep_mods.one_lev", mods)
-        self.assertLen([i for i in mods if i.startswith("deep_mods")], 5)
+        self.assertEqual(len([i for i in mods if i.startswith("deep_mods")]), 5)
 
     def test_deep_outer_imports_one(self) -> None:
         """Parse micro jac file."""
