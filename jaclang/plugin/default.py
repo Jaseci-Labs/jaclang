@@ -38,7 +38,9 @@ from jaclang.core.construct import (
     WalkerArchitype,
     exec_context,
 )
-from jaclang.core.importer import jac_importer
+
+# from jaclang.core.importer import jac_importer
+from jaclang.core.importer import JacMachine
 from jaclang.core.registry import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
@@ -47,6 +49,7 @@ from jaclang.plugin.spec import T
 
 import pluggy
 
+jac_machine: JacMachine = None
 
 __all__ = [
     "EdgeAnchor",
@@ -223,7 +226,10 @@ class JacFeatureDefaults:
         items: Optional[dict[str, Union[str, bool]]],
     ) -> Optional[types.ModuleType]:
         """Core Import Process."""
-        result = jac_importer(
+        global jac_machine
+        if not jac_machine:
+            jac_machine = JacMachine(base_path)
+        result = jac_machine.run(
             target=target,
             base_path=base_path,
             absorb=absorb,

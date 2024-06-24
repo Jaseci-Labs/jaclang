@@ -25,7 +25,7 @@ from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
-
+from jaclang.core.importer import JacMachine
 
 Cmd.create_cmd()
 
@@ -91,8 +91,10 @@ def run(
     base, mod = os.path.split(filename)
     base = base if base else "./"
     mod = mod[:-4]
+    jac_machine = JacMachine(base)
+
     if filename.endswith(".jac"):
-        loaded_mod = jac_import(
+        loaded_mod = jac_machine.run(
             target=mod,
             base_path=base,
             cachable=cache,
@@ -101,7 +103,7 @@ def run(
     elif filename.endswith(".jir"):
         with open(filename, "rb") as f:
             ir = pickle.load(f)
-            loaded_mod = jac_import(
+            loaded_mod = jac_machine.run(
                 target=mod,
                 base_path=base,
                 cachable=cache,
