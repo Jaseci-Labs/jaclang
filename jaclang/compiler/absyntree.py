@@ -23,7 +23,7 @@ from jaclang.compiler.symtable import (
     SymbolType,
     TypeInfo,
 )
-from jaclang.utils.helpers import import_target_to_relative_path
+from jaclang.utils.helpers import get_definition_range, import_target_to_relative_path
 from jaclang.utils.treeprinter import dotgen_ast_tree, print_ast_tree
 
 
@@ -883,17 +883,19 @@ class ModuleItem(AstSymbolNode):
         self.set_kids(nodes=new_kid)
         return res
 
-    def get_item_path(self, node: Name, ser) -> str:
+    def get_item_path(
+        self, node: Name, ser
+    ) -> tuple[str, tuple[int, int]] | tuple[str, None]:  # noqa: ANN001
         """Get path."""
-        ser.log_py(f"Fix me1111 {self.name.value} {self.parent.parent}")
         if (
             self.parent
             and isinstance(self.parent.parent, Import)
             and self.parent.parent.hint.tag.value == "py"
+            and self.parent.parent.from_loc
         ):
-            path = self.parent.parent.from_loc.get_path(node, ser)
+            path = self.parent.parent.from_loc.get_mod_path(node, ser)
             if path:
-                return path, self.get_definition_range(path, node.value)
+                return path, get_definition_range(path, node.value)
         elif (
             self.parent
             and isinstance(self.parent.parent, Import)
@@ -906,68 +908,17 @@ class ModuleItem(AstSymbolNode):
             ser.log_py(f"modddd path \n\n\n{mod_node.sub_module}")
             if mod_node.sub_module:
                 for kid_ in mod_node.sub_module.kid[::-1]:
-                    ser.log_py(f"modddd path \n\n\n{kid_}")
                     if (
-                        (
-                            isinstance(kid_, Ability)
-                            and kid_.py_resolve_name() == node.value
-                        )
-                        or (
-                            isinstance(kid_, Architype)
-                            and kid_.name.value == node.value
-                        )
-                        or (isinstance(kid_, Enum) and kid_.name.value == node.value)
+                        isinstance(kid_, Ability)
+                        and kid_.py_resolve_name() == node.value
+                    ) or (
+                        isinstance(kid_, (Architype, Enum))
+                        and kid_.name.value == node.value
                     ):
-                        ser.log_py(f"Found {kid_}")
                         return kid_.loc.mod_path, (
                             kid_.loc.first_line,
                             kid_.loc.last_line,
                         )
-        ser.log_py(
-            f"Fix me --{self.name.value} {self.parent.parent.hint.tag.value} {self.parent.parent.from_loc}"
-        )
-
-    def get_definition_range(
-        self, filename: str, name: str
-    ) -> tuple[int, int] | tuple[None, None]:
-        """Get the start and end line of a function or class definition in a file."""
-        import ast
-        import inspect
-
-        with open(filename, "r") as file:
-            source = file.read()
-
-        tree = ast.parse(source)
-
-        all_nodes = list(ast.walk(tree))[::-1]
-
-        for node in all_nodes:
-            if (
-                isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.Assign))
-                and hasattr(node, "name")
-                and node.name == name
-            ):
-                start_line = node.lineno
-                end_line = node.end_lineno if hasattr(node, "end_lineno") else None
-
-                if end_line is None:
-                    lines = inspect.getsourcelines(node)
-                    end_line = start_line + len(lines[0]) - 1
-
-                return start_line, end_line
-            elif isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == name:
-                        start_line = node.lineno
-                        end_line = (
-                            node.end_lineno if hasattr(node, "end_lineno") else None
-                        )
-
-                        if end_line is None:
-                            lines = inspect.getsourcelines(node)
-                            end_line = start_line + len(lines[0]) - 1
-
-                        return start_line, end_line
 
 
 class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):

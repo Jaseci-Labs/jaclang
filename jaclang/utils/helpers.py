@@ -158,6 +158,47 @@ def is_standard_lib_module(module_path: str) -> bool:
     return os.path.isfile(file_path) or os.path.isdir(direc_path)
 
 
+def get_definition_range(
+    filename: str, name: str
+) -> tuple[int, int] | tuple[None, None]:
+    """Get the start and end line of a function or class definition in a file."""
+    import ast
+    import inspect
+
+    with open(filename, "r") as file:
+        source = file.read()
+
+    tree = ast.parse(source)
+
+    all_nodes = list(ast.walk(tree))[::-1]
+
+    for node in all_nodes:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.Assign))
+            and hasattr(node, "name")
+            and node.name == name
+        ):
+            start_line = node.lineno
+            end_line = node.end_lineno if hasattr(node, "end_lineno") else None
+
+            if end_line is None:
+                lines = inspect.getsourcelines(node)
+                end_line = start_line + len(lines[0]) - 1
+
+            return start_line, end_line
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    start_line = node.lineno
+                    end_line = node.end_lineno if hasattr(node, "end_lineno") else None
+
+                    if end_line is None:
+                        lines = inspect.getsourcelines(node)
+                        end_line = start_line + len(lines[0]) - 1
+
+                    return start_line, end_line
+
+
 class Jdb(pdb.Pdb):
     """Jac debugger."""
 
