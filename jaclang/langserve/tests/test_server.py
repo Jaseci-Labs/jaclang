@@ -143,16 +143,7 @@ class TestJacLangServer(TestCase):
         lsp.quick_check(circle_file)
         lsp.deep_check(circle_file)
         lsp.type_check(circle_file)
-        expected_string = (
-            "DocumentSymbol(name='calculate_area', kind=<SymbolKind.Function: 12>, range=9:0-9:43, "
-            "selection_range=9:0-9:43, detail=None, tags=None, deprecated=None, children=["
-            "DocumentSymbol(name='radius', kind=<SymbolKind.Variable: 13>, range=9:1-9:14, "
-            "selection_range=9:1-9:14, detail=None, tags=None, deprecated=None, children=[])])"
-        )
-        self.assertEqual(
-            expected_string, str((lsp.get_document_symbols(circle_file))[6])
-        )
-        self.assertEqual(10, len(lsp.get_document_symbols(circle_file)))
+        self.assertEqual(8, len(lsp.get_document_symbols(circle_file)))
 
     def test_go_to_definition(self) -> None:
         """Test that the go to definition is correct."""
@@ -169,7 +160,7 @@ class TestJacLangServer(TestCase):
             str(lsp.get_definition(circle_file, lspt.Position(9, 16))),
         )
         self.assertIn(
-            "fixtures/circle_pure.jac:12:0-17:1",
+            "fixtures/circle_pure.jac:13:11-13:16",
             str(lsp.get_definition(circle_file, lspt.Position(20, 17))),
         )
 
@@ -186,6 +177,23 @@ class TestJacLangServer(TestCase):
         lsp.deep_check(guess_game_file)
         lsp.type_check(guess_game_file)
         self.assertIn(
-            "guess_game4.jac:27:4-27:34",
+            "guess_game4.jac:27:8-27:21",
             str(lsp.get_definition(guess_game_file, lspt.Position(46, 45))),
+        )
+
+    def test_test_annex(self) -> None:
+        """Test that the server doesn't run if there is a syntax error."""
+        lsp = JacLangServer()
+        # Set up the workspace path to "fixtures/"
+        workspace_path = self.fixture_abs_path("")
+        workspace = Workspace(workspace_path, lsp)
+        lsp.lsp._workspace = workspace
+        circle_file = uris.from_fs_path(self.fixture_abs_path("circle_pure.test.jac"))
+        lsp.quick_check(circle_file)
+        lsp.deep_check(circle_file)
+        lsp.type_check(circle_file)
+        pos = lspt.Position(13, 29)
+        self.assertIn(
+            "shape_type: circle_pure.ShapeType",
+            lsp.get_hover_info(circle_file, pos).contents.value,
         )

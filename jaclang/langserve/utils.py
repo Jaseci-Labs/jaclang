@@ -68,7 +68,7 @@ def find_deepest_symbol_node_at_pos(
         if isinstance(node, ast.AstSymbolNode):
             last_symbol_node = node
 
-        for child in node.kid:
+        for child in [i for i in node.kid if i.loc.mod_path == node.loc.mod_path]:
             if position_within_node(child, line, character):
                 deeper_node = find_deepest_symbol_node_at_pos(child, line, character)
                 if deeper_node is not None:
@@ -106,23 +106,27 @@ def collect_symbols(node: SymbolTable) -> list[lspt.DocumentSymbol]:
         return symbols
 
     for key, item in node.tab.items():
-        if key in dir(builtins):
-            continue
-        if item in [owner_sym(tab) for tab in node.kid]:
+        if (
+            key in dir(builtins)
+            or item in [owner_sym(tab) for tab in node.kid]
+            or item.decl.loc.mod_path != node.owner.loc.mod_path
+        ):
             continue
         else:
 
-            pos = create_range(item.defn[0].loc)
+            pos = create_range(item.decl.loc)
             symbol = lspt.DocumentSymbol(
                 name=key,
-                kind=kind_map(item.defn[0]),
+                kind=kind_map(item.decl),
                 range=pos,
                 selection_range=pos,
                 children=[],
             )
             symbols.append(symbol)
 
-    for sub_tab in node.kid:
+    for sub_tab in [
+        i for i in node.kid if i.owner.loc.mod_path == node.owner.loc.mod_path
+    ]:
         sub_symbols = collect_symbols(sub_tab)
 
         if isinstance(
@@ -146,7 +150,7 @@ def collect_symbols(node: SymbolTable) -> list[lspt.DocumentSymbol]:
 
 def owner_sym(table: SymbolTable) -> Optional[Symbol]:
     """Get owner sym."""
-    if table.has_parent() and isinstance(table.owner, ast.AstSymbolNode):
+    if table.parent and isinstance(table.owner, ast.AstSymbolNode):
         return table.parent.lookup(table.owner.sym_name)
     return None
 

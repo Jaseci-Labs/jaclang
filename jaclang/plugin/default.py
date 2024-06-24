@@ -14,6 +14,7 @@ from typing import Any, Callable, Optional, Type, Union
 
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
+from jaclang.compiler.semtable import SemInfo, SemRegistry, SemScope
 from jaclang.core.aott import (
     aott_raise,
     extract_non_primary_type,
@@ -21,7 +22,7 @@ from jaclang.core.aott import (
     get_info_types,
     get_input_information,
 )
-from jaclang.core.construct import (
+from jaclang.core.constructs import (
     Architype,
     DSFunc,
     EdgeAnchor,
@@ -41,7 +42,7 @@ from jaclang.core.construct import (
 
 # from jaclang.core.importer import jac_importer
 from jaclang.core.importer import JacMachine
-from jaclang.core.registry import SemInfo, SemRegistry, SemScope
+from jaclang.compiler.semtable import SemInfo, SemRegistry, SemScope
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.plugin.spec import T
@@ -221,7 +222,7 @@ class JacFeatureDefaults:
         cachable: bool,
         mdl_alias: Optional[str],
         override_name: Optional[str],
-        mod_bundle: Optional[Module],
+        mod_bundle: Optional[Module | str],
         lng: Optional[str],
         items: Optional[dict[str, Union[str, bool]]],
     ) -> Optional[types.ModuleType]:
@@ -669,7 +670,7 @@ class JacFeatureDefaults:
 
         inputs_information = get_input_information(inputs, type_collector)
 
-        output_information = f"{outputs[0]} ({outputs[1]})"
+        output_information = f"{outputs[0]} ({outputs[1]})".strip()
         type_collector.extend(extract_non_primary_type(outputs[1]))
         output_type_explanations = "\n".join(
             list(
