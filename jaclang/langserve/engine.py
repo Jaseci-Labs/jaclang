@@ -293,13 +293,7 @@ class JacLangServer(LanguageServer):
         self.log_py(f"Node selected: {node}")
         self.log_py(f"Node selected parent: {node.parent}")
 
-        # self.log_py(f'varsss \n\n{vars(node)}')
-        # self.log_py(f'\ndecl {node.sym.decl}')
         try:
-            if node.parent and isinstance(node.parent, ast.ModulePath):
-                self.log_py(
-                    f"path of is {node.parent.get_path(node.parent.path.index(node),self)}"
-                )
             if isinstance(node, ast.NameSpec):
                 node = node.name_of
             access = node.sym.access.value + " " if node.sym else None
@@ -335,13 +329,13 @@ class JacLangServer(LanguageServer):
         )
         if node_selected:
             self.log_py(f"Node selected: {node_selected}")
-            # self.log_py(f'varsss \n\n{vars(node_selected)}')
-            if node_selected.parent and isinstance(
-                node_selected.parent, ast.ModulePath
+            self.log_py(f"Node selected.parent get def: {node_selected.parent}")
+            if (
+                isinstance(node_selected, ast.Name)
+                and node_selected.parent
+                and isinstance(node_selected.parent, ast.ModulePath)
             ):
-                spec = node_selected.parent.get_path(
-                    node_selected.parent.path.index(node_selected), self
-                )
+                spec = node_selected.parent.get_mod_path(node_selected, self)
                 self.log_py(f"path of is in get defini\n\n\n {spec}\n\n")
                 if spec:
                     return lspt.Location(
@@ -349,6 +343,20 @@ class JacLangServer(LanguageServer):
                         range=lspt.Range(
                             start=lspt.Position(line=0, character=0),
                             end=lspt.Position(line=0, character=0),
+                        ),
+                    )
+            if (
+                isinstance(node_selected, ast.Name)
+                and node_selected.parent
+                and isinstance(node_selected.parent, ast.ModuleItem)
+            ):
+                path, range = node_selected.parent.get_item_path(node_selected, self)
+                if path and range:
+                    return lspt.Location(
+                        uri=uris.from_fs_path(path),
+                        range=lspt.Range(
+                            start=lspt.Position(line=range[0], character=0),
+                            end=lspt.Position(line=range[1], character=5),
                         ),
                     )
             if isinstance(node_selected, (ast.ElementStmt, ast.BuiltinType)):

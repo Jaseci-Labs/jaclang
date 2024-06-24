@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import ast as ast3
 import importlib.util
+import math
 import os
+import sys
 from hashlib import md5
 from types import EllipsisType
 from typing import Any, Callable, Generic, Optional, Sequence, Type, TypeVar
+
 from jaclang.compiler import TOKEN_MAP
 from jaclang.compiler.codeloc import CodeGenTarget, CodeLocInfo
 from jaclang.compiler.constant import Constants as Con, EdgeDir
@@ -761,7 +764,9 @@ class ModulePath(AstSymbolNode):
             [p.value for p in self.path] if self.path else ""
         )
 
-    def get_path(self, i: int, ser) -> str:
+    def get_mod_path(self, node: Name, ser) -> str:  # noqa: ANN001
+        """Get path."""
+        mod_path = self.loc.mod_path
         if self.parent and (
             (
                 isinstance(self.parent.parent, Import)
@@ -773,17 +778,20 @@ class ModulePath(AstSymbolNode):
                 and self.parent.hint.tag.value == "py"
             )
         ):
-            temp_path_str = ("." * self.level) + ".".join(
-                [p.value for p in self.path[: i + 1]] if self.path else ""
-            )
+            if self.path and node in self.path:
+                temp_path_str = ("." * self.level) + ".".join(
+                    [p.value for p in self.path[: self.path.index(node) + 1]]
+                    if self.path
+                    else ""
+                )
+            else:
+                temp_path_str = self.path_str
+            sys.path.append(os.path.dirname(mod_path))
             spec = importlib.util.find_spec(temp_path_str)
             if spec and spec.origin:
-                import math
-                import sys
 
-                if spec.origin == "frozen":
-                    if self.path_str == "os":
-                        return os.__file__
+                if spec.origin == "frozen" and self.path_str == "os":
+                    return os.__file__
                 if spec.origin == "built-in":
                     return (
                         math.__file__
@@ -791,7 +799,9 @@ class ModulePath(AstSymbolNode):
                         else sys.prefix if self.path_str == "sys" else spec.origin
                     )
                 return spec.origin
-            return spec
+            else:
+                ser.log_py(f"Fix me --{temp_path_str} {spec}")
+
         elif self.parent and (
             (
                 isinstance(self.parent.parent, Import)
@@ -803,21 +813,15 @@ class ModulePath(AstSymbolNode):
                 and self.parent.hint.tag.value == "jac"
             )
         ):
-            ser.log_py(f"jac import1 --{self.path_str}")
-            mod_path = self.loc.mod_path
             targ = import_target_to_relative_path(
                 level=self.level,
                 target=self.path_str,
                 base_path=os.path.dirname(mod_path),
             )
-            ser.log_py(f"jac import --{targ}")
             if os.path.isdir(targ):
-                self.log_py(f"Fixxx meee {targ}")
+                ser.log_py(f"Fixxx meee {targ}")
             else:
                 return targ
-        ser.log_py(
-            f"jac \n\nhere\n\n -{self.parent}-{self.path_str} {self.path} {self.level} {self.alias}"
-        )
 
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module path node."""
@@ -878,6 +882,92 @@ class ModuleItem(AstSymbolNode):
             new_kid.append(self.alias)
         self.set_kids(nodes=new_kid)
         return res
+
+    def get_item_path(self, node: Name, ser) -> str:
+        """Get path."""
+        ser.log_py(f"Fix me1111 {self.name.value} {self.parent.parent}")
+        if (
+            self.parent
+            and isinstance(self.parent.parent, Import)
+            and self.parent.parent.hint.tag.value == "py"
+        ):
+            path = self.parent.parent.from_loc.get_path(node, ser)
+            if path:
+                return path, self.get_definition_range(path, node.value)
+        elif (
+            self.parent
+            and isinstance(self.parent.parent, Import)
+            and self.parent.parent.hint.tag.value == "jac"
+        ):
+            mod_node = [x for x in self.parent.parent.kid if isinstance(x, ModulePath)][
+                0
+            ]
+            ser.log_py(f"modddd path \n\n\n{mod_node}")
+            ser.log_py(f"modddd path \n\n\n{mod_node.sub_module}")
+            if mod_node.sub_module:
+                for kid_ in mod_node.sub_module.kid[::-1]:
+                    ser.log_py(f"modddd path \n\n\n{kid_}")
+                    if (
+                        (
+                            isinstance(kid_, Ability)
+                            and kid_.py_resolve_name() == node.value
+                        )
+                        or (
+                            isinstance(kid_, Architype)
+                            and kid_.name.value == node.value
+                        )
+                        or (isinstance(kid_, Enum) and kid_.name.value == node.value)
+                    ):
+                        ser.log_py(f"Found {kid_}")
+                        return kid_.loc.mod_path, (
+                            kid_.loc.first_line,
+                            kid_.loc.last_line,
+                        )
+        ser.log_py(
+            f"Fix me --{self.name.value} {self.parent.parent.hint.tag.value} {self.parent.parent.from_loc}"
+        )
+
+    def get_definition_range(
+        self, filename: str, name: str
+    ) -> tuple[int, int] | tuple[None, None]:
+        """Get the start and end line of a function or class definition in a file."""
+        import ast
+        import inspect
+
+        with open(filename, "r") as file:
+            source = file.read()
+
+        tree = ast.parse(source)
+
+        all_nodes = list(ast.walk(tree))[::-1]
+
+        for node in all_nodes:
+            if (
+                isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.Assign))
+                and hasattr(node, "name")
+                and node.name == name
+            ):
+                start_line = node.lineno
+                end_line = node.end_lineno if hasattr(node, "end_lineno") else None
+
+                if end_line is None:
+                    lines = inspect.getsourcelines(node)
+                    end_line = start_line + len(lines[0]) - 1
+
+                return start_line, end_line
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == name:
+                        start_line = node.lineno
+                        end_line = (
+                            node.end_lineno if hasattr(node, "end_lineno") else None
+                        )
+
+                        if end_line is None:
+                            lines = inspect.getsourcelines(node)
+                            end_line = start_line + len(lines[0]) - 1
+
+                        return start_line, end_line
 
 
 class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
