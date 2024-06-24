@@ -533,6 +533,13 @@ class JacMachine:
         items: Optional[dict[str, Union[str, bool]]] = None,
     ) -> Optional[tuple[Module, ...]]:
         """Load a module based on provided parameters, handling Jac and Python specifics."""
+        valid_mod_bundle = (
+            sys.modules[mod_bundle].__jac_mod_bundle__
+            if isinstance(mod_bundle, str)
+            and mod_bundle in sys.modules
+            and "__jac_mod_bundle__" in sys.modules[mod_bundle].__dict__
+            else mod_bundle
+        )
         spec = ImportPathSpec(
             target=target,
             base_path=base_path,
@@ -540,7 +547,7 @@ class JacMachine:
             cachable=cachable,
             mdl_alias=mdl_alias,
             override_name=override_name,
-            mod_bundle=mod_bundle,
+            mod_bundle=valid_mod_bundle,
             lng=lng,
             items=items,
             main_base_dir=self.main_base_dir,
