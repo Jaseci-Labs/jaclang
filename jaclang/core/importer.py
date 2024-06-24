@@ -58,7 +58,6 @@ class ImportPathSpec:
             os.path.abspath(self.full_mod_path) if full_path is None else full_path
         )
 
-        print(f"Resolved system module:{full_path}, base module: {self.main_base_dir}")
         if not full_path.startswith(self.main_base_dir):
             return None
         rel_path = os.path.relpath(full_path, self.main_base_dir)
@@ -71,7 +70,7 @@ class ImportPathSpec:
 
     def smart_join(self, base_path: str, target_path: str) -> str:
         """Join two paths while attempting to remove any redundant segments."""
-        print(base_path, target_path)
+
         base_parts = os.path.normpath(base_path).split(os.sep)
         target_parts = os.path.normpath(target_path).split(os.sep)
         while base_parts and target_parts and base_parts[-1] == target_parts[0]:
@@ -117,9 +116,6 @@ class Importer(abc.ABC):
         """
         Logs an error message. This can be overridden by subclasses if they have specific logging requirements.
         """
-        print(
-            f"Error: {message}"
-        )  # Placeholder for logging, can be replaced with a proper logging framework.
 
     def validate_spec(self, spec: "ImportPathSpec") -> bool:
         """
@@ -528,7 +524,7 @@ class JacMachine:
         cachable: bool = True,
         mdl_alias: Optional[str] = None,
         override_name: Optional[str] = None,
-        mod_bundle: Optional[Module] = None,
+        mod_bundle: Optional[Module | str] = None,
         lng: Optional[str] = "jac",
         items: Optional[dict[str, Union[str, bool]]] = None,
     ) -> Optional[tuple[Module, ...]]:
@@ -552,7 +548,7 @@ class JacMachine:
             items=items,
             main_base_dir=self.main_base_dir,
         )
-        print(spec.caller_dir)
+
         # if spec.module_name in self.loaded_programs:
         #     return (self.loaded_programs[spec.module_name],)
         importer = self.python_importer if spec.language == "py" else self.jac_importer
@@ -566,7 +562,6 @@ class JacMachine:
 
     def initialize_base_dir(self, base_path: str) -> str:
         """Compute and set the main base directory."""
-        print(f"initialize_base_dir: {base_path}")
         if not os.path.isdir(base_path):
             return os.path.dirname(base_path)
         elif os.path.isfile(base_path):

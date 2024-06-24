@@ -9,6 +9,7 @@ from uuid import UUID
 
 from .architype import Architype, Root
 from .memory import Memory, ShelveStorage
+from jaclang.core.importer import JacMachine
 
 
 class ExecutionContext:
@@ -16,12 +17,14 @@ class ExecutionContext:
 
     mem: Optional[Memory]
     root: Optional[Root]
+    machine: JacMachine
 
     def __init__(self) -> None:
         """Create execution context."""
         super().__init__()
         self.mem = ShelveStorage()
         self.root = None
+        self.machine = None
 
     def init_memory(self, session: str = "") -> None:
         """Initialize memory."""
@@ -66,6 +69,7 @@ class ExecutionContext:
             self.mem.close()
         self.mem = None
         self.root = None
+        self.machine = None
 
 
 exec_context: ContextVar[ExecutionContext | None] = ContextVar(
