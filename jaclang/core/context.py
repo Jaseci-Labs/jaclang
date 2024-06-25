@@ -15,7 +15,7 @@ from jaclang.core.importer import JacMachine
 class ExecutionContext:
     """Default Execution Context implementation."""
 
-    mem: Memory
+    mem: Optional[Memory]
     root: Optional[Root]
     machine: Optional[JacMachine]
 
