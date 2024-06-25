@@ -19,6 +19,8 @@ from jaclang.langserve.utils import (
     collect_symbols,
     create_range,
     find_deepest_symbol_node_at_pos,
+    get_item_path,
+    get_mod_path,
 )
 from jaclang.vendor.pygls import uris
 from jaclang.vendor.pygls.server import LanguageServer
@@ -27,7 +29,7 @@ import lsprotocol.types as lspt
 
 
 class ALev(IntEnum):
-    """Analysis Level."""
+    """Analysis Level successfully completed."""
 
     QUICK = 1
     DEEP = 2
@@ -52,6 +54,7 @@ class ModuleInfo:
         self.alev = alev
         self.parent: Optional[ModuleInfo] = parent
         self.diagnostics = self.gen_diagnostics()
+        self.sem_tokens: list[int] = []
 
     @property
     def uri(self) -> str:
@@ -63,11 +66,15 @@ class ModuleInfo:
         """Return if there are syntax errors."""
         return len(self.errors) > 0 and self.alev == ALev.QUICK
 
-    def update_with(self, new_info: ModuleInfo) -> None:
+    def update_with(self, new_info: ModuleInfo, refresh: bool = False) -> None:
         """Update module info."""
         self.ir = new_info.ir
-        self.errors += [i for i in new_info.errors if i not in self.errors]
-        self.warnings += [i for i in new_info.warnings if i not in self.warnings]
+        if refresh:
+            self.errors = new_info.errors
+            self.warnings = new_info.warnings
+        else:
+            self.errors += [i for i in new_info.errors if i not in self.errors]
+            self.warnings += [i for i in new_info.warnings if i not in self.warnings]
         self.alev = new_info.alev
         self.diagnostics = self.gen_diagnostics()
 
@@ -153,8 +160,8 @@ class JacLangServer(LanguageServer):
             ],
             alev=alev,
         )
-        if not refresh and file_path in self.modules:
-            self.modules[file_path].update_with(new_mod)
+        if file_path in self.modules:
+            self.modules[file_path].update_with(new_mod, refresh=refresh)
         else:
             self.modules[file_path] = new_mod
         for p in build.ir.mod_deps.keys():
@@ -184,6 +191,7 @@ class JacLangServer(LanguageServer):
             )
         except Exception as e:
             self.log_error(f"Error during syntax check: {e}")
+            return False
         self.update_modules(file_path, build, ALev.QUICK, refresh=True)
         return len(self.modules[file_path].errors) == 0
 
@@ -198,6 +206,7 @@ class JacLangServer(LanguageServer):
             build = jac_ir_to_pass(ir=self.modules[file_path].ir)
         except Exception as e:
             self.log_error(f"Error during syntax check: {e}")
+            return False
         self.update_modules(file_path, build, ALev.DEEP)
         return len(self.modules[file_path].errors) == 0
 
@@ -214,6 +223,7 @@ class JacLangServer(LanguageServer):
             )
         except Exception as e:
             self.log_error(f"Error during type check: {e}")
+            return False
         self.update_modules(file_path, build, ALev.TYPE)
         return len(self.modules[file_path].errors) == 0
 
@@ -336,7 +346,39 @@ class JacLangServer(LanguageServer):
             self.modules[file_path].ir, position.line, position.character
         )
         if node_selected:
-            if isinstance(node_selected, (ast.ElementStmt, ast.BuiltinType)):
+            if (
+                isinstance(node_selected, ast.Name)
+                and node_selected.parent
+                and isinstance(node_selected.parent, ast.ModulePath)
+            ):
+                spec = get_mod_path(node_selected.parent, node_selected)
+                if spec:
+                    return lspt.Location(
+                        uri=uris.from_fs_path(spec),
+                        range=lspt.Range(
+                            start=lspt.Position(line=0, character=0),
+                            end=lspt.Position(line=0, character=0),
+                        ),
+                    )
+                else:
+                    return None
+            elif node_selected.parent and isinstance(
+                node_selected.parent, ast.ModuleItem
+            ):
+                path_range = get_item_path(node_selected.parent)
+                if path_range:
+                    path, range = path_range
+                    if path and range:
+                        return lspt.Location(
+                            uri=uris.from_fs_path(path),
+                            range=lspt.Range(
+                                start=lspt.Position(line=range[0], character=0),
+                                end=lspt.Position(line=range[1], character=5),
+                            ),
+                        )
+                else:
+                    return None
+            elif isinstance(node_selected, (ast.ElementStmt, ast.BuiltinType)):
                 return None
             decl_node = (
                 node_selected.parent.body.target
@@ -366,6 +408,10 @@ class JacLangServer(LanguageServer):
 
     def get_semantic_tokens(self, file_path: str) -> lspt.SemanticTokens:
         """Return semantic tokens for a file."""
+        tokens = self.modules[file_path].sem_tokens
+        # Only update if fully analyzed
+        if self.modules[file_path].alev < ALev.TYPE:
+            return lspt.SemanticTokens(data=tokens)
         tokens = []
         prev_line, prev_col = 0, 0
         for node in self.modules[file_path].ir._in_mod_nodes:
@@ -383,7 +429,7 @@ class JacLangServer(LanguageServer):
                     *node.sem_token,
                 ]
                 prev_line, prev_col = line, col_start
-
+        self.modules[file_path].sem_tokens = tokens
         return lspt.SemanticTokens(data=tokens)
 
     def log_error(self, message: str) -> None:

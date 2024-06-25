@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast as ast3
+import builtins
 import os
 from hashlib import md5
 from types import EllipsisType
@@ -501,22 +502,32 @@ class NameAtom(AtomExpr, EnumBlockStmt):
     @property
     def sem_token(self) -> Optional[tuple[SemTokType, SemTokMod]]:
         """Resolve semantic token."""
+        if isinstance(self.name_of, BuiltinType):
+            return SemTokType.CLASS, SemTokMod.DECLARATION
         name_of = self.sym.decl.name_of if self.sym else self.name_of
         if isinstance(name_of, ModulePath):
             return SemTokType.NAMESPACE, SemTokMod.DEFINITION
-        elif isinstance(name_of, (Architype, BuiltinType)):
+        if isinstance(name_of, Architype):
             return SemTokType.CLASS, SemTokMod.DECLARATION
-        elif isinstance(name_of, Enum):
+        if isinstance(name_of, Enum):
             return SemTokType.ENUM, SemTokMod.DECLARATION
-        elif isinstance(name_of, Ability):
-            if name_of.is_method:
-                return SemTokType.METHOD, SemTokMod.DECLARATION
-        elif isinstance(name_of, (Ability, Test)):
+        if isinstance(name_of, Ability) and name_of.is_method:
+            return SemTokType.METHOD, SemTokMod.DECLARATION
+        if isinstance(name_of, (Ability, Test)):
             return SemTokType.FUNCTION, SemTokMod.DECLARATION
-        elif isinstance(name_of, ParamVar):
+        if isinstance(name_of, ParamVar):
             return SemTokType.PARAMETER, SemTokMod.DECLARATION
-        elif self.sym:
-            return SemTokType.PROPERTY, SemTokMod.DECLARATION
+        if self.sym and self.sym_name.isupper():
+            return SemTokType.VARIABLE, SemTokMod.READONLY
+        if (
+            self.sym
+            and self.sym.decl.name_of == self.sym.decl
+            and self.sym_name in dir(builtins)
+            and callable(getattr(builtins, self.sym_name))
+        ):
+            return SemTokType.FUNCTION, SemTokMod.DEFINITION
+        if self.sym:
+            return SemTokType.PROPERTY, SemTokMod.DEFINITION
         return None
 
 
@@ -964,6 +975,24 @@ class ModuleItem(AstSymbolNode):
             sym_category=SymbolType.MOD_VAR,
         )
 
+    @property
+    def from_parent(self) -> Import:
+        """Get import parent."""
+        if (
+            not self.parent
+            or not self.parent.parent
+            or not isinstance(self.parent.parent, Import)
+        ):
+            raise ValueError("Import parent not found. Not Possible.")
+        return self.parent.parent
+
+    @property
+    def from_mod_path(self) -> ModulePath:
+        """Get relevant module path."""
+        if not self.from_parent.from_loc:
+            raise ValueError("Module items should have module path. Not Possible.")
+        return self.from_parent.from_loc
+
     def normalize(self, deep: bool = False) -> bool:
         """Normalize module item node."""
         res = True
@@ -1219,6 +1248,7 @@ class Ability(
     ElementStmt,
     AstAsyncNode,
     ArchBlockStmt,
+    EnumBlockStmt,
     CodeBlockStmt,
     AstSemStrNode,
     AstImplNeedingNode,
@@ -1264,6 +1294,17 @@ class Ability(
     def is_method(self) -> bool:
         """Check if is func."""
         return self.signature.is_method
+
+    @property
+    def owner_method(self) -> Optional[Architype | Enum]:
+        """Check if is owner method."""
+        return (
+            self.parent.parent
+            if self.parent
+            and self.parent.parent
+            and isinstance(self.parent.parent, (Architype, Enum))
+            else None
+        )
 
     @property
     def is_genai_ability(self) -> bool:
@@ -3955,7 +3996,9 @@ class Name(Token, NameAtom):
         )
 
     @staticmethod
-    def gen_stub_from_node(node: AstSymbolNode, name_str: str) -> Name:
+    def gen_stub_from_node(
+        node: AstSymbolNode, name_str: str, set_name_of: Optional[AstSymbolNode] = None
+    ) -> Name:
         """Generate name from node."""
         ret = Name(
             file_path=node.loc.mod_path,
@@ -3968,7 +4011,7 @@ class Name(Token, NameAtom):
             pos_start=node.loc.pos_start,
             pos_end=node.loc.pos_end,
         )
-        ret.name_of = node
+        ret.name_of = set_name_of if set_name_of else ret
         if node._sym_tab:
             ret.sym_tab = node.sym_tab
         return ret

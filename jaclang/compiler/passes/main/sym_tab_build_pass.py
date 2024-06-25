@@ -129,7 +129,9 @@ class SymTabBuildPass(Pass):
         import unittest
 
         for i in [j for j in dir(unittest.TestCase()) if j.startswith("assert")]:
-            node.sym_tab.def_insert(ast.Name.gen_stub_from_node(node, i))
+            node.sym_tab.def_insert(
+                ast.Name.gen_stub_from_node(node, i, set_name_of=node)
+            )
 
     def exit_test(self, node: ast.Test) -> None:
         """Sub objects.
@@ -304,7 +306,11 @@ class SymTabBuildPass(Pass):
         self.sync_node_to_scope(node)
         if node.is_method:
             node.sym_tab.def_insert(ast.Name.gen_stub_from_node(node, "self"))
-            node.sym_tab.def_insert(ast.Name.gen_stub_from_node(node, "super"))
+            node.sym_tab.def_insert(
+                ast.Name.gen_stub_from_node(
+                    node, "super", set_name_of=node.owner_method
+                )
+            )
 
     def exit_ability(self, node: ast.Ability) -> None:
         """Sub objects.
