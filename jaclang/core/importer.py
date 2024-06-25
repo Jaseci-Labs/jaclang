@@ -24,11 +24,10 @@ class ImportPathSpec:
         self,
         target: str,
         base_path: str,
+        machine: JacMachine,
         absorb: bool = False,
-        cachable: bool = True,
         mdl_alias: Optional[str] = None,
         override_name: Optional[str] = None,
-        mod_bundle: Optional[Module] = None,
         lng: Optional[str] = "jac",
         items: Optional[Dict[str, Union[str, bool]]] = None,
         main_base_dir: Optional[str] = None,
@@ -36,11 +35,10 @@ class ImportPathSpec:
         """Initialize ImportPathSpec."""
         self.target = target
         self.base_path = base_path
+        self.machine = machine
         self.absorb = absorb
-        self.cachable = cachable
         self.mdl_alias = mdl_alias
         self.override_name = override_name or target
-        self.mod_bundle = mod_bundle
         self.language = lng
         self.items = items
         self.main_base_dir = main_base_dir
@@ -52,10 +50,21 @@ class ImportPathSpec:
 
     def get_full_target(self) -> str:
         """Computes the full file path based on the target and base path."""
-        target_path = os.path.join(*(self.target.split(".")))
-        dir_path, file_name = os.path.split(target_path)
-        self.caller_dir = self.get_caller_dir(self.target, self.base_path, dir_path)
-        self.module_name = os.path.splitext(file_name)[0]
+
+        def get_caller_dir(target: str, base_path: str, dir_path: str) -> str:
+            """Get the directory of the caller."""
+            caller_dir = (
+                base_path if os.path.isdir(base_path) else os.path.dirname(base_path)
+            )
+            caller_dir = caller_dir if caller_dir else os.getcwd()
+            chomp_target = target
+            if chomp_target.startswith("."):
+                chomp_target = chomp_target[1:]
+                while chomp_target.startswith("."):
+                    caller_dir = os.path.dirname(caller_dir)
+                    chomp_target = chomp_target[1:]
+            caller_dir = os.path.join(caller_dir, dir_path)
+            return caller_dir
 
         def smart_join(base_path: str, target_path: str) -> str:
             """Join two paths while attempting to remove any redundant segments."""
@@ -65,6 +74,10 @@ class ImportPathSpec:
                 target_parts.pop(0)
             return os.path.normpath(os.path.join(base_path, *target_parts))
 
+        target_path = os.path.join(*(self.target.split(".")))
+        dir_path, file_name = os.path.split(target_path)
+        self.caller_dir = get_caller_dir(self.target, self.base_path, dir_path)
+        self.module_name = os.path.splitext(file_name)[0]
         return smart_join(self.caller_dir, target_path)
 
     def resolve_sys_mod_name(self, full_path: Optional[str] = None) -> str:
@@ -82,27 +95,12 @@ class ImportPathSpec:
             mod_name = mod_name[:-9]
         return mod_name
 
-    def get_caller_dir(self, target: str, base_path: str, dir_path: str) -> str:
-        """Get the directory of the caller."""
-        caller_dir = (
-            base_path if os.path.isdir(base_path) else os.path.dirname(base_path)
-        )
-        caller_dir = caller_dir if caller_dir else os.getcwd()
-        chomp_target = target
-        if chomp_target.startswith("."):
-            chomp_target = chomp_target[1:]
-            while chomp_target.startswith("."):
-                caller_dir = os.path.dirname(caller_dir)
-                chomp_target = chomp_target[1:]
-        caller_dir = os.path.join(caller_dir, dir_path)
-        return caller_dir
-
 
 class Importer(abc.ABC):
     """Abstract base class for all types of module importers."""
 
     @abc.abstractmethod
-    def run_import(self, spec: "ImportPathSpec") -> "ImportReturn":
+    def run_import(self, spec: ImportPathSpec) -> ImportReturn:
         """Implement import logic as specified by subclasses."""
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -146,20 +144,19 @@ class ImportReturn:
         self,
         module: Optional[types.ModuleType],
         spec: ImportPathSpec,
-        mod_bundle: Optional[Module],
-        importer: Importer,
+        importer: JacImporter,
     ) -> None:
         """Initialize the import return module."""
         self.ret_mod = module
-        self.mod_bundle = mod_bundle
         self.importer = importer
+        self.spec = spec
         (self.ret_mod, self.ret_list) = self.decide_return(module, spec)
 
     def setup_parent_modules(self, spec: ImportPathSpec) -> None:
         """Set up and register parent modules for the current module."""
         parent_module_name, submodule_name = spec.target.rsplit(".", 1)
         parent_module = self.importer.ensure_parent_module(
-            parent_module_name, spec.full_mod_path, self.mod_bundle
+            parent_module_name, spec.full_mod_path, self.spec.machine.mod_bundle
         )
         setattr(parent_module, submodule_name, self.ret_mod)
         self.parent_module = parent_module
@@ -237,7 +234,7 @@ class JacImporter(Importer):
     """Jac Importer class."""
 
     def ensure_parent_module(
-        self, module_name: str, full_target: str, mod_bundle: types.ModuleType
+        self, module_name: str, full_target: str, mod_bundle: Optional[types.ModuleType]
     ) -> types.ModuleType:
         """Ensure that the module is created and added to sys.modules."""
         try:
@@ -283,8 +280,8 @@ class JacImporter(Importer):
             codeobj = self.get_codeobj(
                 full_target=jac_file_path,
                 module_name=name,
-                mod_bundle=spec.mod_bundle,
-                cachable=spec.cachable,
+                mod_bundle=spec.machine.mod_bundle,
+                cachable=spec.machine.cachable,
             )
             if not codeobj:
                 raise ImportError(f"No bytecode found for {jac_file_path}")
@@ -322,7 +319,6 @@ class JacImporter(Importer):
                         return ImportReturn(
                             module=None,
                             spec=spec,
-                            mod_bundle=spec.mod_bundle,
                             importer=self,
                         )
                 else:
@@ -330,28 +326,27 @@ class JacImporter(Importer):
                     return ImportReturn(
                         module=None,
                         spec=spec,
-                        mod_bundle=spec.mod_bundle,
                         importer=self,
                     )
             codeobj = self.get_codeobj(
                 full_target=full_jac_path,
                 module_name=module.__name__,
-                mod_bundle=spec.mod_bundle,
-                cachable=spec.cachable,
+                mod_bundle=spec.machine.mod_bundle,
+                cachable=spec.machine.cachable,
             )
             if not codeobj:
                 self.log_error(f"No bytecode found for {spec.full_mod_path}")
                 return ImportReturn(
-                    module=None, spec=spec, mod_bundle=spec.mod_bundle, importer=self
+                    module=None,
+                    spec=spec,
+                    importer=self,
                 )
 
             with sys_path_context(os.path.dirname(spec.full_mod_path)):
                 module.__file__ = f"{spec.full_mod_path}.jac"
                 exec(codeobj, module.__dict__)
 
-        return ImportReturn(
-            module, mod_bundle=spec.mod_bundle, spec=spec, importer=self
-        )
+        return ImportReturn(module, spec=spec, importer=self)
 
     def get_codeobj(
         self,
@@ -406,7 +401,7 @@ class JacImporter(Importer):
                 module_name = spec.resolve_sys_mod_name(full_target)
             module = types.ModuleType(module_name)
             module.__name__ = module_name
-            module.__dict__["__jac_mod_bundle__"] = spec.mod_bundle
+            module.__dict__["__jac_mod_bundle__"] = spec.machine.mod_bundle
             if os.path.isdir(full_target):
                 module.__path__ = [full_target]
                 init_file = os.path.join(full_target, "__init__.jac")
@@ -426,7 +421,9 @@ class JacImporter(Importer):
                     interim_module.__package__ = ".".join(
                         constructed_path.split(".")[:-1]
                     )
-                    interim_module.__dict__["__jac_mod_bundle__"] = spec.mod_bundle
+                    interim_module.__dict__["__jac_mod_bundle__"] = (
+                        spec.machine.mod_bundle
+                    )
                     if os.path.isdir(os.path.dirname(full_target)):
                         interim_module.__path__ = [os.path.dirname(full_target)]
                     if i == len(namespace_parts) - 1 and not os.path.isdir(full_target):
@@ -485,7 +482,7 @@ class PythonImporter(Importer):
     def run_import(self, spec: "ImportPathSpec") -> "ImportReturn":
         """Import a Python module using the specifications provided."""
         if not self.validate_spec(spec):
-            return ImportReturn(None, spec=spec, mod_bundle=None, importer=self)
+            return ImportReturn(None, spec=spec, importer=self)
 
         try:
             loaded_items = {}
@@ -533,10 +530,10 @@ class PythonImporter(Importer):
                     setattr(main_module, spec.mdl_alias, module)
                 else:
                     setattr(main_module, spec.target, module)
-            return ImportReturn(module, spec, mod_bundle=None, importer=self)
+            return ImportReturn(module, spec, importer=self)
         except ImportError as e:
             self.log_error(str(e))
-            return ImportReturn(None, spec, mod_bundle=None, importer=self)
+            return ImportReturn(None, spec, importer=self)
 
     def update_sys(self, module: types.ModuleType, spec: "ImportPathSpec") -> None:
         """Update sys.modules after import."""
@@ -553,6 +550,8 @@ class JacMachine:
         self.jac_importer = JacImporter()
         self.python_importer = PythonImporter()
         self.main_base_dir = self.initialize_base_dir(base_path)
+        self.cachable = True
+        self.mod_bundle = None
 
     def run(
         self,
@@ -567,6 +566,7 @@ class JacMachine:
         items: Optional[dict[str, Union[str, bool]]] = None,
     ) -> Optional[tuple[Module, ...] | None]:
         """Load a module based on provided parameters, handling Jac and Python specifics."""
+        self.cachable = cachable
         valid_mod_bundle = (
             sys.modules[mod_bundle].__jac_mod_bundle__
             if isinstance(mod_bundle, str)
@@ -574,14 +574,14 @@ class JacMachine:
             and "__jac_mod_bundle__" in sys.modules[mod_bundle].__dict__
             else mod_bundle
         )
+        self.mod_bundle = valid_mod_bundle
         spec = ImportPathSpec(
             target=target,
             base_path=base_path,
+            machine=self,
             absorb=absorb,
-            cachable=cachable,
             mdl_alias=mdl_alias,
             override_name=override_name,
-            mod_bundle=valid_mod_bundle,
             lng=lng,
             items=items,
             main_base_dir=self.main_base_dir,
