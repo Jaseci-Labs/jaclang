@@ -68,14 +68,22 @@ class ModuleInfo:
 
     def update_with(self, new_info: ModuleInfo, refresh: bool = False) -> None:
         """Update module info."""
-        self.ir = new_info.ir
+        self.ir =(
+            new_info.ir
+            if not self.ir or new_info.alev > self.alev or new_info.alev == ALev.TYPE
+            else self.ir
+        )
+        self.alev=(
+            new_info.alev
+            if not self.ir or new_info.alev > self.alev or new_info.alev == ALev.TYPE
+            else self.alev
+        )
         if refresh:
             self.errors = new_info.errors
             self.warnings = new_info.warnings
         else:
             self.errors += [i for i in new_info.errors if i not in self.errors]
             self.warnings += [i for i in new_info.warnings if i not in self.warnings]
-        self.alev = new_info.alev
         self.diagnostics = self.gen_diagnostics()
 
     def gen_diagnostics(self) -> list[lspt.Diagnostic]:
@@ -104,19 +112,6 @@ class JacLangServer(LanguageServer):
         """Initialize workspace."""
         super().__init__("jac-lsp", "v0.1")
         self.modules: dict[str, ModuleInfo] = {}
-
-    def module_not_diff(self, uri: str, alev: ALev) -> bool:
-        """Check if module was changed."""
-        doc = self.workspace.get_text_document(uri)
-        return (
-            doc.uri in self.modules
-            and self.modules[doc.uri].ir.source.hash
-            == md5(doc.source.encode()).hexdigest()
-            and (
-                self.modules[doc.uri].alev >= alev
-                or self.modules[doc.uri].has_syntax_error
-            )
-        )
 
     def push_diagnostics(self, file_path: str) -> None:
         """Push diagnostics for a file."""
@@ -182,8 +177,6 @@ class JacLangServer(LanguageServer):
 
     def quick_check(self, file_path: str, force: bool = False) -> bool:
         """Rebuild a file."""
-        if not force and self.module_not_diff(file_path, ALev.QUICK):
-            return len(self.modules[file_path].errors) == 0
         try:
             document = self.workspace.get_text_document(file_path)
             build = jac_str_to_pass(
@@ -199,8 +192,6 @@ class JacLangServer(LanguageServer):
         """Rebuild a file and its dependencies."""
         if file_path in self.modules:
             self.quick_check(file_path, force=force)
-        if not force and self.module_not_diff(file_path, ALev.DEEP):
-            return len(self.modules[file_path].errors) == 0
         try:
             file_path = self.unwind_to_parent(file_path)
             build = jac_ir_to_pass(ir=self.modules[file_path].ir)
@@ -214,8 +205,6 @@ class JacLangServer(LanguageServer):
         """Rebuild a file and its dependencies."""
         if file_path not in self.modules:
             self.deep_check(file_path, force=force)
-        if not force and self.module_not_diff(file_path, ALev.TYPE):
-            return len(self.modules[file_path].errors) == 0
         try:
             file_path = self.unwind_to_parent(file_path)
             build = jac_ir_to_pass(
@@ -243,15 +232,39 @@ class JacLangServer(LanguageServer):
     ) -> lspt.CompletionList:
         """Return completion for a file."""
         items = []
-        document = self.workspace.get_text_document(file_path)
-        current_line = document.lines[position.line].strip()
-        if current_line.endswith("hello."):
+        # document = self.workspace.get_text_document(file_path)
+        # current_line = document.lines[position.line].strip()
+        node_selected = find_deepest_symbol_node_at_pos(
+            self.modules[file_path].ir, position.line, position.character - 2,
+        )
+        from jaclang.compiler.symtable import Symbol, SymbolTable
+        import builtins
+        def get_all_symbols(sym_tab: SymbolTable):
+            symbols = []
+            visited = set()
+            current_tab = sym_tab
 
-            items = [
-                lspt.CompletionItem(label="world"),
-                lspt.CompletionItem(label="friend"),
-            ]
-        return lspt.CompletionList(is_incomplete=False, items=items)
+            while current_tab is not None and current_tab not in visited:
+                visited.add(current_tab)
+                for name, symbol in current_tab.tab.items():
+                    if name not in dir(builtins):
+                        symbols.append(name)
+                current_tab = current_tab.parent if current_tab.parent != current_tab else None
+
+            self.log_py(f'symbols: {symbols}')
+            return symbols
+
+        if node_selected is not None:
+            symbols = get_all_symbols(node_selected.sym_tab)
+            # try:
+            #     if node_selected.parent_of_type(ast.Architype):
+            #         symbols.append("self")
+            # except:
+            #     pass
+            self.log_py(f'symbols: {symbols}')
+            for symbol in symbols:
+                items.append(lspt.CompletionItem(label=symbol))
+            return lspt.CompletionList(is_incomplete=False, items=items)
 
     def rename_module(self, old_path: str, new_path: str) -> None:
         """Rename module."""
