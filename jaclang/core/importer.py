@@ -1,5 +1,7 @@
 """Special Imports for Jac Code."""
 
+from __future__ import annotations
+
 import abc
 import importlib
 import marshal
@@ -128,7 +130,7 @@ class Importer(abc.ABC):
     # ) -> types.ModuleType | None:
     #     pass
 
-    def validate_spec(self, spec: "ImportPathSpec") -> bool:
+    def validate_spec(self, spec: ImportPathSpec) -> bool:
         """Validate the provided ImportPathSpec."""
         if not spec.module_name or not spec.full_mod_path:
             self.log_error("Specification missing required module name or path.")
@@ -292,7 +294,7 @@ class JacImporter(Importer):
             self.log_error(f"Failed to load {name} from {jac_file_path}: {str(e)}")
             return None
 
-    def run_import(self, spec: "ImportPathSpec") -> "ImportReturn":
+    def run_import(self, spec: ImportPathSpec) -> ImportReturn:
         """Import a Jac module using the specifications provided."""
         if not self.validate_spec(spec):
             return ImportReturn(None, spec, None, importer=self)
@@ -377,7 +379,7 @@ class JacImporter(Importer):
 
     def create_jac_py_module(
         self,
-        spec: "ImportPathSpec",
+        spec: ImportPathSpec,
         module_name: str = "",
         full_target: str = "",
     ) -> types.ModuleType:
