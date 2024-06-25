@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import builtins
 import logging
 from enum import IntEnum
-from hashlib import md5
 from typing import Optional
-
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.compile import jac_ir_to_pass, jac_str_to_pass
@@ -15,6 +14,7 @@ from jaclang.compiler.passes import Pass
 from jaclang.compiler.passes.main.schedules import type_checker_sched
 from jaclang.compiler.passes.tool import FuseCommentsPass, JacFormatPass
 from jaclang.compiler.passes.transform import Alert
+from jaclang.compiler.symtable import SymbolTable
 from jaclang.langserve.utils import (
     collect_symbols,
     create_range,
@@ -68,12 +68,12 @@ class ModuleInfo:
 
     def update_with(self, new_info: ModuleInfo, refresh: bool = False) -> None:
         """Update module info."""
-        self.ir =(
+        self.ir = (
             new_info.ir
             if not self.ir or new_info.alev > self.alev or new_info.alev == ALev.TYPE
             else self.ir
         )
-        self.alev=(
+        self.alev = (
             new_info.alev
             if not self.ir or new_info.alev > self.alev or new_info.alev == ALev.TYPE
             else self.alev
@@ -232,36 +232,36 @@ class JacLangServer(LanguageServer):
     ) -> lspt.CompletionList:
         """Return completion for a file."""
         items = []
-        # document = self.workspace.get_text_document(file_path)
-        # current_line = document.lines[position.line].strip()
+        document = self.workspace.get_text_document(file_path)
+        current_line = document.lines[position.line].strip()
+        self.log_warning(current_line)
         node_selected = find_deepest_symbol_node_at_pos(
-            self.modules[file_path].ir, position.line, position.character - 2,
+            self.modules[file_path].ir,
+            position.line,
+            position.character - 2,
         )
-        from jaclang.compiler.symtable import Symbol, SymbolTable
-        import builtins
-        def get_all_symbols(sym_tab: SymbolTable):
+
+        def get_all_symbols(sym_tab: SymbolTable) -> list[str]:
+            """Return all symbols in scope."""
             symbols = []
             visited = set()
-            current_tab = sym_tab
+            current_tab: Optional[SymbolTable] = sym_tab
 
             while current_tab is not None and current_tab not in visited:
                 visited.add(current_tab)
-                for name, symbol in current_tab.tab.items():
+                for name, _ in current_tab.tab.items():
                     if name not in dir(builtins):
                         symbols.append(name)
-                current_tab = current_tab.parent if current_tab.parent != current_tab else None
+                current_tab = (
+                    current_tab.parent if current_tab.parent != current_tab else None
+                )
 
-            self.log_py(f'symbols: {symbols}')
+            self.log_py(f"symbols: {symbols}")
             return symbols
 
         if node_selected is not None:
             symbols = get_all_symbols(node_selected.sym_tab)
-            # try:
-            #     if node_selected.parent_of_type(ast.Architype):
-            #         symbols.append("self")
-            # except:
-            #     pass
-            self.log_py(f'symbols: {symbols}')
+            self.log_py(f"symbols: {symbols}")
             for symbol in symbols:
                 items.append(lspt.CompletionItem(label=symbol))
             return lspt.CompletionList(is_incomplete=False, items=items)
