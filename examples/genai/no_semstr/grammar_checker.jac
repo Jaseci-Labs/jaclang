@@ -2,8 +2,7 @@ import:py from jaclang.core.llms, Anthropic;
 
 glob llm = Anthropic(model_name="claude-3-sonnet-20240229");
 
-can "Resolve any grammar errors in the given text"
-correct_grammar(text: 'Text with Errors': str) -> 'Grammar Corrected Text': str by llm(temperature=0.9);
+can correct_grammar(text: str) -> str by llm(temperature=0.9);
 
 with entry {
     #open the file and read the text

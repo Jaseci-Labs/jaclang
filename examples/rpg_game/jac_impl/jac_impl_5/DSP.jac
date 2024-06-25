@@ -8,7 +8,7 @@ import:py sys;
 import:py os;
 import:py random;
 import:py time;
-import:py from mtllm.llms, Anthropic;
+import:py from jaclang.core.llms, Anthropic;
 
 glob llm = Anthropic(model_name="claude-3-sonnet-20240229");
 

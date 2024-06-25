@@ -1,8 +1,11 @@
-import:py from mtllm.llms, OpenAI;
+import:py from jaclang.core.llms, Anthropic, Ollama, Groq;
 
-glob llm = OpenAI();
+# glob llm = Anthropic(model_name="claude-3-sonnet-20240229");
+# glob llm = Ollama(model_name="phi3");
+glob llm = Groq();
 
-obj PunclineJokes {
+obj "A list of good dad jokes. A indicates the punchline"
+JokeList {
     has jokes: 'Jokes with Punchlines': list[dict] = [
         {
             "joke": "How does a penguin build its house?",
@@ -14,15 +17,17 @@ obj PunclineJokes {
         }
     ];
 
-    can generate_joke -> 'NEW JOKE WITH A PUNCHLINE': dict by llm(incl_info=(self.jokes), temperature=0.0);
+    can 'Generate a Joke with a Punchline'
+    generate_joke_with_punchline -> 'Joke with Punchline':dict by llm(incl_info=(self.jokes), temperature=0.0);
+
     can generate {
-        joke_punchline = self.generate_joke();
+        joke_punchline = self.generate_joke_with_punchline();
         self.jokes.append(joke_punchline);
     }
 }
 
 with entry {
-    joke_gen = PunclineJokes();
+    joke_gen = JokeList();
     for i in range(5) {joke_gen.generate();}
     print(joke_gen.jokes);
 }
