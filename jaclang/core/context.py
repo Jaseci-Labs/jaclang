@@ -67,7 +67,7 @@ class ExecutionContext:
         """Reset the execution context."""
         if self.mem:
             self.mem.close()
-        self.init_memory()
+        self.mem = None
         self.root = None
         self.machine = None
 
