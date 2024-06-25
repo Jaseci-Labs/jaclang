@@ -23,5 +23,4 @@ with entry {
 
 with entry {
     print(olprint());
-    print("olprint type:", type(olprint));
 }
