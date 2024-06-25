@@ -56,15 +56,16 @@ class ImportPathSpec:
         dir_path, file_name = os.path.split(target_path)
         self.caller_dir = self.get_caller_dir(self.target, self.base_path, dir_path)
         self.module_name = os.path.splitext(file_name)[0]
-        return self.smart_join(self.caller_dir, target_path)
 
-    def smart_join(self, base_path: str, target_path: str) -> str:
-        """Join two paths while attempting to remove any redundant segments."""
-        base_parts = os.path.normpath(base_path).split(os.sep)
-        target_parts = os.path.normpath(target_path).split(os.sep)
-        while base_parts and target_parts and base_parts[-1] == target_parts[0]:
-            target_parts.pop(0)
-        return os.path.normpath(os.path.join(base_path, *target_parts))
+        def smart_join(base_path: str, target_path: str) -> str:
+            """Join two paths while attempting to remove any redundant segments."""
+            base_parts = os.path.normpath(base_path).split(os.sep)
+            target_parts = os.path.normpath(target_path).split(os.sep)
+            while base_parts and target_parts and base_parts[-1] == target_parts[0]:
+                target_parts.pop(0)
+            return os.path.normpath(os.path.join(base_path, *target_parts))
+
+        return smart_join(self.caller_dir, target_path)
 
     def resolve_sys_mod_name(self, full_path: Optional[str] = None) -> str:
         """Resolve system module name from the full path of a file and the base module path."""
@@ -443,12 +444,11 @@ class JacImporter(Importer):
         if spec.module_name not in sys.modules:
             sys.modules[spec.sys_mod_name] = module
 
-    def handle_directory(self, spec: "ImportPathSpec") -> "types.ModuleType":
+    def handle_directory(self, spec: ImportPathSpec) -> types.ModuleType:
         """Import from a directory that potentially contains multiple Jac modules."""
-        full_target = spec.full_mod_path
         module = self.create_jac_py_module(spec)
-        init_file_py = os.path.join(full_target, "__init__.py")
-        init_file_jac = os.path.join(full_target, "__init__.jac")
+        init_file_py = os.path.join(spec.full_mod_path, "__init__.py")
+        init_file_jac = os.path.join(spec.full_mod_path, "__init__.jac")
         if os.path.exists(init_file_py):
             self.exec_init_file(init_file_py, module, spec.caller_dir)
         elif os.path.exists(init_file_jac):
