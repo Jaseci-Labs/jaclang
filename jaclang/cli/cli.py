@@ -77,6 +77,7 @@ def run(
     """Run the specified .jac file."""
     # if no session specified, check if it was defined when starting the command shell
     # otherwise default to jaclang.session
+    Jac.context().reset()
     if session == "":
         session = (
             cmd_registry.args.session

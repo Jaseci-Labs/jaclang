@@ -22,8 +22,6 @@ class JacLanguageTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
-        Jac.context().reset()
-        Jac.context().init_memory()
         return super().setUp()
 
     def test_sub_abilities(self) -> None:

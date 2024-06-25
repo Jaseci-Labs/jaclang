@@ -15,9 +15,9 @@ from jaclang.core.importer import JacMachine
 class ExecutionContext:
     """Default Execution Context implementation."""
 
-    mem: Optional[Memory]
+    mem: Memory
     root: Optional[Root]
-    machine: JacMachine
+    machine: Optional[JacMachine]
 
     def __init__(self) -> None:
         """Create execution context."""
@@ -67,7 +67,7 @@ class ExecutionContext:
         """Reset the execution context."""
         if self.mem:
             self.mem.close()
-        self.mem = None
+        self.init_memory()
         self.root = None
         self.machine = None
 
