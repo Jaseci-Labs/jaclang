@@ -58,7 +58,7 @@ class Memory:
         filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
         extended: Optional[bool] = False,
     ) -> Generator[Union[UUID, ObjectAnchor], None, None]:
-        """Temporary."""
+        """Find anchors from memory by ids with filter."""
         if not isinstance(ids, list):
             ids = [ids]
 
@@ -73,11 +73,11 @@ class Memory:
         ids: IDS,
         filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
     ) -> Optional[ObjectAnchor]:
-        """Temporary."""
+        """Find one anchor from memory by ids with filter."""
         return next(self.find(ids, filter), None)
 
     def set(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
-        """Temporary."""
+        """Save anchor/s to memory."""
         if isinstance(data, list):
             for d in data:
                 if str(d.id) not in self.__trash__:
@@ -86,7 +86,7 @@ class Memory:
             self.__mem__[str(data.id)] = data
 
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
-        """Temporary."""
+        """Remove anchor/s from memory."""
         if isinstance(data, list):
             for d in data:
                 self.__mem__.pop(str(d.id), None)
@@ -98,7 +98,7 @@ class Memory:
 
 @dataclass
 class ShelfMemory(Memory):
-    """Generic Memory Handler."""
+    """Shelf Handler."""
 
     __shelf__: Optional[Shelf[ObjectAnchor]] = None
 
@@ -130,7 +130,7 @@ class ShelfMemory(Memory):
         filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
         extended: Optional[bool] = None,
     ) -> Generator[ObjectAnchor, None, None]:
-        """Temporary."""
+        """Find anchors from datasource by ids with filter."""
         objs = super().find(ids, filter, True)
 
         if isinstance(self.__shelf__, Shelf):
@@ -154,7 +154,7 @@ class ShelfMemory(Memory):
     def set(
         self, data: Union[ObjectAnchor, list[ObjectAnchor]], mem_only: bool = False
     ) -> None:
-        """Temporary."""
+        """Save anchor/s to datasource."""
         super().set(data)
 
         if not mem_only and isinstance(self.__shelf__, Shelf):
@@ -165,7 +165,7 @@ class ShelfMemory(Memory):
                 self.__shelf__[str(data.id)] = data
 
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
-        """Temporary."""
+        """Remove anchor/s from datasource."""
         super().remove(data)
         if isinstance(self.__shelf__, Shelf) and ENABLE_MANUAL_SAVE:
             if isinstance(data, list):
