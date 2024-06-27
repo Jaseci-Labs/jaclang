@@ -233,38 +233,157 @@ class JacLangServer(LanguageServer):
         """Return completion for a file."""
         items = []
         document = self.workspace.get_text_document(file_path)
-        current_line = document.lines[position.line].strip()
-        self.log_warning(current_line)
+        current_line = document.lines[position.line]
+
+        def get_list(text: str, dot_position: int) -> list[str] | int:
+            if dot_position > 1:
+                if text[dot_position - 4] == "]":
+                    return 12
+                elif text[dot_position - 4] == "}":
+                    return 13
+            text = text.strip()
+
+            start = text.rfind(" ", 0, dot_position) + 1
+            if start == 0:
+                start = 0
+            relevant_text = text[start:dot_position]
+
+            return relevant_text.split(".")
+
+        current_pos = position.character + 2
+        symbol_path = get_list(current_line, current_pos)
+        if symbol_path == 12:
+            items = [
+                lspt.CompletionItem(label=symbol, kind=lspt.CompletionItemKind.Method)
+                for symbol in [
+                    "append",
+                    "clear",
+                    "copy",
+                    "count",
+                    "extend",
+                    "index",
+                    "insert",
+                    "pop",
+                    "remove",
+                    "reverse",
+                    "sort",
+                ]
+            ]
+            return lspt.CompletionList(is_incomplete=False, items=items)
+        if symbol_path == 13:
+            items = (
+                [
+                    lspt.CompletionItem(
+                        label=symbol, kind=lspt.CompletionItemKind.Method
+                    )
+                    for symbol in [
+                        "clear",
+                        "copy",
+                        "fromkeys",
+                        "get",
+                        "items",
+                        "keys",
+                        "pop",
+                        "popitem",
+                        "setdefault",
+                        "update",
+                        "values",
+                    ]
+                ]
+                if symbol_path == "dict"
+                else [
+                    lspt.CompletionItem(
+                        label=symbol, kind=lspt.CompletionItemKind.Method
+                    )
+                    for symbol in [
+                        "add",
+                        "clear",
+                        "copy",
+                        "difference",
+                        "difference_update",
+                        "discard",
+                        "intersection",
+                        "intersection_update",
+                        "isdisjoint",
+                        "issubset",
+                        "issuperset",
+                        "pop",
+                        "remove",
+                        "symmetric_difference",
+                        "symmetric_difference_update",
+                        "union",
+                        "update",
+                    ]
+                ]
+            )
+            return lspt.CompletionList(is_incomplete=False, items=items)
+
+        self.log_warning(f"Symbol path: {symbol_path}")
         node_selected = find_deepest_symbol_node_at_pos(
             self.modules[file_path].ir,
             position.line,
             position.character - 2,
         )
 
-        def get_all_symbols(sym_tab: SymbolTable) -> list[str]:
+        def get_all_symbols(
+            sym_tab: SymbolTable, symbol_path: list[str]
+        ) -> list[lspt.CompletionItem]:
             """Return all symbols in scope."""
             symbols = []
             visited = set()
             current_tab: Optional[SymbolTable] = sym_tab
 
             while current_tab is not None and current_tab not in visited:
+
                 visited.add(current_tab)
+
+                # self.             chain
+                self.log_warning(f"{34} , {symbol_path}")
+                if (
+                    symbol_path[0] == "self"
+                    and len(symbol_path) == 2
+                    and isinstance(current_tab.owner, ast.Architype)
+                ):
+                    for name, _ in current_tab.tab.items():
+                        if name not in dir(builtins):
+                            symbols.append(
+                                lspt.CompletionItem(
+                                    label=name, kind=lspt.CompletionItemKind.Variable
+                                )
+                            )
+
+                    break
+                    # else:
+
+                if isinstance(current_tab.owner, ast.Architype):
+                    symbols.append(
+                        lspt.CompletionItem(
+                            label="self", kind=lspt.CompletionItemKind.Variable
+                        )
+                    )
+
+                # general cases
                 for name, _ in current_tab.tab.items():
                     if name not in dir(builtins):
-                        symbols.append(name)
+                        # kind=kind_map(_.defn[0])
+                        symbols.append(
+                            lspt.CompletionItem(
+                                label=name, kind=lspt.CompletionItemKind.Variable
+                            )
+                        )
                 current_tab = (
                     current_tab.parent if current_tab.parent != current_tab else None
                 )
-
             self.log_py(f"symbols: {symbols}")
             return symbols
 
         if node_selected is not None:
-            symbols = get_all_symbols(node_selected.sym_tab)
-            self.log_py(f"symbols: {symbols}")
-            for symbol in symbols:
-                items.append(lspt.CompletionItem(label=symbol))
+            if isinstance(symbol_path, list):
+                items = get_all_symbols(node_selected.sym_tab, symbol_path)
+            self.log_py(f"symbols: {items}")
             return lspt.CompletionList(is_incomplete=False, items=items)
+
+        return None
 
     def rename_module(self, old_path: str, new_path: str) -> None:
         """Rename module."""
