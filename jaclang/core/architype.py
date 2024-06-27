@@ -38,7 +38,7 @@ WALKER_ID_REGEX = compile(
     r"^w:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
     IGNORECASE,
 )
-ENABLE_MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
+MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 
 
 class ObjectType(Enum):
@@ -78,7 +78,7 @@ class Access(Generic[T]):
 
 
 @dataclass
-class AnchorAccess(Generic[T]):
+class Permission(Generic[T]):
     """Anchor Access Handler."""
 
     all: int = 0
@@ -95,11 +95,11 @@ class ObjectAnchor:
     name: str = ""
     id: UUID = field(default_factory=uuid4)
     root: Optional[UUID] = None
-    access: AnchorAccess[UUID] = field(default_factory=AnchorAccess[UUID])
+    access: Permission[UUID] = field(default_factory=Permission[UUID])
     architype: Optional[Architype] = None
     connected: bool = False
     current_access_level: Optional[int] = None
-    persistent: bool = field(default=not ENABLE_MANUAL_SAVE)
+    persistent: bool = field(default=not MANUAL_SAVE)
     hash: int = 0
 
     @property

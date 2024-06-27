@@ -1,15 +1,13 @@
 """Memory abstraction for jaseci plugin."""
 
 from dataclasses import dataclass, field
-from os import getenv
 from shelve import Shelf, open
-from typing import Callable, Generator, Literal, Optional, Union, overload
+from typing import Callable, Generator, Optional, Union
 from uuid import UUID
 
-from .architype import ObjectAnchor
+from .architype import MANUAL_SAVE, ObjectAnchor
 
 IDS = Union[UUID, list[UUID]]
-ENABLE_MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 
 
 @dataclass
@@ -17,56 +15,29 @@ class Memory:
     """Generic Memory Handler."""
 
     __mem__: dict[str, ObjectAnchor] = field(default_factory=dict)
-    __trash__: set[str] = field(default_factory=set)
+    __gc__: set[str] = field(default_factory=set)
 
     def close(self) -> None:
         """Close memory handler."""
         self.__mem__.clear()
-        self.__trash__.clear()
+        self.__gc__.clear()
 
     def __del__(self) -> None:
         """On garbage collection cleanup."""
         self.close()
 
-    @overload
     def find(
-        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]]
+        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None
     ) -> Generator[ObjectAnchor, None, None]:
-        pass
-
-    @overload
-    def find(
-        self,
-        ids: IDS,
-        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]],
-        extended: Literal[True],
-    ) -> Generator[Union[UUID, ObjectAnchor], None, None]:
-        pass
-
-    @overload
-    def find(
-        self,
-        ids: IDS,
-        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]],
-        extended: Literal[False],
-    ) -> Generator[ObjectAnchor, None, None]:
-        pass
-
-    def find(
-        self,
-        ids: IDS,
-        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
-        extended: Optional[bool] = False,
-    ) -> Generator[Union[UUID, ObjectAnchor], None, None]:
         """Find anchors from memory by ids with filter."""
         if not isinstance(ids, list):
             ids = [ids]
 
-        for id in ids:
-            if (anchor := self.__mem__.get(str(id))) and (not filter or filter(anchor)):
-                yield anchor
-            elif extended:
-                yield id
+        return (
+            anchor
+            for id in ids
+            if (anchor := self.__mem__.get(str(id))) and (not filter or filter(anchor))
+        )
 
     def find_one(
         self,
@@ -80,9 +51,9 @@ class Memory:
         """Save anchor/s to memory."""
         if isinstance(data, list):
             for d in data:
-                if str(d.id) not in self.__trash__:
+                if str(d.id) not in self.__gc__:
                     self.__mem__[str(d.id)] = d
-        elif str(data.id) not in self.__trash__:
+        elif str(data.id) not in self.__gc__:
             self.__mem__[str(data.id)] = data
 
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
@@ -90,10 +61,10 @@ class Memory:
         if isinstance(data, list):
             for d in data:
                 self.__mem__.pop(str(d.id), None)
-                self.__trash__.add(str(d.id))
+                self.__gc__.add(str(d.id))
         else:
             self.__mem__.pop(str(data.id), None)
-            self.__trash__.add(str(data.id))
+            self.__gc__.add(str(data.id))
 
 
 @dataclass
@@ -114,8 +85,8 @@ class ShelfMemory(Memory):
                 if not anchor.persistent:
                     anchor.destroy()
 
-            if not ENABLE_MANUAL_SAVE:
-                for id in self.__trash__:
+            if not MANUAL_SAVE:
+                for id in self.__gc__:
                     self.__shelf__.pop(id, None)
 
                 for anchor in set(self.__mem__.values()):
@@ -125,31 +96,29 @@ class ShelfMemory(Memory):
         super().close()
 
     def find(
-        self,
-        ids: IDS,
-        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
-        extended: Optional[bool] = None,
+        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None
     ) -> Generator[ObjectAnchor, None, None]:
         """Find anchors from datasource by ids with filter."""
-        objs = super().find(ids, filter, True)
+        if not isinstance(ids, list):
+            ids = [ids]
 
         if isinstance(self.__shelf__, Shelf):
-            for obj in objs:
-                if isinstance(obj, UUID):
-                    if str(obj) not in self.__trash__ and (
-                        anchor := self.__shelf__.get(str(obj))
-                    ):
-                        if architype := anchor.architype:
-                            architype._jac_ = anchor
-                        self.__mem__[str(anchor.id)] = anchor
-                        if not filter or filter(anchor):
-                            yield anchor
-                else:
-                    yield obj
+            for id in ids:
+                _id = str(id)
+                anchor = self.__mem__.get(_id)
+
+                if (
+                    not anchor
+                    and _id not in self.__gc__
+                    and (anchor := self.__shelf__.get(_id))
+                    and (architype := anchor.architype)
+                ):
+                    self.__mem__[_id] = architype._jac_ = anchor
+
+                if anchor and (not filter or filter(anchor)):
+                    yield anchor
         else:
-            for obj in objs:
-                if isinstance(obj, ObjectAnchor):
-                    yield obj
+            yield from super().find(ids, filter)
 
     def set(
         self, data: Union[ObjectAnchor, list[ObjectAnchor]], mem_only: bool = False
@@ -167,7 +136,7 @@ class ShelfMemory(Memory):
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Remove anchor/s from datasource."""
         super().remove(data)
-        if isinstance(self.__shelf__, Shelf) and ENABLE_MANUAL_SAVE:
+        if isinstance(self.__shelf__, Shelf) and MANUAL_SAVE:
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__.pop(str(d.id), None)
