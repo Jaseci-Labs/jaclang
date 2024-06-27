@@ -21,7 +21,7 @@ from jaclang.langserve.utils import (
     find_deepest_symbol_node_at_pos,
     get_item_path,
     get_mod_path,
-    kind_map,
+    label_map,
 )
 from jaclang.vendor.pygls import uris
 from jaclang.vendor.pygls.server import LanguageServer
@@ -286,7 +286,7 @@ class JacLangServer(LanguageServer):
         )
 
         def collect_all_symbols_in_scope(
-            sym_tab: SymbolTable,
+            sym_tab: SymbolTable, up_tree: bool = True
         ) -> list[lspt.CompletionItem]:
             """Return all symbols in scope."""
             symbols = []
@@ -297,26 +297,17 @@ class JacLangServer(LanguageServer):
                 visited.add(current_tab)
                 for name, symbol in current_tab.tab.items():
                     if name not in dir(builtins):
+                        self.log_py(f"Symbol: {name},type- {symbol.sym_type}")
                         symbols.append(
                             lspt.CompletionItem(
-                                label=name, kind=kind_map(symbol.defn[0])
+                                label=name, kind=label_map(symbol.sym_type)
                             )
                         )
+                if not up_tree:
+                    return symbols
                 current_tab = (
                     current_tab.parent if current_tab.parent != current_tab else None
                 )
-            return symbols
-
-        def collect_symbols_in_current_scope(
-            sym_tab: SymbolTable,
-        ) -> list[lspt.CompletionItem]:
-            """Return all symbols in scope."""
-            symbols = []
-            for name, symbol in sym_tab.tab.items():
-                if name not in dir(builtins):
-                    symbols.append(
-                        lspt.CompletionItem(label=name, kind=kind_map(symbol.defn[0]))
-                    )
             return symbols
 
         def resolve_symbol_path(sym_name: str, node_tab: SymbolTable) -> str:
@@ -325,9 +316,10 @@ class JacLangServer(LanguageServer):
 
             while current_tab is not None and current_tab not in visited:
                 visited.add(current_tab)
-                for name, symbol_ in current_tab.tab.items():
+                for name, symbol in current_tab.tab.items():
                     if name not in dir(builtins) and name == sym_name:
-                        path = symbol_.defn[0]._sym_type
+                        self.log_py(f"Symbol: {name},type- {symbol.sym_type}")
+                        path = symbol.defn[0]._sym_type
                         return path
                 current_tab = (
                     current_tab.parent if current_tab.parent != current_tab else None
@@ -341,7 +333,11 @@ class JacLangServer(LanguageServer):
             if current_table is not None:
                 for segment in path.split("."):
                     current_table = next(
-                        (kid for kid in current_table.kid if kid.name == segment),
+                        (
+                            child_table
+                            for child_table in current_table.kid
+                            if child_table.name == segment
+                        ),
                         current_table,
                     )
             if current_table:
@@ -354,7 +350,6 @@ class JacLangServer(LanguageServer):
             current_symbol_table = mod_tab
             for obj in current_symbol_path:
                 if obj == "self":
-                    from contextlib import suppress
                     try:
                         try:
                             is_abilitydef = (
@@ -396,17 +391,18 @@ class JacLangServer(LanguageServer):
                     if isinstance(base_name, ast.Name) and base_name.sym:
                         base.append(base_name.sym.sym_dotted_name)
                 for base_ in base:
-                    completion_items = collect_symbols_in_current_scope(
-                        find_symbol_table(base_)
+                    completion_items = collect_all_symbols_in_scope(
+                        find_symbol_table(base_),
+                        up_tree=False,
                     )
             else:
                 completion_items = []
 
             completion_items.extend(
-                collect_symbols_in_current_scope(current_symbol_table)
+                collect_all_symbols_in_scope(current_symbol_table, up_tree=False)
             )
         else:
-            try:
+            try:  # noqa SIM105
                 completion_items = collect_all_symbols_in_scope(current_symbol_table)
             except AttributeError:
                 pass
