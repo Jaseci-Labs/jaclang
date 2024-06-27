@@ -21,6 +21,7 @@ from jaclang.langserve.utils import (
     find_deepest_symbol_node_at_pos,
     get_item_path,
     get_mod_path,
+    kind_map,
 )
 from jaclang.vendor.pygls import uris
 from jaclang.vendor.pygls.server import LanguageServer
@@ -252,21 +253,16 @@ class JacLangServer(LanguageServer):
                 self.push_diagnostics(uri)
 
     def get_completion(
-        self, file_path: str, position: lspt.Position
+        self, file_path: str, position: lspt.Position, completion_trigger: str
     ) -> lspt.CompletionList:
         """Return completion for a file."""
-        items = []
+        completion_items = []
         document = self.workspace.get_text_document(file_path)
         current_line = document.lines[position.line]
 
-        def get_list(text: str, dot_position: int) -> list[str] | int:
-            if dot_position > 1:
-                if text[dot_position - 4] == "]":
-                    return 12
-                elif text[dot_position - 4] == "}":
-                    return 13
+        def parse_symbol_path(text: str, dot_position: int) -> list[str]:
+            """Parse text and return a list of symbols."""
             text = text.strip()
-
             start = text.rfind(" ", 0, dot_position) + 1
             if start == 0:
                 start = 0
@@ -275,82 +271,22 @@ class JacLangServer(LanguageServer):
             return relevant_text.split(".")
 
         current_pos = position.character + 2
-        symbol_path = get_list(current_line, current_pos)
-        if symbol_path == 12:
-            items = [
-                lspt.CompletionItem(label=symbol, kind=lspt.CompletionItemKind.Method)
-                for symbol in [
-                    "append",
-                    "clear",
-                    "copy",
-                    "count",
-                    "extend",
-                    "index",
-                    "insert",
-                    "pop",
-                    "remove",
-                    "reverse",
-                    "sort",
-                ]
-            ]
-            return lspt.CompletionList(is_incomplete=False, items=items)
-        if symbol_path == 13:
-            items = (
-                [
-                    lspt.CompletionItem(
-                        label=symbol, kind=lspt.CompletionItemKind.Method
-                    )
-                    for symbol in [
-                        "clear",
-                        "copy",
-                        "fromkeys",
-                        "get",
-                        "items",
-                        "keys",
-                        "pop",
-                        "popitem",
-                        "setdefault",
-                        "update",
-                        "values",
-                    ]
-                ]
-                if symbol_path == "dict"
-                else [
-                    lspt.CompletionItem(
-                        label=symbol, kind=lspt.CompletionItemKind.Method
-                    )
-                    for symbol in [
-                        "add",
-                        "clear",
-                        "copy",
-                        "difference",
-                        "difference_update",
-                        "discard",
-                        "intersection",
-                        "intersection_update",
-                        "isdisjoint",
-                        "issubset",
-                        "issuperset",
-                        "pop",
-                        "remove",
-                        "symmetric_difference",
-                        "symmetric_difference_update",
-                        "union",
-                        "update",
-                    ]
-                ]
-            )
-            return lspt.CompletionList(is_incomplete=False, items=items)
+        current_symbol_path = parse_symbol_path(current_line, current_pos)
 
-        self.log_warning(f"Symbol path: {symbol_path}")
         node_selected = find_deepest_symbol_node_at_pos(
             self.modules[file_path].ir,
             position.line,
             position.character - 2,
         )
 
-        def get_all_symbols(
-            sym_tab: SymbolTable, symbol_path: list[str]
+        mod_tab = (
+            self.modules[file_path].ir.sym_tab
+            if not node_selected
+            else node_selected.sym_tab
+        )
+
+        def collect_all_symbols_in_scope(
+            sym_tab: SymbolTable,
         ) -> list[lspt.CompletionItem]:
             """Return all symbols in scope."""
             symbols = []
@@ -358,56 +294,123 @@ class JacLangServer(LanguageServer):
             current_tab: Optional[SymbolTable] = sym_tab
 
             while current_tab is not None and current_tab not in visited:
-
                 visited.add(current_tab)
-
-                # self.             chain
-                self.log_warning(f"{34} , {symbol_path}")
-                if (
-                    symbol_path[0] == "self"
-                    and len(symbol_path) == 2
-                    and isinstance(current_tab.owner, ast.Architype)
-                ):
-                    for name, _ in current_tab.tab.items():
-                        if name not in dir(builtins):
-                            symbols.append(
-                                lspt.CompletionItem(
-                                    label=name, kind=lspt.CompletionItemKind.Variable
-                                )
-                            )
-
-                    break
-                    # else:
-
-                if isinstance(current_tab.owner, ast.Architype):
-                    symbols.append(
-                        lspt.CompletionItem(
-                            label="self", kind=lspt.CompletionItemKind.Variable
-                        )
-                    )
-
-                # general cases
-                for name, _ in current_tab.tab.items():
+                for name, symbol in current_tab.tab.items():
                     if name not in dir(builtins):
-                        # kind=kind_map(_.defn[0])
                         symbols.append(
                             lspt.CompletionItem(
-                                label=name, kind=lspt.CompletionItemKind.Variable
+                                label=name, kind=kind_map(symbol.defn[0])
                             )
                         )
                 current_tab = (
                     current_tab.parent if current_tab.parent != current_tab else None
                 )
-            self.log_py(f"symbols: {symbols}")
             return symbols
 
-        if node_selected is not None:
-            if isinstance(symbol_path, list):
-                items = get_all_symbols(node_selected.sym_tab, symbol_path)
-            self.log_py(f"symbols: {items}")
-            return lspt.CompletionList(is_incomplete=False, items=items)
+        def collect_symbols_in_current_scope(
+            sym_tab: SymbolTable,
+        ) -> list[lspt.CompletionItem]:
+            """Return all symbols in scope."""
+            symbols = []
+            for name, symbol in sym_tab.tab.items():
+                if name not in dir(builtins):
+                    symbols.append(
+                        lspt.CompletionItem(label=name, kind=kind_map(symbol.defn[0]))
+                    )
+            return symbols
 
-        return None
+        def resolve_symbol_path(sym_name: str, node_tab: SymbolTable) -> str:
+            visited = set()
+            current_tab: Optional[SymbolTable] = node_tab
+
+            while current_tab is not None and current_tab not in visited:
+                visited.add(current_tab)
+                for name, symbol_ in current_tab.tab.items():
+                    if name not in dir(builtins) and name == sym_name:
+                        path = symbol_.defn[0]._sym_type
+                        return path
+                current_tab = (
+                    current_tab.parent if current_tab.parent != current_tab else None
+                )
+            return ""
+
+        def find_symbol_table(path: str) -> SymbolTable:
+            """Find symbol table."""
+            path = path.lstrip(".")
+            current_table = self.modules[file_path].ir._sym_tab
+            if current_table is not None:
+                for segment in path.split("."):
+                    current_table = next(
+                        (kid for kid in current_table.kid if kid.name == segment),
+                        current_table,
+                    )
+            if current_table:
+                return current_table
+            raise ValueError(f"Symbol table not found for path {path}")
+
+        current_symbol_table = mod_tab
+        if completion_trigger == ".":
+            current_symbol_path.pop()
+            current_symbol_table = mod_tab
+            for obj in current_symbol_path:
+                if obj == "self":
+                    from contextlib import suppress
+                    try:
+                        try:
+                            is_abilitydef = (
+                                mod_tab.owner
+                                if isinstance(mod_tab.owner, ast.AbilityDef)
+                                else mod_tab.owner.parent_of_type(ast.AbilityDef)
+                            )
+                            archi_owner = (
+                                (is_abilitydef.decl_link.parent_of_type(ast.Architype))
+                                if is_abilitydef.decl_link
+                                else None
+                            )
+                            current_symbol_table = (
+                                archi_owner._sym_tab
+                                if archi_owner and archi_owner._sym_tab
+                                else mod_tab
+                            )
+                            continue
+
+                        except ValueError:
+                            pass
+                        archi_owner = mod_tab.owner.parent_of_type(ast.Architype)
+                        current_symbol_table = (
+                            archi_owner._sym_tab
+                            if archi_owner and archi_owner._sym_tab
+                            else mod_tab
+                        )
+                    except ValueError:
+                        pass
+                else:
+                    path: str = resolve_symbol_path(obj, current_symbol_table)
+                    current_symbol_table = find_symbol_table(path)
+            if (
+                isinstance(current_symbol_table.owner, ast.Architype)
+                and current_symbol_table.owner.base_classes
+            ):
+                base = []
+                for base_name in current_symbol_table.owner.base_classes.items:
+                    if isinstance(base_name, ast.Name) and base_name.sym:
+                        base.append(base_name.sym.sym_dotted_name)
+                for base_ in base:
+                    completion_items = collect_symbols_in_current_scope(
+                        find_symbol_table(base_)
+                    )
+            else:
+                completion_items = []
+
+            completion_items.extend(
+                collect_symbols_in_current_scope(current_symbol_table)
+            )
+        else:
+            try:
+                completion_items = collect_all_symbols_in_scope(current_symbol_table)
+            except AttributeError:
+                pass
+        return lspt.CompletionList(is_incomplete=False, items=completion_items)
 
     def rename_module(self, old_path: str, new_path: str) -> None:
         """Rename module."""
@@ -483,7 +486,6 @@ class JacLangServer(LanguageServer):
                 node_info += f"\n{node.doc.value}"
             if isinstance(node, ast.Ability) and node.signature:
                 node_info += f"\n{node.signature.unparse()}"
-            self.log_py(f"mypy_node: {node.gen.mypy_ast}")
         except AttributeError as e:
             self.log_warning(f"Attribute error when accessing node attributes: {e}")
         return node_info.strip()

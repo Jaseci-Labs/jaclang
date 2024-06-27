@@ -78,7 +78,10 @@ def did_delete_files(ls: JacLangServer, params: lspt.DeleteFilesParams) -> None:
 )
 def completion(ls: JacLangServer, params: lspt.CompletionParams) -> lspt.CompletionList:
     """Provide completion."""
-    return ls.get_completion(params.text_document.uri, params.position)
+    # pass params.text_document.uri, params position and params.context.trigger_character
+    return ls.get_completion(
+        params.text_document.uri, params.position, params.context.trigger_character
+    )
 
 
 @server.feature(lspt.TEXT_DOCUMENT_FORMATTING)
