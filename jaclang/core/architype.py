@@ -83,8 +83,8 @@ class Permission(Generic[T]):
 
     all: int = 0
     roots: Access[T] = field(default_factory=Access[T])
-    types: dict[type[Architype], Access[T]] = field(default_factory=dict)
-    nodes: Access[T] = field(default_factory=Access[T])
+    # types: dict[type[Architype], Access[T]] = field(default_factory=dict)
+    # nodes: Access[T] = field(default_factory=Access[T])
 
 
 @dataclass(eq=False)
@@ -171,22 +171,22 @@ class ObjectAnchor:
             return True
 
         if self.current_access_level and self.current_access_level > -1:
-            whitelist, has_access, level = to_access.nodes.check(self.id)
-            if not whitelist and not has_access:
-                to.current_access_level = None
-                return False
-            elif whitelist and has_access and to.current_access_level is None:
-                to.current_access_level = level
+            # whitelist, has_access, level = to_access.nodes.check(self.id)
+            # if not whitelist and not has_access:
+            #     to.current_access_level = None
+            #     return False
+            # elif whitelist and has_access and to.current_access_level is None:
+            #     to.current_access_level = level
 
-            if (architype := self.architype) and (
-                access_type := to_access.types.get(architype.__class__)
-            ):
-                whitelist, has_access, level = access_type.check(self.id)
-                if not whitelist and not has_access:
-                    to.current_access_level = None
-                    return False
-                elif whitelist and has_access and to.current_access_level is None:
-                    to.current_access_level = level
+            # if (architype := self.architype) and (
+            #     access_type := to_access.types.get(architype.__class__)
+            # ):
+            #     whitelist, has_access, level = access_type.check(self.id)
+            #     if not whitelist and not has_access:
+            #         to.current_access_level = None
+            #         return False
+            #     elif whitelist and has_access and to.current_access_level is None:
+            #         to.current_access_level = level
 
             whitelist, has_access, level = to_access.roots.check(jroot.id)
             if not whitelist and not has_access:
