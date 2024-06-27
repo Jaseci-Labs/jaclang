@@ -504,7 +504,11 @@ class NameAtom(AtomExpr, EnumBlockStmt):
         """Resolve semantic token."""
         if isinstance(self.name_of, BuiltinType):
             return SemTokType.CLASS, SemTokMod.DECLARATION
-        name_of = self.sym.decl.name_of if self.sym else self.name_of
+        name_of = (
+            self.sym.decl.name_of
+            if self.sym and not isinstance(self.sym.decl.name_of, Name)
+            else self.name_of
+        )
         if isinstance(name_of, ModulePath):
             return SemTokType.NAMESPACE, SemTokMod.DEFINITION
         if isinstance(name_of, Architype):
@@ -4251,6 +4255,7 @@ class CommentToken(Token):
         name: str,
         value: str,
         line: int,
+        end_line: int,
         col_start: int,
         col_end: int,
         pos_start: int,
@@ -4259,15 +4264,21 @@ class CommentToken(Token):
         is_inline: bool = False,
     ) -> None:
         """Initialize token."""
-        self.file_path = file_path
-        self.name = name
-        self.value = value
-        self.line_no = line
-        self.c_start = col_start
-        self.c_end = col_end
-        self.pos_start = pos_start
-        self.pos_end = pos_end
         self.is_inline = is_inline
+
+        Token.__init__(
+            self,
+            file_path=file_path,
+            name=name,
+            value=value,
+            line=line,
+            end_line=end_line,
+            col_start=col_start,
+            col_end=col_end,
+            pos_start=pos_start,
+            pos_end=pos_end,
+        )
+
         AstNode.__init__(self, kid=kid)
 
 
