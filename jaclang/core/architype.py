@@ -13,7 +13,6 @@ from typing import (
     Callable,
     Generic,
     Optional,
-    Union,
     cast,
 )
 from uuid import UUID, uuid4
@@ -153,13 +152,12 @@ class ObjectAnchor:
         self.root = jctx.root.id
         jctx.datasource.set(self, True)
 
-    def is_allowed(self, to: Union[ObjectAnchor, Architype]) -> bool:
+    def is_allowed(self, to: ObjectAnchor) -> bool:
         """Access validation."""
         from .context import ExecutionContext
 
         jctx = ExecutionContext.get()
         jroot = jctx.root
-        to = to._jac_ if isinstance(to, Architype) else to
         to.current_access_level = None
 
         if jroot == jctx.super_root or jroot.id == to.root:
@@ -311,7 +309,7 @@ class NodeAnchor(ObjectAnchor):
         ret_edges: list[EdgeArchitype] = []
         for anchor in self.edges:
             if (
-                (architype := anchor.sync())
+                (architype := anchor.sync(self))
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
@@ -347,7 +345,7 @@ class NodeAnchor(ObjectAnchor):
         ret_edges: list[NodeArchitype] = []
         for anchor in self.edges:
             if (
-                (architype := anchor.sync())
+                (architype := anchor.sync(self))
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
