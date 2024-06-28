@@ -418,9 +418,10 @@ class JacFeatureDefaults:
         left = [left] if isinstance(left, NodeArchitype) else left
         right = [right] if isinstance(right, NodeArchitype) else right
         for i in left:
-            for anchor in set(i._jac_.edges):
+            node = i._jac_
+            for anchor in set(node.edges):
                 if (
-                    (architype := anchor.sync())
+                    (architype := anchor.sync(node))
                     and (source := anchor.source)
                     and (target := anchor.target)
                     and (not filter_func or filter_func([architype]))
