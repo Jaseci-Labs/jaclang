@@ -22,6 +22,8 @@ from jaclang.utils.helpers import import_target_to_relative_path, is_standard_li
 class JacImportPass(Pass):
     """Jac statically imports Jac modules."""
 
+    python_modules_to_import: set[str] = set()
+
     def before_pass(self) -> None:
         """Run once before pass."""
         self.import_table: dict[str, ast.Module] = {}
@@ -50,6 +52,8 @@ class JacImportPass(Pass):
                 node=i,
                 mod_path=node.loc.mod_path,
             )
+        elif lang == "py":
+            self.python_modules_to_import.add(i.path_str)
 
     def attach_mod_to_node(
         self, node: ast.ModulePath | ast.ModuleItem, mod: ast.Module | None

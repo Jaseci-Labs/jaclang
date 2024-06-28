@@ -11,7 +11,7 @@ from typing import Callable, TypeVar
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
-from jaclang.compiler.symtable import SymbolTable
+from jaclang.compiler.passes.main import JacImportPass
 from jaclang.settings import settings
 from jaclang.utils.helpers import pascal_to_snake
 from jaclang.vendor.mypy.nodes import Node as VNode  # bit of a hack
@@ -266,11 +266,6 @@ class FuseTypeInfoPass(Pass):
                 "Getting type of 'HasVar' is only supported with AssignmentStmt"
             )
 
-    def exit_has_var(self, node: ast.HasVar) -> None:
-        """Pass handler for HasVar nodes."""
-        node.name_spec.sym_type = node.name.sym_type
-        node.name_spec.type_sym_tab = node.name.type_sym_tab
-
     @__handle_node
     def enter_multi_string(self, node: ast.MultiString) -> None:
         """Pass handler for MultiString nodes."""
@@ -447,20 +442,28 @@ class FuseTypeInfoPass(Pass):
                 if self_obj.type_sym_tab and isinstance(right_obj, ast.AstSymbolNode):
                     self_obj.type_sym_tab.def_insert(right_obj)
 
+    def exit_atom_trailer(self, node: ast.AtomTrailer) -> None:
+        """Adding symbol links to AtomTrailer right nodes."""
+        # This will fix adding the symbol links to nodes in atom trailer
+        # self.x.z = 5  # will add symbol links to both x and z
+        for i in range(1, len(node.as_attr_list)):
+            left = node.as_attr_list[i - 1]
+            right = node.as_attr_list[i]
+            # assert isinstance(left, ast.NameAtom)
+            # assert isinstance(right, ast.NameAtom)
+            if left.type_sym_tab and not isinstance(
+                right, ast.IndexSlice
+            ):  # TODO check why IndexSlice produce an issue
+                right.name_spec.sym = left.type_sym_tab.lookup(right.sym_name)
+
     def exit_name(self, node: ast.Name) -> None:
-        """Add new symbols in the symbol table in case of atom trailer."""
-        if isinstance(node.parent, ast.AtomTrailer):
-            target_node = node.parent.target
-            if isinstance(target_node, ast.AstSymbolNode):
-                parent_symbol_table = target_node.type_sym_tab
-                if isinstance(parent_symbol_table, SymbolTable):
-                    node.sym = parent_symbol_table.lookup(node.sym_name)
+        """Update python nodes."""
+        if node.sym_name in JacImportPass.python_modules_to_import and self.ir._sym_tab:
+            py_symtab = self.ir._sym_tab.find_scope(node.sym_name)
+            if py_symtab:
+                node.type_sym_tab = py_symtab
 
-    # def exit_in_for_stmt(self, node: ast.InForStmt):
-    #     print(node.loc.mod_path, node.loc)
-    #     print(node.target, node.target.loc)
-    #     # node.sym_tab.def_insert()
-    #     # exit()
-
-    # def after_pass(self) -> None:
-    #     exit()
+    def exit_has_var(self, node: ast.HasVar) -> None:
+        """Pass handler for HasVar nodes."""
+        node.name_spec.sym_type = node.name.sym_type
+        node.name_spec.type_sym_tab = node.name.type_sym_tab
