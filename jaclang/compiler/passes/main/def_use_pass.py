@@ -18,6 +18,7 @@ class DefUsePass(Pass):
 
     def after_pass(self) -> None:
         """After pass."""
+        super().after_pass()
 
     def enter_architype(self, node: ast.Architype) -> None:
         """Sub objects.

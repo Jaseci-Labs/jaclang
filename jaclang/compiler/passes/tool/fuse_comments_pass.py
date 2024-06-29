@@ -74,6 +74,7 @@ class FuseCommentsPass(Pass):
                         raise self.ice(
                             "Token without parent in AST should be impossible"
                         )
+        super().after_pass()
 
 
 def is_comment_next(cmt: ast.CommentToken, code: ast.Token) -> bool:

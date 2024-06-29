@@ -26,6 +26,7 @@ class JacImportPass(Pass):
 
     def before_pass(self) -> None:
         """Run once before pass."""
+        super().before_pass()
         self.import_table: dict[str, ast.Module] = {}
 
     def enter_module(self, node: ast.Module) -> None:
@@ -210,10 +211,9 @@ class PyImportPass(JacImportPass):
 
     def before_pass(self) -> None:
         """Only run pass if settings are set to raise python."""
+        super().before_pass()
         if not settings.py_raise:
             self.terminate()
-        else:
-            return super().before_pass()
 
     def process_import(self, node: ast.Module, i: ast.ModulePath) -> None:
         """Process an import."""
