@@ -263,6 +263,17 @@ class SymbolTable:
         """Generate dot graph for sym table."""
         return dotgen_symtab_tree(self)
 
+    @property
+    def sym_dotted_name(self) -> str:
+        """Return a full path of the symbol."""
+        out = [self.name]
+        current_tab: SymbolTable | None = self.parent
+        while current_tab is not None:
+            out.append(current_tab.name)
+            current_tab = current_tab.parent
+        out.reverse()
+        return ".".join(out)
+
     def __repr__(self) -> str:
         """Repr."""
         out = f"{self.name} {super().__repr__()}:\n"
