@@ -101,7 +101,12 @@ def print_ast_tree(
             else "SymbolTable: None" if isinstance(node, AstSymbolNode) else ""
         )
 
-        if isinstance(node, Token) and isinstance(node, AstSymbolNode):
+        types_to_ignore = (ast.Int, ast.Bool, ast.Float, ast.String)
+        if (
+            isinstance(node, Token)
+            and isinstance(node, AstSymbolNode)
+            and not isinstance(node, types_to_ignore)
+        ):
             out = (
                 f"{node.__class__.__name__} - {node.value} - "
                 f"Type: {node.sym_type}, {access} {sym_table_link}"

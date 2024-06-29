@@ -18,6 +18,7 @@ class SymTabBuildPass(Pass):
     def before_pass(self) -> None:
         """Before pass."""
         self.cur_sym_tab: list[SymbolTable] = []
+        return super().before_pass()
 
     def push_scope(self, name: str, key_node: ast.AstNode, fresh: bool = False) -> None:
         """Push scope."""

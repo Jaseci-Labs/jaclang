@@ -17,6 +17,7 @@ class JacFormatPass(Pass):
 
     def before_pass(self) -> None:
         """Initialize pass."""
+        super().before_pass()
         self.comments: list[ast.CommentToken] = []
         self.indent_size = 4
         self.indent_level = 0

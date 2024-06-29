@@ -27,6 +27,7 @@ class DeclImplMatchPass(Pass):
     def after_pass(self) -> None:
         """Rebuild sub node table."""
         self.ir = SubNodeTabPass(input_ir=self.ir, prior=self).ir
+        return super().after_pass()
 
     def defn_lookup(self, lookup: Symbol) -> ast.NameAtom | None:
         """Lookup a definition in a symbol table."""

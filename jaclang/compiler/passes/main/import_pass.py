@@ -22,8 +22,11 @@ from jaclang.utils.helpers import import_target_to_relative_path, is_standard_li
 class JacImportPass(Pass):
     """Jac statically imports Jac modules."""
 
+    python_modules_to_import: set[str] = set()
+
     def before_pass(self) -> None:
         """Run once before pass."""
+        super().before_pass()
         self.import_table: dict[str, ast.Module] = {}
 
     def enter_module(self, node: ast.Module) -> None:
@@ -50,6 +53,8 @@ class JacImportPass(Pass):
                 node=i,
                 mod_path=node.loc.mod_path,
             )
+        elif lang == "py":
+            self.python_modules_to_import.add(i.path_str)
 
     def attach_mod_to_node(
         self, node: ast.ModulePath | ast.ModuleItem, mod: ast.Module | None
@@ -206,10 +211,9 @@ class PyImportPass(JacImportPass):
 
     def before_pass(self) -> None:
         """Only run pass if settings are set to raise python."""
+        super().before_pass()
         if not settings.py_raise:
             self.terminate()
-        else:
-            return super().before_pass()
 
     def process_import(self, node: ast.Module, i: ast.ModulePath) -> None:
         """Process an import."""

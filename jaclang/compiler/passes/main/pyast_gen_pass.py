@@ -40,6 +40,7 @@ class PyastGenPass(Pass):
 
     def before_pass(self) -> None:
         """Initialize pass."""
+        super().before_pass()
         self.debuginfo: dict[str, list[str]] = {"jac_mods": []}
         self.already_added: list[str] = []
         self.preamble: list[ast3.AST] = [

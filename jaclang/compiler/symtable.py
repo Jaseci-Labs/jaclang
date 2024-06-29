@@ -142,6 +142,11 @@ class SymbolTable:
         self.kid.append(SymbolTable(name, key_node, self))
         return self.kid[-1]
 
+    def push_py_scope(self, name: str, key_node: ast.AstNode) -> SymbolTable:
+        """Push a new scope onto the symbol table."""
+        self.kid.append(PySymbolTable(name, key_node, self))
+        return self.kid[-1]
+
     def inherit_sym_tab(self, target_sym_tab: SymbolTable) -> None:
         """Inherit symbol table."""
         for i in target_sym_tab.tab.values():
@@ -258,12 +263,58 @@ class SymbolTable:
         """Generate dot graph for sym table."""
         return dotgen_symtab_tree(self)
 
+    @property
+    def sym_dotted_name(self) -> str:
+        """Return a full path of the symbol."""
+        out = [self.name]
+        current_tab: SymbolTable | None = self.parent
+        while current_tab is not None:
+            out.append(current_tab.name)
+            current_tab = current_tab.parent
+        out.reverse()
+        return ".".join(out)
+
     def __repr__(self) -> str:
         """Repr."""
         out = f"{self.name} {super().__repr__()}:\n"
         for k, v in self.tab.items():
             out += f"    {k}: {v}\n"
         return out
+
+
+# TODO: Change SymbolTable to be an abstract class and both Py and Jac implement it
+class PySymbolTable(SymbolTable):
+
+    def insert(
+        self,
+        node: ast.AstSymbolNode,
+        access_spec: Optional[ast.AstAccessNode] | SymbolAccess = None,
+        single: bool = False,
+    ) -> Optional[ast.AstNode]:
+        """Set a variable in the symbol table.
+
+        Returns original symbol as collision if single check fails, none otherwise.
+        Also updates node.sym to create pointer to symbol.
+        """
+        collision = (
+            self.tab[node.sym_name].defn[-1]
+            if single and node.sym_name in self.tab
+            else None
+        )
+        if node.sym_name not in self.tab:
+            self.tab[node.sym_name] = Symbol(
+                defn=node.name_spec,
+                access=(
+                    access_spec
+                    if isinstance(access_spec, SymbolAccess)
+                    else access_spec.access_type if access_spec else SymbolAccess.PUBLIC
+                ),
+                parent_tab=self,
+            )
+        else:
+            self.tab[node.sym_name].add_defn(node.name_spec)
+        node.name_spec.sym = self.tab[node.sym_name]
+        return collision
 
 
 __all__ = [

@@ -18,7 +18,7 @@ class AccessCheckPass(Pass):
 
     def after_pass(self) -> None:
         """After pass."""
-        pass
+        return super().after_pass()
 
     def exit_node(self, node: ast.AstNode) -> None:
         """Exit node."""
