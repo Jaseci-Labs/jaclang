@@ -4291,7 +4291,7 @@ class JacSource(EmptyToken):
         super().__init__()
         self.value = source
         self.hash = md5(source.encode()).hexdigest()
-        self.file_path = mod_path
+        self.file_path = os.path.abspath(mod_path)
         self.comments: list[CommentToken] = []
 
     @property
