@@ -1,0 +1,3 @@
+can foo{
+    return "Hello";
+}
