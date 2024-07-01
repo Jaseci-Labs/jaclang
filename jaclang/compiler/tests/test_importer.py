@@ -17,13 +17,13 @@ class TestLoader(TestCase):
 
     def test_import_basic_python(self) -> None:
         """Test basic self loading."""
-        h = jac_import("fixtures.hello_world", base_path=__file__)
+        (h,) = jac_import("fixtures.hello_world", base_path=__file__, mdl_alias="h")
         self.assertEqual(h.hello(), "Hello World!")  # type: ignore
 
     def test_modules_correct(self) -> None:
         """Test basic self loading."""
         jac_import("fixtures.hello_world", base_path=__file__)
-        self.assertIn("module 'hello_world'", str(sys.modules))
+        self.assertIn("module 'fixtures.hello_world'", str(sys.modules))
         self.assertIn("/tests/fixtures/hello_world.jac", str(sys.modules))
 
     def test_jac_py_import(self) -> None:

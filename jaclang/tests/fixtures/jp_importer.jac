@@ -9,8 +9,8 @@ with entry {before = list(sys.modules.keys());}
 with entry {print("Deep in?", "deep" in list(sys.modules.keys()));}
 import:jac from deep.mycode, code as c;
 with entry {print([x for x in sys.modules.keys() if x not in before]);}
-with entry {print(sys.modules['deep']);}
-with entry {print(sys.modules['deep'].__path__);}
+# with entry {print(sys.modules['deep']);}
+# with entry {print(sys.modules['deep'].__path__);}
 import:py from deep.mycode_py, code as py_c;
 import:py from deep.othercode_py, foo as py_foo;
 
