@@ -211,10 +211,10 @@ class JacFeatureDefaults:
         cachable: bool,
         mdl_alias: Optional[str],
         override_name: Optional[str],
-        mod_bundle: Optional[Module | str],
+        mod_bundle: Optional[Module],
         lng: Optional[str],
         items: Optional[dict[str, Union[str, bool]]],
-    ) -> Optional[types.ModuleType]:
+    ) -> Optional[tuple[types.ModuleType, ...] | None]:
         """Core Import Process."""
         result = jac_importer(
             target=target,
