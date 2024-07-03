@@ -41,7 +41,7 @@ class ExecutionContext:
 
     def generate_super_root(self) -> NodeAnchor:
         """Generate default super root."""
-        super_root = NodeAnchor(id=UUID(int=0), current_access_level=1)
+        super_root = NodeAnchor(id=UUID(int=0), current_access_level=2)
         architype = super_root.architype = object.__new__(Root)
         architype._jac_ = super_root
         self.datasource.set(super_root, True)
@@ -55,7 +55,7 @@ class ExecutionContext:
         """Load initial anchors."""
         if anchor and (_anchor := self.datasource.find_one(anchor.id)):
             anchor.__dict__.update(_anchor.__dict__)
-            anchor.current_access_level = 1
+            anchor.current_access_level = 2
         else:
             anchor = default() if callable(default) else default
 
