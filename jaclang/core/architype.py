@@ -105,37 +105,37 @@ class Permission(Generic[T]):
 
     all: int = -1
     roots: Access[T] = field(default_factory=Access[T])
-    types: dict[type[Architype], Access[T]] = field(default_factory=dict)
-    nodes: Access[T] = field(default_factory=Access[T])
+    # types: dict[type[Architype], Access[T]] = field(default_factory=dict)
+    # nodes: Access[T] = field(default_factory=Access[T])
 
     def serialize(self) -> dict[str, object]:
         """Serialize Permission."""
         return {
             "all": self.all,
             "roots": self.roots.serialize(),
-            "types": {
-                f"{'n' if isinstance(key, NodeArchitype) else 'e'}:{key.__name__}": value.serialize()
-                for key, value in self.types.items()
-            },
-            "nodes": self.nodes.serialize(),
+            # "types": {
+            #     f"{'n' if isinstance(key, NodeArchitype) else 'e'}:{key.__name__}": value.serialize()
+            #     for key, value in self.types.items()
+            # },
+            # "nodes": self.nodes.serialize(),
         }
 
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> Permission:
         """Deserialize Permission."""
-        types = cast(dict[str, dict[str, Any]], data.get("types", {}))
+        # types = cast(dict[str, dict[str, Any]], data.get("types", {}))
         return Permission(
             all=data.get("all", -1),
             roots=Access.deserialize(data.get("roots", {})),
-            types={
-                (
-                    NodeArchitype.get(key[2:])
-                    if key[0] == "n"
-                    else EdgeArchitype.get(key[2:])
-                ): Access.deserialize(value)
-                for key, value in types.items()
-            },
-            nodes=Access.deserialize(data.get("nodes", {})),
+            # types={
+            #     (
+            #         NodeArchitype.get(key[2:])
+            #         if key[0] == "n"
+            #         else EdgeArchitype.get(key[2:])
+            #     ): Access.deserialize(value)
+            #     for key, value in types.items()
+            # },
+            # nodes=Access.deserialize(data.get("nodes", {})),
         )
 
 
@@ -235,22 +235,22 @@ class ObjectAnchor:
         if (to_access := to.access).all > -1:
             to.current_access_level = to_access.all
 
-        whitelist, level = to_access.nodes.check(self.id)
-        if not whitelist and level < 0:
-            to.current_access_level = -1
-            return to.current_access_level
-        elif whitelist and level > -1:
-            to.current_access_level = level
+        # whitelist, level = to_access.nodes.check(self.id)
+        # if not whitelist and level < 0:
+        #     to.current_access_level = -1
+        #     return to.current_access_level
+        # elif whitelist and level > -1:
+        #     to.current_access_level = level
 
-        if (architype := self.architype) and (
-            access_type := to_access.types.get(architype.__class__)
-        ):
-            whitelist, level = access_type.check(self.id)
-            if not whitelist and level < 0:
-                to.current_access_level = -1
-                return to.current_access_level
-            elif whitelist and level > -1 and to.current_access_level == -1:
-                to.current_access_level = level
+        # if (architype := self.architype) and (
+        #     access_type := to_access.types.get(architype.__class__)
+        # ):
+        #     whitelist, level = access_type.check(self.id)
+        #     if not whitelist and level < 0:
+        #         to.current_access_level = -1
+        #         return to.current_access_level
+        #     elif whitelist and level > -1 and to.current_access_level == -1:
+        #         to.current_access_level = level
 
         whitelist, level = to_access.roots.check(jroot.id)
         if not whitelist and level < 0:
