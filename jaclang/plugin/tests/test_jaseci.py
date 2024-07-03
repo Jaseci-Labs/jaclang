@@ -118,8 +118,8 @@ class TestJaseciPlugin(TestCase):
             walker="create",
         )
         obj = cli.get_object(session=session, id="root")
-        edge_obj = cli.get_object(session=session, id=obj["edges"][0].ref_id)
-        a_obj = cli.get_object(session=session, id=edge_obj["target"].ref_id)
+        edge_obj = cli.get_object(session=session, id=obj["edges"][0])
+        a_obj = cli.get_object(session=session, id=edge_obj["target"])
 
         self._output2buffer()
         cli.run(
@@ -142,9 +142,10 @@ class TestJaseciPlugin(TestCase):
         )
         obj = cli.get_object(session=session, id="root")
         self.assertEqual(len(obj["edges"]), 2)
-        edge_objs = [cli.get_object(session=session, id=e.ref_id) for e in obj["edges"]]
-        node_ids = [obj["target"].ref_id for obj in edge_objs]
-        node_objs = [cli.get_object(session=session, id=n_id) for n_id in node_ids]
+        edge_objs = [cli.get_object(session=session, id=e) for e in obj["edges"]]
+        node_objs = [
+            cli.get_object(session=session, id=edge["target"]) for edge in edge_objs
+        ]
         self.assertEqual(len(node_objs), 2)
         self.assertEqual(
             {obj["architype"]["tag"] for obj in node_objs}, {"first", "second"}

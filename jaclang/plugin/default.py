@@ -111,8 +111,13 @@ class JacFeatureDefaults:
         inner_init = cls.__init__  # type: ignore
 
         @wraps(inner_init)
-        def new_init(self: Architype, *args: object, **kwargs: object) -> None:
-            arch_base.__init__(self)
+        def new_init(
+            self: Architype,
+            *args: object,
+            _jac_: Optional[ObjectAnchor] = None,
+            **kwargs: object,
+        ) -> None:
+            arch_base.__init__(self, _jac_)
             inner_init(self, *args, **kwargs)
 
         cls.__init__ = new_init  # type: ignore
@@ -319,7 +324,12 @@ class JacFeatureDefaults:
         ),
     ) -> bool:
         """Jac's ignore stmt feature."""
-        return walker._jac_.ignore_node(expr)
+        if isinstance(walker, WalkerArchitype):
+            return walker._jac_.ignore_node(
+                (i._jac_ for i in expr) if isinstance(expr, list) else [expr._jac_]
+            )
+        else:
+            raise TypeError("Invalid walker object")
 
     @staticmethod
     @hookimpl
@@ -335,7 +345,9 @@ class JacFeatureDefaults:
     ) -> bool:
         """Jac's visit stmt feature."""
         if isinstance(walker, WalkerArchitype):
-            return walker._jac_.visit_node(expr)
+            return walker._jac_.visit_node(
+                (i._jac_ for i in expr) if isinstance(expr, list) else [expr._jac_]
+            )
         else:
             raise TypeError("Invalid walker object")
 
@@ -395,9 +407,10 @@ class JacFeatureDefaults:
         edges = []
         for i in left:
             for j in right:
-                conn_edge = edge_spec()
-                edges.append(conn_edge)
-                i._jac_.connect_node(j._jac_, conn_edge._jac_)
+                if (source := i._jac_).has_connect_access(target := j._jac_):
+                    conn_edge = edge_spec()
+                    edges.append(conn_edge)
+                    source.connect_node(target, conn_edge._jac_)
         return right if not edges_only else edges
 
     @staticmethod
@@ -428,7 +441,7 @@ class JacFeatureDefaults:
                         dir in [EdgeDir.OUT, EdgeDir.ANY]
                         and i == source
                         and trg_arch in right
-                        and source.is_allowed(target)
+                        and source.has_write_access(target)
                     ):
                         anchor.detach()
                         disconnect_occurred = True
@@ -436,7 +449,7 @@ class JacFeatureDefaults:
                         dir in [EdgeDir.IN, EdgeDir.ANY]
                         and i == target
                         and src_arch in right
-                        and target.is_allowed(source)
+                        and target.has_write_access(source)
                     ):
                         anchor.detach()
                         disconnect_occurred = True

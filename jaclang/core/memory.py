@@ -1,11 +1,24 @@
 """Memory abstraction for jaseci plugin."""
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from shelve import Shelf, open
-from typing import Callable, Generator, Optional, Union
+from typing import Any, Callable, Generator, Optional, Union, cast
 from uuid import UUID
 
-from .architype import MANUAL_SAVE, ObjectAnchor
+from .architype import (
+    Architype,
+    EdgeAnchor,
+    EdgeArchitype,
+    MANUAL_SAVE,
+    NodeAnchor,
+    NodeArchitype,
+    ObjectAnchor,
+    ObjectType,
+    Permission,
+    WalkerAnchor,
+    WalkerArchitype,
+)
 
 IDS = Union[UUID, list[UUID]]
 
@@ -71,7 +84,7 @@ class Memory:
 class ShelfMemory(Memory):
     """Shelf Handler."""
 
-    __shelf__: Optional[Shelf[ObjectAnchor]] = None
+    __shelf__: Optional[Shelf[dict[str, object]]] = None
 
     def __init__(self, session: Optional[str] = None) -> None:
         """Initialize memory handler."""
@@ -81,15 +94,12 @@ class ShelfMemory(Memory):
     def close(self) -> None:
         """Close memory handler."""
         if isinstance(self.__shelf__, Shelf):
-            for anchor in self.__mem__.values():
+            for anchor in set(self.__mem__.values()):
                 if not anchor.persistent:
                     anchor.destroy()
-
-            if not MANUAL_SAVE:
-                for id in self.__gc__:
-                    self.__shelf__.pop(id, None)
-
-                for anchor in set(self.__mem__.values()):
+                elif not MANUAL_SAVE:
+                    for id in self.__gc__:
+                        self.__shelf__.pop(id, None)
                     anchor.save()
             self.__shelf__.sync()
 
@@ -110,11 +120,9 @@ class ShelfMemory(Memory):
                 if (
                     not anchor
                     and _id not in self.__gc__
-                    and (anchor := self.__shelf__.get(_id))
-                    and (architype := anchor.architype)
+                    and (_anchor := self.__shelf__.get(_id))
                 ):
-                    self.__mem__[_id] = architype._jac_ = anchor
-
+                    self.__mem__[_id] = anchor = self.get(deepcopy(_anchor))
                 if anchor and (not filter or filter(anchor)):
                     yield anchor
         else:
@@ -127,11 +135,16 @@ class ShelfMemory(Memory):
         super().set(data)
 
         if not mem_only and isinstance(self.__shelf__, Shelf):
-            if isinstance(data, list):
-                for d in data:
-                    self.__shelf__[str(d.id)] = d
-            else:
-                self.__shelf__[str(data.id)] = data
+            for d in data if isinstance(data, list) else [data]:
+                _id = str(d.id)
+                json = d.serialize()
+                if _id not in self.__shelf__:
+                    self.__shelf__[_id] = json
+                else:
+                    if d.current_access_level > 0 and isinstance(d, NodeAnchor):
+                        self.__shelf__[_id]["edges"] = json["edges"]
+                    if d.current_access_level > 1:
+                        self.__shelf__[_id]["architype"] = json["architype"]
 
     def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
         """Remove anchor/s from datasource."""
@@ -142,3 +155,42 @@ class ShelfMemory(Memory):
                     self.__shelf__.pop(str(d.id), None)
             else:
                 self.__shelf__.pop(str(data.id), None)
+
+    def get(self, anchor: dict[str, Any]) -> ObjectAnchor:
+        """Get Anchor Instance."""
+        name = cast(str, anchor.get("name"))
+        architype = anchor.pop("architype")
+        access = Permission.deserialize(anchor.pop("access"))
+
+        match ObjectType(anchor.pop("type")):
+            case ObjectType.node:
+                nanch = NodeAnchor(
+                    edges=[
+                        e for edge in anchor.pop("edges") if (e := EdgeAnchor.ref(edge))
+                    ],
+                    access=access,
+                    **anchor,
+                )
+                nanch.architype = NodeArchitype.get(name or "Root")(
+                    _jac_=nanch, **architype
+                )
+                return nanch
+            case ObjectType.edge:
+                eanch = EdgeAnchor(
+                    source=NodeAnchor.ref(anchor.pop("source")),
+                    target=NodeAnchor.ref(anchor.pop("target")),
+                    access=access,
+                    **anchor,
+                )
+                eanch.architype = EdgeArchitype.get(name or "GenericEdge")(
+                    _jac_=eanch, **architype
+                )
+                return eanch
+            case ObjectType.walker:
+                wanch = WalkerAnchor(access=access, **anchor)
+                wanch.architype = WalkerArchitype.get(name)(_jac_=wanch, **architype)
+                return wanch
+            case _:
+                oanch = ObjectAnchor(access=access, **anchor)
+                oanch.architype = Architype(_jac_=oanch)
+                return oanch
