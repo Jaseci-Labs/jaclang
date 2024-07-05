@@ -175,7 +175,11 @@ class PySymTabBuildPass(Pass):
         self.__debug_print(f"Trying to import {py_name}")
         out = []
         py_name_lists = py_name.split(".")
-        obj = importlib.import_module(py_name_lists[0])
+        try:
+            obj = importlib.import_module(py_name_lists[0])
+        except ImportError:
+            return []
+
         stop_importing = False
 
         for i in py_name_lists[1:]:
