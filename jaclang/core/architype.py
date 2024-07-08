@@ -712,10 +712,6 @@ class Architype:
         self._jac_ = _jac_ or ObjectAnchor(architype=self)
         self._jac_.allocate()
 
-    def __setstate__(self, state: dict) -> None:
-        """Override setstate for pickle and shelve."""
-        self.__dict__.update(state)
-
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
         if isinstance(other, Architype):

@@ -81,7 +81,7 @@ class Memory:
 
 
 @dataclass
-class ShelfMemory(Memory):
+class ShelfStorage(Memory):
     """Shelf Handler."""
 
     __shelf__: Optional[Shelf[dict[str, object]]] = None

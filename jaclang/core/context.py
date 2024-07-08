@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional, TypedDict, Union
 from uuid import UUID
 
 from .architype import NodeAnchor, Root
-from .memory import ShelfMemory
+from .memory import ShelfStorage
 
 
 EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
@@ -31,7 +31,7 @@ class ExecutionContext:
         entry: Optional[NodeAnchor] = None,
     ) -> None:
         """Create JacContext."""
-        self.datasource: ShelfMemory = ShelfMemory(session)
+        self.datasource: ShelfStorage = ShelfStorage(session)
         self.reports: list[Any] = []
         self.super_root = self.load(
             NodeAnchor(id=UUID(int=0)), self.generate_super_root
