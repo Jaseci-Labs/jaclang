@@ -299,7 +299,7 @@ class ObjectAnchor:
                 and self.architype == self.architype
             )
         elif isinstance(other, Architype):
-            return self == other._jac_
+            return self == other.__jac__
 
         return False
 
@@ -707,23 +707,23 @@ class Architype:
     _jac_exit_funcs_: list[DSFunc]
     _jac_classes_: dict[str, type[Architype]]
 
-    def __init__(self, _jac_: Optional[ObjectAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[ObjectAnchor] = None) -> None:
         """Create default architype."""
-        self._jac_ = _jac_ or ObjectAnchor(architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or ObjectAnchor(architype=self)
+        self.__jac__.allocate()
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
         if isinstance(other, Architype):
             return super().__eq__(other)
         elif isinstance(other, ObjectAnchor):
-            return self._jac_ == other
+            return self.__jac__ == other
 
         return False
 
     def __hash__(self) -> int:
         """Override hash for architype."""
-        return self._jac_.__hash__()
+        return self.__jac__.__hash__()
 
     def __repr__(self) -> str:
         """Override repr for architype."""
@@ -743,34 +743,40 @@ class Architype:
 class NodeArchitype(Architype):
     """Node Architype Protocol."""
 
-    _jac_: NodeAnchor
+    __jac__: NodeAnchor
 
-    def __init__(self, _jac_: Optional[NodeAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[NodeAnchor] = None) -> None:
         """Create node architype."""
-        self._jac_ = _jac_ or NodeAnchor(name=self.__class__.__name__, architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or NodeAnchor(
+            name=self.__class__.__name__, architype=self
+        )
+        self.__jac__.allocate()
 
 
 class EdgeArchitype(Architype):
     """Edge Architype Protocol."""
 
-    _jac_: EdgeAnchor
+    __jac__: EdgeAnchor
 
-    def __init__(self, _jac_: Optional[EdgeAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[EdgeAnchor] = None) -> None:
         """Create edge architype."""
-        self._jac_ = _jac_ or EdgeAnchor(name=self.__class__.__name__, architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or EdgeAnchor(
+            name=self.__class__.__name__, architype=self
+        )
+        self.__jac__.allocate()
 
 
 class WalkerArchitype(Architype):
     """Walker Architype Protocol."""
 
-    _jac_: WalkerAnchor
+    __jac__: WalkerAnchor
 
-    def __init__(self, _jac_: Optional[WalkerAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[WalkerAnchor] = None) -> None:
         """Create walker architype."""
-        self._jac_ = _jac_ or WalkerAnchor(name=self.__class__.__name__, architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or WalkerAnchor(
+            name=self.__class__.__name__, architype=self
+        )
+        self.__jac__.allocate()
 
 
 class GenericEdge(EdgeArchitype):
@@ -779,10 +785,10 @@ class GenericEdge(EdgeArchitype):
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
 
-    def __init__(self, _jac_: Optional[EdgeAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[EdgeAnchor] = None) -> None:
         """Create walker architype."""
-        self._jac_ = _jac_ or EdgeAnchor(architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or EdgeAnchor(architype=self)
+        self.__jac__.allocate()
 
 
 class Root(NodeArchitype):
@@ -793,16 +799,16 @@ class Root(NodeArchitype):
     reachable_nodes: list[NodeArchitype] = []
     connections: set[tuple[NodeArchitype, NodeArchitype, EdgeArchitype]] = set()
 
-    def __init__(self, _jac_: Optional[NodeAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[NodeAnchor] = None) -> None:
         """Create walker architype."""
-        self._jac_ = _jac_ or NodeAnchor(architype=self)
-        self._jac_.allocate()
+        self.__jac__ = __jac__ or NodeAnchor(architype=self)
+        self.__jac__.allocate()
 
     def reset(self) -> None:
         """Reset the root."""
         self.reachable_nodes = []
         self.connections = set()
-        self._jac_.edges = []
+        self.__jac__.edges = []
 
 
 @dataclass(eq=False)

@@ -114,10 +114,10 @@ class JacFeatureDefaults:
         def new_init(
             self: Architype,
             *args: object,
-            _jac_: Optional[ObjectAnchor] = None,
+            __jac__: Optional[ObjectAnchor] = None,
             **kwargs: object,
         ) -> None:
-            arch_base.__init__(self, _jac_)
+            arch_base.__init__(self, __jac__)
             inner_init(self, *args, **kwargs)
 
         cls.__init__ = new_init  # type: ignore
@@ -305,9 +305,9 @@ class JacFeatureDefaults:
     def spawn_call(op1: Architype, op2: Architype) -> WalkerArchitype:
         """Jac's spawn operator feature."""
         if isinstance(op1, WalkerArchitype):
-            return op1._jac_.spawn_call(op2._jac_)
+            return op1.__jac__.spawn_call(op2.__jac__)
         elif isinstance(op2, WalkerArchitype):
-            return op2._jac_.spawn_call(op1._jac_)
+            return op2.__jac__.spawn_call(op1.__jac__)
         else:
             raise TypeError("Invalid walker object")
 
@@ -330,8 +330,8 @@ class JacFeatureDefaults:
     ) -> bool:
         """Jac's ignore stmt feature."""
         if isinstance(walker, WalkerArchitype):
-            return walker._jac_.ignore_node(
-                (i._jac_ for i in expr) if isinstance(expr, list) else [expr._jac_]
+            return walker.__jac__.ignore_node(
+                (i.__jac__ for i in expr) if isinstance(expr, list) else [expr.__jac__]
             )
         else:
             raise TypeError("Invalid walker object")
@@ -350,8 +350,8 @@ class JacFeatureDefaults:
     ) -> bool:
         """Jac's visit stmt feature."""
         if isinstance(walker, WalkerArchitype):
-            return walker._jac_.visit_node(
-                (i._jac_ for i in expr) if isinstance(expr, list) else [expr._jac_]
+            return walker.__jac__.visit_node(
+                (i.__jac__ for i in expr) if isinstance(expr, list) else [expr.__jac__]
             )
         else:
             raise TypeError("Invalid walker object")
@@ -360,7 +360,7 @@ class JacFeatureDefaults:
     @hookimpl
     def disengage(walker: WalkerArchitype) -> bool:  # noqa: ANN401
         """Jac's disengage stmt feature."""
-        walker._jac_.disengage_now()
+        walker.__jac__.disengage_now()
         return True
 
     @staticmethod
@@ -383,7 +383,7 @@ class JacFeatureDefaults:
         if edges_only:
             connected_edges: list[EdgeArchitype] = []
             for node in node_obj:
-                connected_edges += node._jac_.get_edges(
+                connected_edges += node.__jac__.get_edges(
                     dir, filter_func, target_obj=targ_obj_set
                 )
             return list(set(connected_edges))
@@ -391,7 +391,9 @@ class JacFeatureDefaults:
             connected_nodes: list[NodeArchitype] = []
             for node in node_obj:
                 connected_nodes.extend(
-                    node._jac_.edges_to_nodes(dir, filter_func, target_obj=targ_obj_set)
+                    node.__jac__.edges_to_nodes(
+                        dir, filter_func, target_obj=targ_obj_set
+                    )
                 )
             return list(set(connected_nodes))
 
@@ -412,10 +414,10 @@ class JacFeatureDefaults:
         edges = []
         for i in left:
             for j in right:
-                if (source := i._jac_).has_connect_access(target := j._jac_):
+                if (source := i.__jac__).has_connect_access(target := j.__jac__):
                     conn_edge = edge_spec()
                     edges.append(conn_edge)
-                    source.connect_node(target, conn_edge._jac_)
+                    source.connect_node(target, conn_edge.__jac__)
         return right if not edges_only else edges
 
     @staticmethod
@@ -431,7 +433,7 @@ class JacFeatureDefaults:
         left = [left] if isinstance(left, NodeArchitype) else left
         right = [right] if isinstance(right, NodeArchitype) else right
         for i in left:
-            node = i._jac_
+            node = i.__jac__
             for anchor in set(node.edges):
                 if (
                     (architype := anchor.sync(node))
@@ -499,7 +501,7 @@ class JacFeatureDefaults:
 
         def builder() -> EdgeArchitype:
             edge = conn_type() if isinstance(conn_type, type) else conn_type
-            edge._jac_.is_undirected = is_undirected
+            edge.__jac__.is_undirected = is_undirected
             if conn_assign:
                 for fld, val in zip(conn_assign[0], conn_assign[1]):
                     if hasattr(edge, fld):
@@ -705,14 +707,14 @@ class JacBuiltin:
         for source, target, edge in connections:
             dot_content += (
                 f"{visited_nodes.index(source)} -> {visited_nodes.index(target)} "
-                f' [label="{html.escape(str(edge._jac_.architype.__class__.__name__))} "];\n'
+                f' [label="{html.escape(str(edge.__jac__.architype.__class__.__name__))} "];\n'
             )
         for node_ in visited_nodes:
             color = (
                 colors[node_depths[node_]] if node_depths[node_] < 25 else colors[24]
             )
             dot_content += (
-                f'{visited_nodes.index(node_)} [label="{html.escape(str(node_._jac_.architype))}"'
+                f'{visited_nodes.index(node_)} [label="{html.escape(str(node_.__jac__.architype))}"'
                 f'fillcolor="{color}"];\n'
             )
         if dot_file:

@@ -172,7 +172,7 @@ class ShelfStorage(Memory):
                     **anchor,
                 )
                 nanch.architype = NodeArchitype.get(name or "Root")(
-                    _jac_=nanch, **architype
+                    __jac__=nanch, **architype
                 )
                 return nanch
             case ObjectType.edge:
@@ -183,14 +183,14 @@ class ShelfStorage(Memory):
                     **anchor,
                 )
                 eanch.architype = EdgeArchitype.get(name or "GenericEdge")(
-                    _jac_=eanch, **architype
+                    __jac__=eanch, **architype
                 )
                 return eanch
             case ObjectType.walker:
                 wanch = WalkerAnchor(access=access, **anchor)
-                wanch.architype = WalkerArchitype.get(name)(_jac_=wanch, **architype)
+                wanch.architype = WalkerArchitype.get(name)(__jac__=wanch, **architype)
                 return wanch
             case _:
                 oanch = ObjectAnchor(access=access, **anchor)
-                oanch.architype = Architype(_jac_=oanch)
+                oanch.architype = Architype(__jac__=oanch)
                 return oanch

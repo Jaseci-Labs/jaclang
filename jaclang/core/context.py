@@ -43,7 +43,7 @@ class ExecutionContext:
         """Generate default super root."""
         super_root = NodeAnchor(id=UUID(int=0), current_access_level=2)
         architype = super_root.architype = object.__new__(Root)
-        architype._jac_ = super_root
+        architype.__jac__ = super_root
         self.datasource.set(super_root, True)
         return super_root
 
