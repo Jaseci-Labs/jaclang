@@ -1,10 +1,63 @@
-# Programming with GenAI
-<!-- TODO: Guide for coders to use by_llm @kugesan1105 Put the one in the chatgpt -->
-GenAI Ability is a powerful feature that enhances interaction with Large Language Models (LLM) by utilizing the keyword <span style="color:orange;">by &lt;model&gt;</span>. Developers can customize the behavior of functions or methods by modifying associated
-[Semstrings](#introducing-semstrings).
- This new feature eliminates the need for explicit prompting and allows for a more streamlined coding experience.
+# Generative AI in Jaclang - MTLLM
 
-### Model Initialization
+Jaclang facilitates the integration of generative AI models, specifically Large Language Models (LLMs) into programming in an ultra seamless manner. We name this functionality as <span style="color:orange;">MTLLM</span>, meaning "Meaning-typed LLMs". There is an extensive research journey which you can dive into, available on arxiv.org. (Link available at the bottom of this page)
+
+**MTLLM** has been developed as a separate plugin to Jaclang which can be installed as a PyPi package.
+
+<div class="grid cards" markdown>
+
+-   __MTLLM REPO__
+
+    ---
+
+    *You can check out the source code in our github repo for MTLLM.*
+
+    <!-- [:octicons-arrow-right-24: Getting started](#) -->
+
+    [REPO](https://github.com/Jaseci-Labs/mtllm){ .md-button .md-button--primary }
+
+-   __MTLLM Documentation__
+
+    ---
+
+    *You can refer to our official documentation for MTLLM*
+
+    [DOCS](https://jaseci-labs.github.io/mtllm/){ .md-button .md-button--primary }
+
+</div>
+
+
+<!-- GenAI Ability is a powerful feature that enhances interaction with Large Language Models (LLM) by utilizing the keyword ```by <model>```<span style="color:orange;">by &lt;model&gt;</span>. Developers can customize the behavior of functions or methods by modifying associated
+[Semstrings](#introducing-semstrings).
+ This new feature eliminates the need for explicit prompting and allows for a more streamlined coding experience. -->
+
+## MTLLM in a FLASH
+
+### Getting MTLLM setup
+
+> **NOTE:** Jaclang should be updated to the latest version to work without any errors.
+
+The basic installation step of MTLLM a simple PyPi package installation as below.
+
+```bash
+pip install mtllm
+```
+
+However if you are choosing to use a specific LLM model you may need to refer the documentation for supported models ans install the relevant package, as in the case shown below for open-ai cloud hosted LLMs.
+
+```bash
+pip install mtllm[openai]
+```
+
+> **NOTE:**
+>
+> Refer to the [MTLLM documentation](https://jaseci-labs.github.io/mtllm/docs/quickstart/installation) fro the full installation guide and to identify all available models with MTLLM support.
+
+
+### Example Usage
+Consider a scenario where you require to use an open-ai LLM to translate from english to a specified language
+
+<!-- ### Model Initialization
 
 To incorporate a Large Language Model (LLM) into code, initialize it by importing from the ```mtllm.llms``` module built into the langauge.
 
@@ -24,7 +77,7 @@ _Cloud Hosted LLMs (API Clients)_
 
 > Note:
 >
-> - Theses LLMs require an API Key and the relevent python libraries to be installed.
+> - Theses LLMs require an API Key and the relevent python libraries to be installed. -->
 
 <!-- === "OpenAI"
     ```bash
