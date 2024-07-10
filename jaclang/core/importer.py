@@ -6,6 +6,7 @@ import os
 import sys
 import types
 from os import getcwd, path
+from traceback import TracebackException
 from typing import Optional, Union
 
 from jaclang.compiler.absyntree import Module
@@ -206,9 +207,70 @@ def jac_importer(
                     raise ImportError(f"No bytecode found for {full_target}")
                 with sys_path_context(caller_dir):
                     exec(codeobj, module.__dict__)
+
             except Exception as e:
-                print(f"Error importing {full_target}: {str(e)}")
+
+                # TODO:
+                #  - Move the stack trace dump to a different function.
+                #  - `import:py blah;` This will contain
+                #       1. stackframe of jac runtime -- remove them.
+                #       2. py_import() prints "Failed to import module blah" -- should be a verbose debug message.
+                trace_dump = ""
+
+                # Utility function to get the error line char offset.
+                def byte_offset_to_char_offset(string: str, offset: int) -> int:
+                    return len(
+                        string.encode("utf-8")[:offset].decode(
+                            "utf-8", errors="replace"
+                        )
+                    )
+
+                tb = TracebackException(
+                    type(e), e, e.__traceback__, limit=None, compact=True
+                )
+                trace_dump += f"Error: {str(e)}"
+
+                # The first frame is the call the to the above `exec` function, not usefull to the enduser,
+                # and Make the most recent call first.
+                tb.stack.pop(0)
+                tb.stack.reverse()
+
+                # FIXME: should be some settings, we should replace to ensure the anchors length match.
+                dump_tab_width = 4
+
+                for idx, frame in enumerate(tb.stack):
+                    func_signature = frame.name + (
+                        "()" if frame.name.isidentifier() else ""
+                    )
+
+                    # Pretty print the most recent call's location.
+                    if idx == 0 and (frame.line and frame.line.strip() != ""):
+                        line_o = frame._original_line.rstrip()  # type: ignore [attr-defined]
+                        line_s = frame.line.rstrip() if frame.line else ""
+                        stripped_chars = len(line_o) - len(line_s)
+                        trace_dump += f'\n{" " * (dump_tab_width * 2)}{line_s}'
+                        if frame.colno is not None and frame.end_colno is not None:
+                            off_start = byte_offset_to_char_offset(line_o, frame.colno)
+                            off_end = byte_offset_to_char_offset(
+                                line_o, frame.end_colno
+                            )
+
+                            # A bunch of caret '^' characters under the error location.
+                            anchors = (
+                                " " * (off_start - stripped_chars - 1)
+                            ) + "^" * len(
+                                line_o[off_start:off_end].replace(
+                                    "\t", " " * dump_tab_width
+                                )
+                            )
+
+                            trace_dump += f'\n{" " * (dump_tab_width * 2)}{anchors}'
+
+                    trace_dump += f'\n{" " * dump_tab_width}at {func_signature} {frame.filename}:{frame.lineno}'
+
+                print(trace_dump)  # FIXME: Dump to stderr with some logging api.
                 return None
+
     return module
 
 
