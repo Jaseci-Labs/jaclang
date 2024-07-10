@@ -14,7 +14,7 @@ Jaclang facilitates the integration of generative AI models, specifically Large 
 
     <!-- [:octicons-arrow-right-24: Getting started](#) -->
 
-    [REPO](https://github.com/Jaseci-Labs/mtllm){ .md-button .md-button--primary }
+    [REPO](https://github.com/Jaseci-Labs/mtllm){ .md-button}
 
 -   __MTLLM Documentation__
 
@@ -22,7 +22,7 @@ Jaclang facilitates the integration of generative AI models, specifically Large 
 
     *You can refer to our official documentation for MTLLM*
 
-    [DOCS](https://jaseci-labs.github.io/mtllm/){ .md-button .md-button--primary }
+    [DOCS](https://jaseci-labs.github.io/mtllm/){ .md-button}
 
 </div>
 
@@ -51,12 +51,81 @@ pip install mtllm[openai]
 
 > **NOTE:**
 >
-> Refer to the [MTLLM documentation](https://jaseci-labs.github.io/mtllm/docs/quickstart/installation) fro the full installation guide and to identify all available models with MTLLM support.
-
+> Refer to the [MTLLM documentation](https://jaseci-labs.github.io/mtllm/docs/quickstart/installation) for the full installation guide and to identify all available generative AI models with MTLLM support.
 
 ### Example Usage
-Consider a scenario where you require to use an open-ai LLM to translate from english to a specified language
 
+Consider a scenario where you require to use an open-ai LLM to find bio-data of a historically significant figure. MTLLM allows this to be done at two main LLM interaction methodologies, we shall visit both of these methods.
+
+=== "Method 1 : Dedicated Function"
+    ```jac linenums="1"
+    import:py from mtllm.llms, OpenAI;
+
+    glob llm = OpenAI(model_name = "gpt-4o");
+
+    obj personBio {
+        has name:str;
+        has birth_year:'year, AD/BC adjective':(int, str);
+        has death_year:'year, AD/BC adjective':(int, str);
+        has married:bool;
+        has children:int;
+    }
+
+    can findBioData(name:str) -> personBio by llm();
+
+    with entry {
+        person = findBioData("Cleopatra VII Philopator");
+        print( f"{person.name} was born in {person.birth_year[0]} {person.birth_year[1]} and died in {person.death_year[0]} {person.death_year[1]}.");
+        if person.married{
+            print(f"They were married and had {person.children} children.");
+        }
+    }
+    ```
+=== "Method 2 : Object Auto Fill"
+    ```jac linenums="1"
+    import:py from mtllm.llms, OpenAI;
+
+    glob llm = OpenAI(model_name = "gpt-4o");
+
+    obj personBio {
+        has name:str;
+        has birth_year:'year, AD/BC adjective':(int, str);
+        has death_year:'year, AD/BC adjective':(int, str);
+        has married:bool;
+        has children:int;
+    }
+
+    with entry {
+        person = personBio(name = "Cleopatra VII Philopator" by llm());
+        print( f"{person.name} was born in {person.birth_year[0]} {person.birth_year[1]} and died in {person.death_year[0]} {person.death_year[1]}.");
+        if person.married{
+            print(f"They were married and had {person.children} children.");
+        }
+    }
+    ```
+**Import and setup**
+
+The first two lines of the above code snippets refer to importing the required LLM vendor and initializing the ```llm``` with the model name and other parameters. There are other arguments that can found in the mtllm docs.
+
+> **NOTE:**
+>
+> Refer to the [MTLLM documentation](https://jaseci-labs.github.io/mtllm/docs/building-blocks/language_models) for the full range of passable arguments and how to visualize the prompt and LLM generation within the runtime.
+
+**Method 1 : Dedicated Function**
+
+In the first code example we can observe a ```personBio``` object which contains attributes related to the biographic data of the named person. In Line:13 a function is defined as ```findBioData``` which takes in the name of the person as the input argument and outputs a ```personBio``` object. by adding the ```by llm()``` after the output type hint we invoke the previously define llm to generate the object with data filled in. The filled in data will be correctly typed using the defined type hints of ```personBio```.
+
+**Method 2 : Object Auto Fill**
+
+The main change of this methods with the above approach is that a separate function does not need to be declared. At object initialization in Line:14 we invoke the llm to use the prefilled attributes of the object to fill out the remaining attributes of the object. This is a much easier approach to be used when everything that should be generated needs to be in an object.
+
+> **NOTE:**
+>
+> To dive deep into exactly how to use MTLLM please visit our [MTLLM Documentation](https://jaseci-labs.github.io/mtllm/){ .md-button}.
+
+**Semstrings?**
+
+You may have noticed in both methodologies we are using a string annotation on Line:7 amd Line:8. This is called a semstring, which is an optional feature of MTLLM, which can be used for adding additional context to attributes, abilities as well as objects. Look into our [full documentation for semstrings](https://jaseci-labs.github.io/mtllm/docs/building-blocks/semstrings) to get a better insight.
 <!-- ### Model Initialization
 
 To incorporate a Large Language Model (LLM) into code, initialize it by importing from the ```mtllm.llms``` module built into the langauge.
@@ -96,7 +165,7 @@ _Cloud Hosted LLMs (API Clients)_
     pip install together
     ``` -->
 
-_Running Local LLMs_
+<!-- _Running Local LLMs_
 
  - [Ollama](https://ollama.com/library)
 
@@ -279,9 +348,9 @@ Here,
 
 - `context`: List of information to give external information to llm for our use cases.
 
-`by <model>(temperature=0.7, top_k = 3, top_p =0.51, incl_info=(xxx), context=[""],reason=true) ` <!--TODO : This line needs to be modified  with a working example code snippet later  -->
+`by <model>(temperature=0.7, top_k = 3, top_p =0.51, incl_info=(xxx), context=[""],reason=true) ` TODO : This line needs to be modified  with a working example code snippet later  -->
 
-|    Parameters    |          Type              |
+<!-- |    Parameters    |          Type              |
 |    --------      |         -------            |
 |   model_params   |   kw_pair \| None          |
 |     method       |    kw_pair \| None         |
@@ -383,5 +452,5 @@ Utilizing Semstring in return type specifications provides a meaningful way to e
 can 'Summarize the Accomplishments'
 summarize (a: 'Accomplishments': list[str]) -> 'Summary of the Accomplishments' : str by llm();
 ```
-In this example, the semstring <span style="color:orange;">'Summary of the Accomplishments' </span> precisely communicates the nature of the expected output. This clarity ensures that developers, as well as LLM, comprehend the type of information that will be returned by invoking the 'Summarize the Accomplishments' function.
+In this example, the semstring <span style="color:orange;">'Summary of the Accomplishments' </span> precisely communicates the nature of the expected output. This clarity ensures that developers, as well as LLM, comprehend the type of information that will be returned by invoking the 'Summarize the Accomplishments' function. -->
 <!-- how ? -->
