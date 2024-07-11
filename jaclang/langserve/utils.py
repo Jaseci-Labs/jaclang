@@ -7,7 +7,7 @@ import os
 import re
 import sys
 from functools import wraps
-from typing import Any, Awaitable, Callable, Coroutine, Optional, ParamSpec, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Optional, ParamSpec, TypeVar, Union
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.codeloc import CodeLocInfo
@@ -364,13 +364,14 @@ def get_definition_range(
     return None
 
 
+
 def locate_affected_token(
     tokens: list[int],
     change_start_line: int,
     change_start_char: int,
     change_end_line: int,
     change_end_char: int,
-) -> Optional[int]:
+) -> Optional[Union[int,bool]]:
     """Find in which token change is occurring."""
     token_index = 0
     current_line = 0
@@ -391,17 +392,17 @@ def locate_affected_token(
             and token_abs_start_char <= change_start_char
             and change_end_char <= token_abs_end_char
         ):
-            return token_index
+            return token_index, token_abs_start_char == change_start_char
         if (
             current_line == change_start_line
             and token_abs_start_char <= change_start_char < token_abs_end_char
         ):
-            return token_index
+            return token_index, token_abs_start_char == change_start_char
         if (
             current_line == change_end_line
             and token_abs_start_char < change_end_char <= token_abs_end_char
         ):
-            return token_index
+            return token_index, token_abs_start_char == change_start_char
 
         line_char_offset += token_start_char
         token_index += 5

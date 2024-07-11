@@ -73,7 +73,34 @@ class ModuleInfo:
                 ]
                 prev_line, prev_col = line, col_start
         return tokens
+    # def find_surrounding_tokens(self, change_start_line: int, change_start_char: int) -> tuple[Optional[int], Optional[int]]:
+    #     """Find the indices of the previous and next tokens surrounding the change."""
+    #     prev_token_index = None
+    #     next_token_index = None
+    #     current_line = 0
+    #     line_char_offset = 0
 
+    #     for i in range(0, len(self.sem_tokens), 5):
+    #         token_line_delta = self.sem_tokens[i]
+    #         token_start_char = self.sem_tokens[i + 1]
+    #         token_length = self.sem_tokens[i + 2]
+
+    #         if token_line_delta > 0:
+    #             current_line += token_line_delta
+    #             line_char_offset = 0
+            
+    #         token_abs_start_char = line_char_offset + token_start_char
+    #         token_abs_end_char = token_abs_start_char + token_length
+
+    #         if current_line < change_start_line or (current_line == change_start_line and token_abs_end_char <= change_start_char):
+    #             prev_token_index = i
+    #         elif current_line > change_start_line or (current_line == change_start_line and token_abs_start_char > change_start_char):
+    #             next_token_index = i
+    #             break
+
+    #         line_char_offset += token_start_char
+
+    #     return prev_token_index, next_token_index
     def update_sem_tokens(
         self, content_changes: lspt.DidChangeTextDocumentParams
     ) -> list[int]:
@@ -83,6 +110,10 @@ class ModuleInfo:
             for x in content_changes.content_changes
             if isinstance(x, lspt.TextDocumentContentChangeEvent_Type1)
         ]:
+            logging.info("\n\ninitial : ")
+            for i in range(0, len(self.sem_tokens), 5):
+                logging.info(self.sem_tokens[i : i + 5])
+            logging.info(f"\n\nchange:\n {change} \n")
             change_start_line = change.range.start.line
             change_start_char = change.range.start.character
             change_end_line = change.range.end.line
@@ -100,28 +131,57 @@ class ModuleInfo:
                     - change_end_char
                     + change_start_char
                 )
-
-            changed_token_index = locate_affected_token(
+            logging.info(
+                f"line_delta: {line_delta}, char_delta: {char_delta},\n change_start_line: {change_start_line}, change_start_char: {change_start_char}, \nchange_end_line: {change_end_line}, change_end_char: {change_end_char}"
+            )
+            x= locate_affected_token(
                 self.sem_tokens,
                 change_start_line,
                 change_start_char,
                 change_end_line,
                 change_end_char,
             )
-            if changed_token_index:
-                self.sem_tokens[changed_token_index + 2] = max(
-                    1, self.sem_tokens[changed_token_index + 2] + char_delta
-                )
-                if (
-                    len(self.sem_tokens) > changed_token_index + 5
-                    and self.sem_tokens[changed_token_index + 5] == 0
-                ):
-                    next_token_index = changed_token_index + 5
-                    self.sem_tokens[next_token_index + 1] = max(
-                        0, self.sem_tokens[next_token_index + 1] + char_delta
-                    )
-                    return self.sem_tokens
 
+            if x:
+                changed_token_index , start = x
+                logging.info(f'changed_token_index: {changed_token_index} \n')
+                # logging.info(f': {changed_token_index} \n')
+                if ' ' not in change.text:
+                    self.sem_tokens[changed_token_index + 2] = max(
+                        1, self.sem_tokens[changed_token_index + 2] + char_delta
+                    )
+                    if (
+                        len(self.sem_tokens) > changed_token_index + 5
+                        and self.sem_tokens[changed_token_index + 5] == 0
+                    ):
+                        next_token_index = changed_token_index + 5
+                        self.sem_tokens[next_token_index + 1] = max(
+                            0, self.sem_tokens[next_token_index + 1] + char_delta
+                        )
+                    return self.sem_tokens
+                else:
+                    logging.info(f'sucessaa {changed_token_index} \n')
+                    # check for change at start or at end
+                    if start:
+                         self.sem_tokens[changed_token_index + 1] += char_delta
+                logging.info("\n\nfinal : ")
+                for i in range(0, len(self.sem_tokens), 5):
+                    logging.info(self.sem_tokens[i : i + 5])
+                return self.sem_tokens
+            # else:
+            #     # Log information about previous and next tokens
+            #     prev_token_index, next_token_index = self.find_surrounding_tokens(
+            #         change_start_line, change_start_char
+            #     )
+            #     logging.info("Change is not inside an affected token.")
+            #     if prev_token_index is not None:
+            #         logging.info(f"Previous token: {self.sem_tokens[prev_token_index:prev_token_index+5]}")
+            #     else:
+            #         logging.info("No previous token found.")
+            #     if next_token_index is not None:
+            #         logging.info(f"Next token: {self.sem_tokens[next_token_index:next_token_index+5]}")
+            #     else:
+            #         logging.info("No next token found.")
             current_token_index = 0
             line_offset = 0
             while current_token_index < len(self.sem_tokens):
@@ -142,6 +202,9 @@ class ModuleInfo:
                         break
                 line_offset += self.sem_tokens[current_token_index]
                 current_token_index += 5
+        logging.info("\n\nfinal : ")
+        for i in range(0, len(self.sem_tokens), 5):
+            logging.info(self.sem_tokens[i : i + 5])
         return self.sem_tokens
 
 
