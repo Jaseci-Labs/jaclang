@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast as ast3
 import builtins
 import html
+import os
 from typing import Optional, TYPE_CHECKING
 
 import jaclang.compiler.absyntree as ast
@@ -101,7 +102,13 @@ def print_ast_tree(
             else "SymbolTable: None" if isinstance(node, AstSymbolNode) else ""
         )
 
-        if isinstance(node, Token) and isinstance(node, AstSymbolNode):
+        types_to_ignore = (ast.Int, ast.Bool, ast.Float, ast.String)
+
+        if (
+            isinstance(node, Token)
+            and isinstance(node, AstSymbolNode)
+            and not isinstance(node, types_to_ignore)
+        ):
             out = (
                 f"{node.__class__.__name__} - {node.value} - "
                 f"Type: {node.sym_type}, {access} {sym_table_link}"
@@ -183,8 +190,12 @@ def print_ast_tree(
     markers += marker if level > 0 else ""
 
     if isinstance(root, ast.AstNode):
-        tree_str = f"{root.loc}\t{markers}{__node_repr_in_tree(root)}\n"
+        file_name = root.loc.mod_path
+        file_name = file_name.split(os.path.sep)[-1]
+        tree_str = f"{file_name} {root.loc}\t{markers}{__node_repr_in_tree(root)}\n"
         for i, child in enumerate(root.kid):
+            if isinstance(child, ast.Module) and child.py_lib:
+                continue
             is_last = i == len(root.kid) - 1
             tree_str += print_ast_tree(
                 child, marker, [*level_markers, not is_last], output_file, max_depth

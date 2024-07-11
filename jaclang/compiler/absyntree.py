@@ -635,6 +635,7 @@ class Module(AstDocNode):
         self.test_mod: list[Module] = []
         self.mod_deps: dict[str, Module] = {}
         self.registry = registry
+        self.py_lib: bool = False
         AstNode.__init__(self, kid=kid)
         AstDocNode.__init__(self, doc=doc)
 
