@@ -260,6 +260,20 @@ class JacImportPass(Pass):
         """Call pass after_pass."""
         from jaclang.compiler.passes.main import PyastBuildPass
 
+        # This part to handle importing/creating parent modules in case of doing
+        # import a.b.c
+        # without it code will crash as it will create a.b.c as a module and at linking
+        # it will try to link each a, b and c as separate modules which will crash
+        more_modules_to_import = []
+        for i in self.py_resolve_list:
+            if "." in i:
+                name_list = i.split(".")
+                for index in range(len(name_list)):
+                    more_modules_to_import.append(".".join(name_list[:index]))
+
+        for i in more_modules_to_import:
+            self.py_resolve_list.add(i)
+
         sorted_resolve_list = list(self.py_resolve_list)
         sorted_resolve_list.sort()
 
@@ -281,27 +295,20 @@ class JacImportPass(Pass):
             # if "." in i:
             #     print(self.grep(file_path=expected_file, regex=fr"\s*{final_target}\s*="))
 
-            try:
-
-                if expected_file not in py_mod_map:
-                    with open(expected_file, "r", encoding="utf-8") as f:
-                        py_mod_map[expected_file] = (
-                            PyastBuildPass(
-                                input_ir=ast.PythonModuleAst(
-                                    py_ast.parse(f.read()), mod_path=expected_file
-                                ),
-                            ).ir,
-                            [i],
-                        )
-                        SubNodeTabPass(
-                            prior=self, input_ir=py_mod_map[expected_file][0]
-                        )
-                        py_mod_map[expected_file][0].py_lib = True
-                else:
-                    py_mod_map[expected_file][1].append(i)
-
-            except Exception:
-                pass
+            if expected_file not in py_mod_map:
+                with open(expected_file, "r", encoding="utf-8") as f:
+                    py_mod_map[expected_file] = (
+                        PyastBuildPass(
+                            input_ir=ast.PythonModuleAst(
+                                py_ast.parse(f.read()), mod_path=expected_file
+                            ),
+                        ).ir,
+                        [i],
+                    )
+                    SubNodeTabPass(prior=self, input_ir=py_mod_map[expected_file][0])
+                    py_mod_map[expected_file][0].py_lib = True
+            else:
+                py_mod_map[expected_file][1].append(i)
 
         attached_modules: dict[str, ast.Module] = {}
         for i in py_mod_map:
