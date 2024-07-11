@@ -7,7 +7,15 @@ import os
 import re
 import sys
 from functools import wraps
-from typing import Any, Awaitable, Callable, Coroutine, Optional, ParamSpec, TypeVar, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Optional,
+    ParamSpec,
+    TypeVar,
+)
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.codeloc import CodeLocInfo
@@ -364,14 +372,13 @@ def get_definition_range(
     return None
 
 
-
 def locate_affected_token(
     tokens: list[int],
     change_start_line: int,
     change_start_char: int,
     change_end_line: int,
     change_end_char: int,
-) -> Optional[Union[int,bool]]:
+) -> Optional[tuple[int, bool]]:
     """Find in which token change is occurring."""
     token_index = 0
     current_line = 0
