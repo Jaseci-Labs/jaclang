@@ -87,7 +87,11 @@ def run(
         )
 
     jctx = Jac.context(
-        session, {"root": NodeAnchor.ref(root), "entry": NodeAnchor.ref(node)}
+        {
+            "session": session,
+            "root": NodeAnchor.ref(root),
+            "entry": NodeAnchor.ref(node),
+        }
     )
 
     base, mod = os.path.split(filename)
@@ -139,7 +143,7 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    jctx = Jac.context(session)
+    jctx = Jac.context({"session": session})
 
     response = {}
     if id == "root":
@@ -346,7 +350,7 @@ def dot(
             else ""
         )
 
-    jctx = Jac.context(session)
+    jctx = Jac.context({"session": session})
 
     base, mod = os.path.split(filename)
     base = base if base else "./"

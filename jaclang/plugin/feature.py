@@ -14,7 +14,7 @@ from jaclang.core.constructs import (
     Root,
     WalkerArchitype,
 )
-from jaclang.core.context import ContextOptions, ExecutionContext
+from jaclang.core.context import ExecutionContext
 from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec
 
 import pluggy
@@ -39,11 +39,9 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(
-        session: Optional[str] = "", options: Optional[ContextOptions] = None
-    ) -> ExecutionContext:
+    def context(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
         """Create execution context."""
-        return pm.hook.context(session=session, options=options)
+        return pm.hook.context(options=options)
 
     @staticmethod
     def make_architype(

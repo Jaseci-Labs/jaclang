@@ -15,7 +15,7 @@ from jaclang.core.constructs import (
     Root,
     WalkerArchitype,
 )
-from jaclang.core.context import ContextOptions, ExecutionContext
+from jaclang.core.context import ExecutionContext
 
 import pluggy
 
@@ -27,9 +27,7 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(
-        session: Optional[str], options: Optional[ContextOptions]
-    ) -> ExecutionContext:
+    def context(options: Optional[dict[str, Any]]) -> ExecutionContext:
         """Get the execution context."""
         raise NotImplementedError
 

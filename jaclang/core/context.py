@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 from contextvars import ContextVar
-from typing import Any, Callable, Optional, TypedDict, Union
+from typing import Any, Callable, Optional, Union
 from uuid import UUID
 
 from .architype import NodeAnchor, Root
@@ -14,19 +14,12 @@ from .memory import ShelfStorage
 EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
 
 
-class ContextOptions(TypedDict, total=False):
-    """Execution Context Options."""
-
-    root: Optional[NodeAnchor]
-    entry: Optional[NodeAnchor]
-
-
 class ExecutionContext:
     """Execution Context."""
 
     def __init__(
         self,
-        session: Optional[str] = "",
+        session: Optional[str] = None,
         root: Optional[NodeAnchor] = None,
         entry: Optional[NodeAnchor] = None,
     ) -> None:
@@ -66,12 +59,10 @@ class ExecutionContext:
         self.datasource.close()
 
     @staticmethod
-    def get(
-        session: Optional[str] = "", options: Optional[ContextOptions] = None
-    ) -> ExecutionContext:
+    def get(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
         """Get or create execution context."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            EXECUTION_CONTEXT.set(ctx := ExecutionContext(session, **options or {}))
+            EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))
         return ctx
 
 

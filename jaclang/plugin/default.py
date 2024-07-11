@@ -29,7 +29,7 @@ from jaclang.core.constructs import (
     WalkerAnchor,
     WalkerArchitype,
 )
-from jaclang.core.context import ContextOptions, ExecutionContext
+from jaclang.core.context import ExecutionContext
 from jaclang.core.importer import jac_importer
 from jaclang.core.utils import traverse_graph
 from jaclang.plugin.feature import JacFeature as Jac
@@ -66,11 +66,9 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(
-        session: Optional[str], options: Optional[ContextOptions]
-    ) -> ExecutionContext:
+    def context(options: Optional[dict[str, Any]]) -> ExecutionContext:
         """Get the execution context."""
-        return ExecutionContext.get(session, options)
+        return ExecutionContext.get(options)
 
     @staticmethod
     @hookimpl
