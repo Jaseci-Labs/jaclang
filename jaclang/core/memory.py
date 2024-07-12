@@ -7,13 +7,13 @@ from typing import Any, Callable, Generator, Optional, Union, cast
 from uuid import UUID
 
 from .architype import (
+    Anchor,
     Architype,
     EdgeAnchor,
     EdgeArchitype,
     MANUAL_SAVE,
     NodeAnchor,
     NodeArchitype,
-    ObjectAnchor,
     ObjectType,
     Permission,
     WalkerAnchor,
@@ -27,7 +27,7 @@ IDS = Union[UUID, list[UUID]]
 class Memory:
     """Generic Memory Handler."""
 
-    __mem__: dict[str, ObjectAnchor] = field(default_factory=dict)
+    __mem__: dict[str, Anchor] = field(default_factory=dict)
     __gc__: set[str] = field(default_factory=set)
 
     def close(self) -> None:
@@ -40,8 +40,8 @@ class Memory:
         self.close()
 
     def find(
-        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None
-    ) -> Generator[ObjectAnchor, None, None]:
+        self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
+    ) -> Generator[Anchor, None, None]:
         """Find anchors from memory by ids with filter."""
         if not isinstance(ids, list):
             ids = [ids]
@@ -55,12 +55,12 @@ class Memory:
     def find_one(
         self,
         ids: IDS,
-        filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None,
-    ) -> Optional[ObjectAnchor]:
+        filter: Optional[Callable[[Anchor], Anchor]] = None,
+    ) -> Optional[Anchor]:
         """Find one anchor from memory by ids with filter."""
         return next(self.find(ids, filter), None)
 
-    def set(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
+    def set(self, data: Union[Anchor, list[Anchor]]) -> None:
         """Save anchor/s to memory."""
         if isinstance(data, list):
             for d in data:
@@ -69,7 +69,7 @@ class Memory:
         elif str(data.id) not in self.__gc__:
             self.__mem__[str(data.id)] = data
 
-    def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
+    def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
         """Remove anchor/s from memory."""
         if isinstance(data, list):
             for d in data:
@@ -106,8 +106,8 @@ class ShelfStorage(Memory):
         super().close()
 
     def find(
-        self, ids: IDS, filter: Optional[Callable[[ObjectAnchor], ObjectAnchor]] = None
-    ) -> Generator[ObjectAnchor, None, None]:
+        self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
+    ) -> Generator[Anchor, None, None]:
         """Find anchors from datasource by ids with filter."""
         if not isinstance(ids, list):
             ids = [ids]
@@ -128,9 +128,7 @@ class ShelfStorage(Memory):
         else:
             yield from super().find(ids, filter)
 
-    def set(
-        self, data: Union[ObjectAnchor, list[ObjectAnchor]], mem_only: bool = False
-    ) -> None:
+    def set(self, data: Union[Anchor, list[Anchor]], mem_only: bool = False) -> None:
         """Save anchor/s to datasource."""
         super().set(data)
 
@@ -146,7 +144,7 @@ class ShelfStorage(Memory):
                     if d.current_access_level > 1:
                         self.__shelf__[_id]["architype"] = json["architype"]
 
-    def remove(self, data: Union[ObjectAnchor, list[ObjectAnchor]]) -> None:
+    def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
         """Remove anchor/s from datasource."""
         super().remove(data)
         if isinstance(self.__shelf__, Shelf) and MANUAL_SAVE:
@@ -156,7 +154,7 @@ class ShelfStorage(Memory):
             else:
                 self.__shelf__.pop(str(data.id), None)
 
-    def get(self, anchor: dict[str, Any]) -> ObjectAnchor:
+    def get(self, anchor: dict[str, Any]) -> Anchor:
         """Get Anchor Instance."""
         name = cast(str, anchor.get("name"))
         architype = anchor.pop("architype")
@@ -191,6 +189,6 @@ class ShelfStorage(Memory):
                 wanch.architype = WalkerArchitype.get(name)(__jac__=wanch, **architype)
                 return wanch
             case _:
-                oanch = ObjectAnchor(access=access, **anchor)
+                oanch = Anchor(access=access, **anchor)
                 oanch.architype = Architype(__jac__=oanch)
                 return oanch

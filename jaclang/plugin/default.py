@@ -16,6 +16,7 @@ from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, T, colors
 from jaclang.compiler.semtable import SemInfo, SemRegistry, SemScope
 from jaclang.core.constructs import (
+    Anchor,
     Architype,
     DSFunc,
     EdgeAnchor,
@@ -24,7 +25,6 @@ from jaclang.core.constructs import (
     JacTestCheck,
     NodeAnchor,
     NodeArchitype,
-    ObjectAnchor,
     Root,
     WalkerAnchor,
     WalkerArchitype,
@@ -43,7 +43,7 @@ __all__ = [
     "GenericEdge",
     "JacTestCheck",
     "NodeAnchor",
-    "ObjectAnchor",
+    "Anchor",
     "WalkerAnchor",
     "NodeArchitype",
     "EdgeArchitype",
@@ -112,7 +112,7 @@ class JacFeatureDefaults:
         def new_init(
             self: Architype,
             *args: object,
-            __jac__: Optional[ObjectAnchor] = None,
+            __jac__: Optional[Anchor] = None,
             **kwargs: object,
         ) -> None:
             arch_base.__init__(self, __jac__)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 from .architype import (
+    Anchor,
     Architype,
     DSFunc,
     EdgeAnchor,
@@ -11,7 +12,6 @@ from .architype import (
     GenericEdge,
     NodeAnchor,
     NodeArchitype,
-    ObjectAnchor,
     Root,
     WalkerAnchor,
     WalkerArchitype,
@@ -21,7 +21,7 @@ from .memory import Memory, ShelfStorage
 from .test import JacTestCheck, JacTestResult, JacTextTestRunner
 
 __all__ = [
-    "ObjectAnchor",
+    "Anchor",
     "NodeAnchor",
     "EdgeAnchor",
     "WalkerAnchor",

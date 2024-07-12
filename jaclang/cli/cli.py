@@ -18,7 +18,7 @@ from jaclang.compiler.constant import Constants
 from jaclang.compiler.passes.main.pyast_load_pass import PyastBuildPass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
 from jaclang.compiler.passes.tool.schedules import format_pass
-from jaclang.core.constructs import NodeAnchor, ObjectAnchor
+from jaclang.core.constructs import Anchor, NodeAnchor
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
@@ -149,7 +149,7 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
     if id == "root":
         super_root = jctx.super_root
         response = super_root.serialize()
-    elif (anchor := ObjectAnchor.ref(id)) and anchor.sync():
+    elif (anchor := Anchor.ref(id)) and anchor.sync():
         response = anchor.serialize()
 
     jctx.close()

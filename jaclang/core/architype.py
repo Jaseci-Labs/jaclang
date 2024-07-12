@@ -140,7 +140,7 @@ class Permission(Generic[T]):
 
 
 @dataclass(eq=False)
-class ObjectAnchor:
+class Anchor:
     """Object Anchor."""
 
     type: ObjectType = ObjectType.generic
@@ -160,10 +160,10 @@ class ObjectAnchor:
         return f"{self.type.value}:{self.name}:{self.id}"
 
     @staticmethod
-    def ref(ref_id: str) -> Optional[ObjectAnchor]:
+    def ref(ref_id: str) -> Optional[Anchor]:
         """Return ObjectAnchor instance if ."""
         if matched := GENERIC_ID_REGEX.search(ref_id):
-            cls: type = ObjectAnchor
+            cls: type = Anchor
             match ObjectType(matched.group(1)):
                 case ObjectType.node:
                     cls = NodeAnchor
@@ -209,19 +209,19 @@ class ObjectAnchor:
         self.root = jctx.root.id
         jctx.datasource.set(self, True)
 
-    def has_read_access(self, to: ObjectAnchor) -> bool:
+    def has_read_access(self, to: Anchor) -> bool:
         """Read Access Validation."""
         return self.access_level(to) > -1
 
-    def has_connect_access(self, to: ObjectAnchor) -> bool:
+    def has_connect_access(self, to: Anchor) -> bool:
         """Write Access Validation."""
         return self.access_level(to) > 0
 
-    def has_write_access(self, to: ObjectAnchor) -> bool:
+    def has_write_access(self, to: Anchor) -> bool:
         """Write Access Validation."""
         return self.access_level(to) > 1
 
-    def access_level(self, to: ObjectAnchor) -> int:
+    def access_level(self, to: Anchor) -> int:
         """Access validation."""
         from .context import ExecutionContext
 
@@ -301,7 +301,7 @@ class ObjectAnchor:
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
-        if isinstance(other, ObjectAnchor):
+        if isinstance(other, Anchor):
             return (
                 self.type == other.type
                 and self.name == other.name
@@ -316,7 +316,7 @@ class ObjectAnchor:
 
 
 @dataclass(eq=False)
-class NodeAnchor(ObjectAnchor):
+class NodeAnchor(Anchor):
     """Node Anchor."""
 
     type: ObjectType = ObjectType.node
@@ -480,7 +480,7 @@ class NodeAnchor(ObjectAnchor):
 
 
 @dataclass(eq=False)
-class EdgeAnchor(ObjectAnchor):
+class EdgeAnchor(Anchor):
     """Edge Anchor."""
 
     type: ObjectType = ObjectType.edge
@@ -585,14 +585,14 @@ class EdgeAnchor(ObjectAnchor):
 
 
 @dataclass(eq=False)
-class WalkerAnchor(ObjectAnchor):
+class WalkerAnchor(Anchor):
     """Walker Anchor."""
 
     type: ObjectType = ObjectType.walker
     architype: Optional[WalkerArchitype] = None
-    path: list[ObjectAnchor] = field(default_factory=list)
-    next: list[ObjectAnchor] = field(default_factory=list)
-    ignores: list[ObjectAnchor] = field(default_factory=list)
+    path: list[Anchor] = field(default_factory=list)
+    next: list[Anchor] = field(default_factory=list)
+    ignores: list[Anchor] = field(default_factory=list)
     disengaged: bool = False
     persistent: bool = False  # Disabled initially but can be adjusted
 
@@ -667,7 +667,7 @@ class WalkerAnchor(ObjectAnchor):
         """Disengage walker from traversal."""
         self.disengaged = True
 
-    def spawn_call(self, nd: ObjectAnchor) -> WalkerArchitype:
+    def spawn_call(self, nd: Anchor) -> WalkerArchitype:
         """Invoke data spatial call."""
         if walker := self.sync():
             self.path = []
@@ -718,16 +718,16 @@ class Architype:
     _jac_exit_funcs_: list[DSFunc]
     _jac_classes_: dict[str, type[Architype]]
 
-    def __init__(self, __jac__: Optional[ObjectAnchor] = None) -> None:
+    def __init__(self, __jac__: Optional[Anchor] = None) -> None:
         """Create default architype."""
-        self.__jac__ = __jac__ or ObjectAnchor(architype=self)
+        self.__jac__ = __jac__ or Anchor(architype=self)
         self.__jac__.allocate()
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
         if isinstance(other, Architype):
             return super().__eq__(other)
-        elif isinstance(other, ObjectAnchor):
+        elif isinstance(other, Anchor):
             return self.__jac__ == other
 
         return False
