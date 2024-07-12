@@ -284,6 +284,17 @@ class ObjectAnchor:
             ),
         }
 
+    def report(self) -> dict[str, object]:
+        """Report Anchor."""
+        return {
+            "id": self.ref_id,
+            "context": (
+                asdict(self.architype)
+                if is_dataclass(self.architype) and not isinstance(self.architype, type)
+                else {}
+            ),
+        }
+
     def __hash__(self) -> int:
         """Override hash for anchor."""
         return hash(self.ref_id)
