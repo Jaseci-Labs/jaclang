@@ -230,6 +230,13 @@ class JacImportPass(Pass):
         if os.path.sep not in lib_path:
             return None
 
+        if (
+            os.path.isfile(lib_path)
+            and not lib_path.endswith(".py")
+            and not lib_path.endswith(".pyi")
+        ):
+            return None
+
         if lib_path.endswith("py") and os.path.isfile(lib_path.replace(".py", ".pyi")):
             lib_path = lib_path.replace(".py", ".pyi")
 
