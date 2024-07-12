@@ -205,7 +205,6 @@ class JacImportPass(Pass):
             self.warnings_had += mod_pass.warnings_had
             mod = mod_pass.ir
         except Exception as e:
-            print(e)
             mod = None
         if isinstance(mod, ast.Module):
             self.import_table[target] = mod
@@ -219,8 +218,6 @@ class JacImportPass(Pass):
     def get_py_lib_path(self, import_path: str) -> Optional[str]:
         """Try to get the stub path of a python module."""
         base_library = import_path.split(".")[0]
-
-        print(base_library)
 
         try:
             spec = importlib.util.find_spec(base_library)
