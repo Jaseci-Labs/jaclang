@@ -129,7 +129,11 @@ def run(
     # TODO: handle no override name
     if walker:
         walker_module = dict(inspect.getmembers(loaded_mod)).get(walker)
-        if walker_module and (architype := jctx.entry.architype):
+        if (
+            walker_module
+            and jctx.validate_access()
+            and (architype := jctx.entry.architype)
+        ):
             Jac.spawn_call(architype, walker_module())
         else:
             print(f"Walker {walker} not found.")

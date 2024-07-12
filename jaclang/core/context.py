@@ -58,6 +58,10 @@ class ExecutionContext:
         """Clean up context."""
         self.datasource.close()
 
+    def validate_access(self) -> bool:
+        """Validate access."""
+        return self.root.has_read_access(self.entry)
+
     @staticmethod
     def get(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
         """Get or create execution context."""

@@ -167,6 +167,7 @@ class ShelfStorage(Memory):
                         e for edge in anchor.pop("edges") if (e := EdgeAnchor.ref(edge))
                     ],
                     access=access,
+                    connected=True,
                     **anchor,
                 )
                 nanch.architype = NodeArchitype.get(name or "Root")(
@@ -178,6 +179,7 @@ class ShelfStorage(Memory):
                     source=NodeAnchor.ref(anchor.pop("source")),
                     target=NodeAnchor.ref(anchor.pop("target")),
                     access=access,
+                    connected=True,
                     **anchor,
                 )
                 eanch.architype = EdgeArchitype.get(name or "GenericEdge")(
@@ -185,10 +187,10 @@ class ShelfStorage(Memory):
                 )
                 return eanch
             case ObjectType.walker:
-                wanch = WalkerAnchor(access=access, **anchor)
+                wanch = WalkerAnchor(access=access, connected=True, **anchor)
                 wanch.architype = WalkerArchitype.get(name)(__jac__=wanch, **architype)
                 return wanch
             case _:
-                oanch = Anchor(access=access, **anchor)
+                oanch = Anchor(access=access, connected=True, **anchor)
                 oanch.architype = Architype(__jac__=oanch)
                 return oanch
