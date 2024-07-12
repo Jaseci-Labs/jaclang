@@ -220,10 +220,12 @@ class JacImportPass(Pass):
         """Try to get the stub path of a python module."""
         base_library = import_path.split(".")[0]
 
+        print(base_library)
+
         try:
             spec = importlib.util.find_spec(base_library)
             lib_path = spec.origin if spec else None
-        except ModuleNotFoundError:
+        except Exception:
             lib_path = None
 
         if lib_path is None:
