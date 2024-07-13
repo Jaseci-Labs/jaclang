@@ -204,7 +204,7 @@ class JacImportPass(Pass):
             self.errors_had += mod_pass.errors_had
             self.warnings_had += mod_pass.warnings_had
             mod = mod_pass.ir
-        except Exception as e:
+        except Exception:
             mod = None
         if isinstance(mod, ast.Module):
             self.import_table[target] = mod
@@ -312,7 +312,7 @@ class JacImportPass(Pass):
                         [i],
                     )
                     SubNodeTabPass(prior=self, input_ir=py_mod_map[expected_file][0])
-                    py_mod_map[expected_file][0].py_lib = True
+                    py_mod_map[expected_file][0].is_py_raised = True
             else:
                 py_mod_map[expected_file][1].append(i)
 

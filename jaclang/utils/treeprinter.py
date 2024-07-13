@@ -194,7 +194,7 @@ def print_ast_tree(
         file_name = file_name.split(os.path.sep)[-1]
         tree_str = f"{file_name} {root.loc}\t{markers}{__node_repr_in_tree(root)}\n"
         for i, child in enumerate(root.kid):
-            if isinstance(child, ast.Module) and child.py_lib:
+            if isinstance(child, ast.Module) and child.is_py_raised:
                 continue
             is_last = i == len(root.kid) - 1
             tree_str += print_ast_tree(
