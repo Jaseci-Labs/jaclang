@@ -30,7 +30,8 @@ class JacTypeCheckPass(Pass):
 
     def enter_module(self, node: ast.Module) -> None:
         """Call mypy checks on module level only."""
-        self.__modules.append(node)
+        if not node.is_py_raised:
+            self.__modules.append(node)
 
     def after_pass(self) -> None:
         """Call mypy api after traversing all the modules."""

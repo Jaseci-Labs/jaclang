@@ -11,7 +11,6 @@ from typing import Callable, TypeVar
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
-from jaclang.compiler.symtable import SymbolTable
 from jaclang.settings import settings
 from jaclang.utils.helpers import pascal_to_snake
 from jaclang.vendor.mypy.nodes import Node as VNode  # bit of a hack
@@ -447,20 +446,25 @@ class FuseTypeInfoPass(Pass):
                 if self_obj.type_sym_tab and isinstance(right_obj, ast.AstSymbolNode):
                     self_obj.type_sym_tab.def_insert(right_obj)
 
+    def exit_atom_trailer(self, node: ast.AtomTrailer) -> None:
+        """Adding symbol links to AtomTrailer right nodes."""
+        # This will fix adding the symbol links to nodes in atom trailer
+        # self.x.z = 5  # will add symbol links to both x and z
+        for i in range(1, len(node.as_attr_list)):
+            left = node.as_attr_list[i - 1]
+            right = node.as_attr_list[i]
+            # assert isinstance(left, ast.NameAtom)
+            # assert isinstance(right, ast.NameAtom)
+
+            if left.type_sym_tab and not isinstance(
+                right, ast.IndexSlice
+            ):  # TODO check why IndexSlice produce an issue
+                right.name_spec.sym = left.type_sym_tab.lookup(right.sym_name)
+                right.type_sym_tab = left.type_sym_tab.find_scope(right.sym_name)
+
     def exit_name(self, node: ast.Name) -> None:
-        """Add new symbols in the symbol table in case of atom trailer."""
-        if isinstance(node.parent, ast.AtomTrailer):
-            target_node = node.parent.target
-            if isinstance(target_node, ast.AstSymbolNode):
-                parent_symbol_table = target_node.type_sym_tab
-                if isinstance(parent_symbol_table, SymbolTable):
-                    node.sym = parent_symbol_table.lookup(node.sym_name)
-
-    # def exit_in_for_stmt(self, node: ast.InForStmt):
-    #     print(node.loc.mod_path, node.loc)
-    #     print(node.target, node.target.loc)
-    #     # node.sym_tab.def_insert()
-    #     # exit()
-
-    # def after_pass(self) -> None:
-    #     exit()
+        """Update python nodes."""
+        assert self.ir._sym_tab is not None
+        py_symtab = self.ir._sym_tab.find_py_scope(node.sym_name)
+        if py_symtab:
+            node.type_sym_tab = py_symtab

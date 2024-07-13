@@ -9,6 +9,7 @@ import sys
 from jaclang.cli import cli
 from jaclang.plugin.builtin import dotgen
 from jaclang.utils.test import TestCase
+from jaclang.settings import settings
 
 
 class JacCliTests(TestCase):
@@ -103,6 +104,24 @@ class JacCliTests(TestCase):
         sys.stdout = sys.__stdout__
         stdout_value = captured_output.getvalue()
         self.assertIn("Errors: 0, Warnings: 1", stdout_value)
+
+    def test_symbol_linking(self) -> None:
+        """Testing for type info inside the ast tool."""
+        settings.ast_symbol_info_detailed = True
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        cli.tool("ir", ["ast", f"{self.fixture_abs_path('type_info.jac')}"])
+        sys.stdout = sys.__stdout__
+        stdout_value = captured_output.getvalue()
+        self.assertIn(
+            "Name - pygls - Type: NoType,  SymbolTable: pygls SymbolPath: type_info.pygls",
+            stdout_value,
+        )
+        self.assertIn(
+            "Name - LanguageServer - Type: NoType,  SymbolTable: LanguageServer SymbolPath: type_info.pygls.server.LanguageServer",
+            stdout_value,
+        )
+        settings.ast_symbol_info_detailed = False
 
     def test_type_info(self) -> None:
         """Testing for type info inside the ast tool."""

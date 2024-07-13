@@ -8,6 +8,7 @@ symbols are available for matching.
 import ast as py_ast
 import importlib.util
 import os
+import subprocess
 import sys
 from typing import Optional
 
@@ -58,7 +59,8 @@ class JacImportPass(Pass):
                 mod_path=node.loc.mod_path,
             )
         elif lang == "py":
-            self.__py_imports.add(i.path_str)
+            self.__py_imports.add(i.path_str.split(".")[0])
+            self.py_resolve_list.add(i.path_str)
 
     def attach_mod_to_node(
         self, node: ast.ModulePath | ast.ModuleItem, mod: ast.Module | None
@@ -202,8 +204,7 @@ class JacImportPass(Pass):
             self.errors_had += mod_pass.errors_had
             self.warnings_had += mod_pass.warnings_had
             mod = mod_pass.ir
-        except Exception as e:
-            print(e)
+        except Exception:
             mod = None
         if isinstance(mod, ast.Module):
             self.import_table[target] = mod
@@ -213,6 +214,129 @@ class JacImportPass(Pass):
         else:
             self.error(f"Module {target} is not a valid Jac module.")
             return None
+
+    def get_py_lib_path(self, import_path: str) -> Optional[str]:
+        """Try to get the stub path of a python module."""
+        base_library = import_path.split(".")[0]
+
+        try:
+            spec = importlib.util.find_spec(base_library)
+            lib_path = spec.origin if spec else None
+        except Exception:
+            lib_path = None
+
+        if lib_path is None:
+            return None
+        if os.path.sep not in lib_path:
+            return None
+
+        if (
+            os.path.isfile(lib_path)
+            and not lib_path.endswith(".py")
+            and not lib_path.endswith(".pyi")
+        ):
+            return None
+
+        if lib_path.endswith("py") and os.path.isfile(lib_path.replace(".py", ".pyi")):
+            lib_path = lib_path.replace(".py", ".pyi")
+
+        base_path = lib_path[: lib_path.rindex("/")]
+
+        for i in import_path.split(".")[1:]:
+
+            # TODO: Check this branch
+            if os.path.isdir(os.path.join(base_path, i)):
+                lib_path = os.path.join(base_path, i)
+
+            elif os.path.isfile(os.path.join(base_path, i + ".pyi")):
+                return os.path.join(base_path, i + ".pyi")
+
+            elif os.path.isfile(os.path.join(base_path, i + ".py")):
+                return os.path.join(base_path, i + ".py")
+
+        return lib_path
+
+    def grep(self, file_path: str, regex: str) -> list[str]:
+        """Search for a word inside a directory."""
+        command = ["grep", regex, file_path]
+        result = subprocess.run(command, capture_output=True, text=True)
+        return result.stdout.split("\n")
+
+    def after_pass(self) -> None:
+        """Call pass after_pass."""
+        from jaclang.compiler.passes.main import PyastBuildPass
+
+        # This part to handle importing/creating parent modules in case of doing
+        # import a.b.c
+        # without it code will crash as it will create a.b.c as a module and at linking
+        # it will try to link each a, b and c as separate modules which will crash
+        more_modules_to_import = []
+        for i in self.py_resolve_list:
+            if "." in i:
+                name_list = i.split(".")
+                for index in range(len(name_list)):
+                    more_modules_to_import.append(".".join(name_list[:index]))
+
+        for i in more_modules_to_import:
+            self.py_resolve_list.add(i)
+
+        sorted_resolve_list = list(self.py_resolve_list)
+        sorted_resolve_list.sort()
+
+        py_mod_map: dict[str, tuple[ast.Module, list[str]]] = {}
+
+        for i in sorted_resolve_list:
+
+            expected_file = self.get_py_lib_path(i)
+
+            if expected_file is None:
+                continue
+
+            if not os.path.isfile(expected_file):
+                continue
+
+            # final_target = i.split(".")[-1]
+            # base_file = i.split(".")[0]
+
+            # if "." in i:
+            #     print(self.grep(file_path=expected_file, regex=fr"\s*{final_target}\s*="))
+
+            if expected_file not in py_mod_map:
+                with open(expected_file, "r", encoding="utf-8") as f:
+                    py_mod_map[expected_file] = (
+                        PyastBuildPass(
+                            input_ir=ast.PythonModuleAst(
+                                py_ast.parse(f.read()), mod_path=expected_file
+                            ),
+                        ).ir,
+                        [i],
+                    )
+                    SubNodeTabPass(prior=self, input_ir=py_mod_map[expected_file][0])
+                    py_mod_map[expected_file][0].is_py_raised = True
+            else:
+                py_mod_map[expected_file][1].append(i)
+
+        attached_modules: dict[str, ast.Module] = {}
+        for i in py_mod_map:
+            mode = py_mod_map[i][0]
+            name_list = py_mod_map[i][1]  # List of names that uses the modules
+            name_list.sort()
+            mode_name = name_list[0].split(".")[
+                -1
+            ]  # Less name in length will be the module name itself
+            mode.name = mode_name
+
+            assert isinstance(self.ir, ast.Module)
+            if mode_name == name_list[0]:
+                self.attach_mod_to_node(self.ir, mode)
+                attached_modules[mode.name] = mode
+                mode.parent = self.ir
+            else:
+                # TODO: Fix me when an issue happens
+                parent_mode = attached_modules[name_list[0].split(".")[-2]]
+                self.attach_mod_to_node(parent_mode, mode)
+                # attached_modules[mode] = mode
+                mode.parent = parent_mode
 
 
 class PyImportPass(JacImportPass):

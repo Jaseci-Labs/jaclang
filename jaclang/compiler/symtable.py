@@ -137,6 +137,17 @@ class SymbolTable:
                 return k
         return None
 
+    def find_py_scope(self, name: str) -> Optional[SymbolTable]:
+        """Find a scope that was originally a python module in the symbol table."""
+        for k in self.kid:
+            if (
+                isinstance(k.owner, ast.Module)
+                and k.owner.is_py_raised
+                and k.name == name
+            ):
+                return k
+        return None
+
     def push_scope(self, name: str, key_node: ast.AstNode) -> SymbolTable:
         """Push a new scope onto the symbol table."""
         self.kid.append(SymbolTable(name, key_node, self))
