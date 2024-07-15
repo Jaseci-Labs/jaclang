@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum
 from os import getenv
-from pickle import dumps
 from re import IGNORECASE, compile
 from types import UnionType
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Generic,
     Iterable,
     Optional,
@@ -21,7 +21,7 @@ from uuid import UUID, uuid4
 
 from jaclang.compiler.constant import EdgeDir, T
 from jaclang.core.utils import collect_node_connections
-
+from jaclang.vendor.orjson import dumps
 
 GENERIC_ID_REGEX = compile(
     r"^(g|n|e|w):([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
@@ -43,7 +43,7 @@ MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 TA = TypeVar("TA", bound="type[Architype]")
 
 
-class ObjectType(Enum):
+class AnchorType(Enum):
     """Enum For Anchor Types."""
 
     generic = "g"
@@ -143,7 +143,7 @@ class Permission(Generic[T]):
 class Anchor:
     """Object Anchor."""
 
-    type: ObjectType = ObjectType.generic
+    type: ClassVar[AnchorType] = AnchorType.generic
     name: str = ""
     id: UUID = field(default_factory=uuid4)
     root: Optional[UUID] = None
@@ -164,21 +164,34 @@ class Anchor:
         """Return ObjectAnchor instance if ."""
         if matched := GENERIC_ID_REGEX.search(ref_id):
             cls: type = Anchor
-            match ObjectType(matched.group(1)):
-                case ObjectType.node:
+            match AnchorType(matched.group(1)):
+                case AnchorType.node:
                     cls = NodeAnchor
-                case ObjectType.edge:
+                case AnchorType.edge:
                     cls = EdgeAnchor
-                case ObjectType.walker:
+                case AnchorType.walker:
                     cls = WalkerAnchor
                 case _:
                     pass
             return cls(name=matched.group(2), id=UUID(matched.group(3)))
         return None
 
+    def _save(self) -> None:
+        """Save Anchor."""
+        raise NotImplementedError("_save must be implemented in subclasses")
+
     def save(self) -> None:
         """Save Anchor."""
-        raise NotImplementedError("save must be implemented in subclasses")
+        if self.architype:
+            if not self.connected:
+                self.connected = True
+                self.sync_hash()
+                self._save()
+            elif self.current_access_level == 0 and self.hash != (
+                _hash := self.data_hash()
+            ):
+                self.hash = _hash
+                self._save()
 
     def destroy(self) -> None:
         """Save Anchor."""
@@ -284,6 +297,14 @@ class Anchor:
             ),
         }
 
+    def data_hash(self) -> int:
+        """Get current serialization hash."""
+        return hash(dumps(self.serialize()))
+
+    def sync_hash(self) -> None:
+        """Sync current serialization hash."""
+        self.hash = self.data_hash()
+
     def report(self) -> dict[str, object]:
         """Report Anchor."""
         return {
@@ -319,7 +340,7 @@ class Anchor:
 class NodeAnchor(Anchor):
     """Node Anchor."""
 
-    type: ObjectType = ObjectType.node
+    type: ClassVar[AnchorType] = AnchorType.node
     architype: Optional[NodeArchitype] = None
     edges: list[EdgeAnchor] = field(default_factory=list)
 
@@ -342,19 +363,6 @@ class NodeAnchor(Anchor):
             edge.save()
 
         jsrc.set(self)
-
-    def save(self) -> None:
-        """Save Anchor."""
-        if self.architype:
-            if not self.connected:
-                self.connected = True
-                self.hash = hash(dumps(self))
-                self._save()
-            elif self.current_access_level > 0 and self.hash != (
-                _hash := hash(dumps(self))
-            ):
-                self.hash = _hash
-                self._save()
 
     def destroy(self) -> None:
         """Delete Anchor."""
@@ -483,7 +491,7 @@ class NodeAnchor(Anchor):
 class EdgeAnchor(Anchor):
     """Edge Anchor."""
 
-    type: ObjectType = ObjectType.edge
+    type: ClassVar[AnchorType] = AnchorType.edge
     architype: Optional[EdgeArchitype] = None
     source: Optional[NodeAnchor] = None
     target: Optional[NodeAnchor] = None
@@ -511,19 +519,6 @@ class EdgeAnchor(Anchor):
             target.save()
 
         jsrc.set(self)
-
-    def save(self) -> None:
-        """Save Anchor."""
-        if self.architype:
-            if not self.connected:
-                self.connected = True
-                self.hash = hash(dumps(self))
-                self._save()
-            elif self.current_access_level == 1 and self.hash != (
-                _hash := hash(dumps(self))
-            ):
-                self.hash = _hash
-                self._save()
 
     def destroy(self) -> None:
         """Delete Anchor."""
@@ -588,7 +583,7 @@ class EdgeAnchor(Anchor):
 class WalkerAnchor(Anchor):
     """Walker Anchor."""
 
-    type: ObjectType = ObjectType.walker
+    type: ClassVar[AnchorType] = AnchorType.walker
     architype: Optional[WalkerArchitype] = None
     path: list[Anchor] = field(default_factory=list)
     next: list[Anchor] = field(default_factory=list)
@@ -610,19 +605,6 @@ class WalkerAnchor(Anchor):
         from .context import ExecutionContext
 
         ExecutionContext.get().datasource.set(self)
-
-    def save(self) -> None:
-        """Save Anchor."""
-        if self.architype:
-            if not self.connected:
-                self.connected = True
-                self.hash = hash(dumps(self))
-                self._save()
-            elif self.current_access_level > 1 and self.hash != (
-                _hash := hash(dumps(self))
-            ):
-                self.hash = _hash
-                self._save()
 
     def destroy(self) -> None:
         """Delete Anchor."""

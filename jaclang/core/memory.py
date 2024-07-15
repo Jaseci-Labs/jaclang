@@ -8,13 +8,13 @@ from uuid import UUID
 
 from .architype import (
     Anchor,
+    AnchorType,
     Architype,
     EdgeAnchor,
     EdgeArchitype,
     MANUAL_SAVE,
     NodeAnchor,
     NodeArchitype,
-    ObjectType,
     Permission,
     WalkerAnchor,
     WalkerArchitype,
@@ -160,8 +160,8 @@ class ShelfStorage(Memory):
         architype = anchor.pop("architype")
         access = Permission.deserialize(anchor.pop("access"))
 
-        match ObjectType(anchor.pop("type")):
-            case ObjectType.node:
+        match AnchorType(anchor.pop("type")):
+            case AnchorType.node:
                 nanch = NodeAnchor(
                     edges=[
                         e for edge in anchor.pop("edges") if (e := EdgeAnchor.ref(edge))
@@ -173,8 +173,9 @@ class ShelfStorage(Memory):
                 nanch.architype = NodeArchitype.get(name or "Root")(
                     __jac__=nanch, **architype
                 )
+                nanch.sync_hash()
                 return nanch
-            case ObjectType.edge:
+            case AnchorType.edge:
                 eanch = EdgeAnchor(
                     source=NodeAnchor.ref(anchor.pop("source")),
                     target=NodeAnchor.ref(anchor.pop("target")),
@@ -185,12 +186,15 @@ class ShelfStorage(Memory):
                 eanch.architype = EdgeArchitype.get(name or "GenericEdge")(
                     __jac__=eanch, **architype
                 )
+                eanch.sync_hash()
                 return eanch
-            case ObjectType.walker:
+            case AnchorType.walker:
                 wanch = WalkerAnchor(access=access, connected=True, **anchor)
                 wanch.architype = WalkerArchitype.get(name)(__jac__=wanch, **architype)
+                wanch.sync_hash()
                 return wanch
             case _:
                 oanch = Anchor(access=access, connected=True, **anchor)
                 oanch.architype = Architype(__jac__=oanch)
+                oanch.sync_hash()
                 return oanch
