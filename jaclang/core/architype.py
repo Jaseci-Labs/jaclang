@@ -11,7 +11,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Generic,
     Iterable,
     Optional,
     TypeVar,
@@ -19,7 +18,7 @@ from typing import (
 )
 from uuid import UUID, uuid4
 
-from jaclang.compiler.constant import EdgeDir, T
+from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
 from jaclang.vendor.orjson import dumps
 
@@ -53,60 +52,50 @@ class AnchorType(Enum):
 
 
 @dataclass
-class Access(Generic[T]):
+class Access:
     """Access Structure."""
 
     whitelist: bool = True  # whitelist or blacklist
-    level: tuple[set[T], set[T], set[T]] = field(
-        default_factory=lambda: (set(), set(), set())
-    )  # index 0 == read access, 1 == write access
+    anchors: dict[Anchor, int] = field(default_factory=dict)
 
     def check(
-        self, id: T
+        self, anchor: Anchor
     ) -> tuple[bool, int]:  # whitelist or blacklist, has_read_access, level
         """Validate access."""
         if self.whitelist:
-            for i in range(2, -1, -1):
-                if id in self.level[i]:
-                    return self.whitelist, i
-            return self.whitelist, -1
+            return self.whitelist, self.anchors.get(anchor, -1)
         else:
-            access = -1
-            for i in range(0, 3, 1):
-                if id in self.level[i]:
-                    break
-                access = i
-            return self.whitelist, access
+            return self.whitelist, self.anchors.get(anchor, 2)
 
     def serialize(self) -> dict[str, object]:
         """Serialize Access."""
         return {
             "whitelist": self.whitelist,
-            "level": [list(level) for level in self.level],
+            "anchors": {key.ref_id: val for key, val in self.anchors.items()},
         }
 
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> Access:
         """Deserialize Access."""
-        level = cast(list[list[T]], data.get("level"))
+        anchors = cast(dict[str, int], data.get("anchors"))
         return Access(
             whitelist=bool(data.get("whitelist")),
-            level=(
-                (set(level[0]), set(level[1]), set(level[2]))
-                if level
-                else (set(), set(), set())
-            ),
+            anchors={
+                anchor: val
+                for key, val in anchors.items()
+                if (anchor := Anchor.ref(key))
+            },
         )
 
 
 @dataclass
-class Permission(Generic[T]):
+class Permission:
     """Anchor Access Handler."""
 
     all: int = -1
-    roots: Access[T] = field(default_factory=Access[T])
-    # types: dict[type[Architype], Access[T]] = field(default_factory=dict)
-    # nodes: Access[T] = field(default_factory=Access[T])
+    roots: Access = field(default_factory=Access)
+    # types: dict[type[Architype], Access] = field(default_factory=dict)
+    # nodes: Access = field(default_factory=Access)
 
     def serialize(self) -> dict[str, object]:
         """Serialize Permission."""
@@ -114,7 +103,7 @@ class Permission(Generic[T]):
             "all": self.all,
             "roots": self.roots.serialize(),
             # "types": {
-            #     f"{'n' if isinstance(key, NodeArchitype) else 'e'}:{key.__name__}": value.serialize()
+            #     f"{'n' if issubclass(key, NodeArchitype) else 'e'}:{key.__name__}": value.serialize()
             #     for key, value in self.types.items()
             # },
             # "nodes": self.nodes.serialize(),
@@ -147,7 +136,7 @@ class Anchor:
     name: str = ""
     id: UUID = field(default_factory=uuid4)
     root: Optional[UUID] = None
-    access: Permission[UUID] = field(default_factory=Permission[UUID])
+    access: Permission = field(default_factory=Permission)
     architype: Optional[Architype] = None
     connected: bool = False
     current_access_level: int = -1
@@ -248,7 +237,7 @@ class Anchor:
         if (to_access := to.access).all > -1:
             to.current_access_level = to_access.all
 
-        # whitelist, level = to_access.nodes.check(self.id)
+        # whitelist, level = to_access.nodes.check(self)
         # if not whitelist and level < 0:
         #     to.current_access_level = -1
         #     return to.current_access_level
@@ -258,14 +247,14 @@ class Anchor:
         # if (architype := self.architype) and (
         #     access_type := to_access.types.get(architype.__class__)
         # ):
-        #     whitelist, level = access_type.check(self.id)
+        #     whitelist, level = access_type.check(self)
         #     if not whitelist and level < 0:
         #         to.current_access_level = -1
         #         return to.current_access_level
         #     elif whitelist and level > -1 and to.current_access_level == -1:
         #         to.current_access_level = level
 
-        whitelist, level = to_access.roots.check(jroot.id)
+        whitelist, level = to_access.roots.check(jroot)
         if not whitelist and level < 0:
             to.current_access_level = -1
             return to.current_access_level
@@ -273,7 +262,7 @@ class Anchor:
             to.current_access_level = level
 
         if to.root and (to_root := jctx.datasource.find_one(to.root)):
-            whitelist, level = to_root.access.roots.check(jroot.id)
+            whitelist, level = to_root.access.roots.check(jroot)
             if not whitelist and level < 0:
                 to.current_access_level = -1
                 return to.current_access_level
