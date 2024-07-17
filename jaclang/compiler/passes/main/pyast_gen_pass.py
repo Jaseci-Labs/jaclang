@@ -39,6 +39,26 @@ class PyastGenPass(Pass):
     #     except Exception:
     #         pass
 
+    async_methods: set[str] = set()
+
+    @staticmethod
+    def set(methods: str | list[str]) -> None:
+        """Set methods that has async."""
+        if isinstance(methods, str):
+            methods = [methods]
+
+        for method in methods:
+            PyastGenPass.async_methods.add(method)
+
+    def is_awaitable(self, method: str, expr: ast3.Call) -> ast3.Call | ast3.Await:
+        """Get Jac and check if awaitable."""
+        expr = self.sync(expr)
+
+        if method in PyastGenPass.async_methods:
+            return self.sync(ast3.Await(expr))
+
+        return expr
+
     def before_pass(self) -> None:
         """Initialize pass."""
         self.debuginfo: dict[str, list[str]] = {"jac_mods": []}
@@ -950,8 +970,10 @@ class PyastGenPass(Pass):
         if node.arch_type.name != Tok.KW_CLASS:
             self.needs_jac_feature()
             self.needs_dataclass()
+            method = f"make_{node.arch_type.value}"
             decorators.append(
-                self.sync(
+                self.is_awaitable(
+                    method,
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
@@ -981,7 +1003,7 @@ class PyastGenPass(Pass):
                                 )
                             ),
                         ],
-                    )
+                    ),
                 )
             )
             decorators.append(
@@ -1439,13 +1461,14 @@ class PyastGenPass(Pass):
         model_params: dict[str, ast.Expr],
         scope: ast3.AST,
         inputs: Sequence[Optional[ast3.AST]],
-        outputs: Sequence[Optional[ast3.AST]] | ast3.Call,
+        outputs: Sequence[Optional[ast3.AST]] | ast3.Call | ast3.Await,
         action: Optional[ast3.AST],
         include_info: list[tuple[str, ast3.AST]],
         exclude_info: list[tuple[str, ast3.AST]],
-    ) -> ast3.Call:
+    ) -> ast3.Await | ast3.Call:
         """Return the LLM Call, e.g. _Jac.with_llm()."""
-        return self.sync(
+        return self.is_awaitable(
+            "with_llm",
             ast3.Call(
                 func=self.sync(
                     ast3.Attribute(
@@ -1573,7 +1596,7 @@ class PyastGenPass(Pass):
                         )
                     ),
                 ],
-            )
+            ),
         )
 
     def exit_ability_def(self, node: ast.AbilityDef) -> None:
@@ -1818,7 +1841,8 @@ class PyastGenPass(Pass):
                         target=node.name.gen.py_ast[0],
                         annotation=annotation,
                         value=(
-                            self.sync(
+                            self.is_awaitable(
+                                "has_instance_default",
                                 ast3.Call(
                                     func=self.sync(
                                         ast3.Attribute(
@@ -1856,7 +1880,7 @@ class PyastGenPass(Pass):
                                             )
                                         )
                                     ],
-                                )
+                                ),
                             )
                             if node.value
                             and not (is_static_var or is_in_class or node.defer)
@@ -2203,25 +2227,24 @@ class PyastGenPass(Pass):
         node.gen.py_ast = [
             self.sync(
                 ast3.Expr(
-                    value=self.sync(
-                        self.sync(
-                            ast3.Call(
-                                func=self.sync(
-                                    ast3.Attribute(
-                                        value=self.sync(
-                                            ast3.Name(
-                                                id=Con.JAC_FEATURE.value,
-                                                ctx=ast3.Load(),
-                                            )
-                                        ),
-                                        attr="report",
-                                        ctx=ast3.Load(),
-                                    )
-                                ),
-                                args=node.expr.gen.py_ast,
-                                keywords=[],
-                            )
-                        )
+                    value=self.is_awaitable(
+                        "report",
+                        ast3.Call(
+                            func=self.sync(
+                                ast3.Attribute(
+                                    value=self.sync(
+                                        ast3.Name(
+                                            id=Con.JAC_FEATURE.value,
+                                            ctx=ast3.Load(),
+                                        )
+                                    ),
+                                    attr="report",
+                                    ctx=ast3.Load(),
+                                )
+                            ),
+                            args=node.expr.gen.py_ast,
+                            keywords=[],
+                        ),
                     )
                 )
             )
@@ -2267,13 +2290,15 @@ class PyastGenPass(Pass):
         node.gen.py_ast = [
             self.sync(
                 ast3.Expr(
-                    value=self.sync(
+                    value=self.is_awaitable(
+                        "ignore",
                         ast3.Call(
                             func=self.sync(
                                 ast3.Attribute(
                                     value=self.sync(
                                         ast3.Name(
-                                            id=Con.JAC_FEATURE.value, ctx=ast3.Load()
+                                            id=Con.JAC_FEATURE.value,
+                                            ctx=ast3.Load(),
                                         )
                                     ),
                                     attr="ignore",
@@ -2282,7 +2307,7 @@ class PyastGenPass(Pass):
                             ),
                             args=[loc, node.target.gen.py_ast[0]],
                             keywords=[],
-                        )
+                        ),
                     )
                 )
             )
@@ -2303,7 +2328,8 @@ class PyastGenPass(Pass):
         node.gen.py_ast = [
             self.sync(
                 ast3.If(
-                    test=self.sync(
+                    test=self.is_awaitable(
+                        "visit_node",
                         ast3.Call(
                             func=self.sync(
                                 ast3.Attribute(
@@ -2318,12 +2344,12 @@ class PyastGenPass(Pass):
                             ),
                             args=[loc, node.target.gen.py_ast[0]],
                             keywords=[],
-                        )
+                        ),
                     ),
                     body=[self.sync(ast3.Pass())],
                     orelse=node.else_body.gen.py_ast if node.else_body else [],
                 )
-            )
+            ),
         ]
 
     def exit_revisit_stmt(self, node: ast.RevisitStmt) -> None:
@@ -2347,25 +2373,24 @@ class PyastGenPass(Pass):
         node.gen.py_ast = [
             self.sync(
                 ast3.Expr(
-                    value=self.sync(
-                        self.sync(
-                            ast3.Call(
-                                func=self.sync(
-                                    ast3.Attribute(
-                                        value=self.sync(
-                                            ast3.Name(
-                                                id=Con.JAC_FEATURE.value,
-                                                ctx=ast3.Load(),
-                                            )
-                                        ),
-                                        attr="disengage",
-                                        ctx=ast3.Load(),
-                                    )
-                                ),
-                                args=[loc],
-                                keywords=[],
-                            )
-                        )
+                    value=self.is_awaitable(
+                        "disengage",
+                        ast3.Call(
+                            func=self.sync(
+                                ast3.Attribute(
+                                    value=self.sync(
+                                        ast3.Name(
+                                            id=Con.JAC_FEATURE.value,
+                                            ctx=ast3.Load(),
+                                        )
+                                    ),
+                                    attr="disengage",
+                                    ctx=ast3.Load(),
+                                )
+                            ),
+                            args=[loc],
+                            keywords=[],
+                        ),
                     )
                 )
             ),
@@ -2467,7 +2492,8 @@ class PyastGenPass(Pass):
         """
         if isinstance(node.op, ast.ConnectOp):
             node.gen.py_ast = [
-                self.sync(
+                self.is_awaitable(
+                    "connect",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
@@ -2507,17 +2533,21 @@ class PyastGenPass(Pass):
                                 )
                             ),
                         ],
-                    )
+                    ),
                 )
             ]
         elif isinstance(node.op, ast.DisconnectOp):
             node.gen.py_ast = [
-                self.sync(
+                self.is_awaitable(
+                    "disconnect",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
                                 value=self.sync(
-                                    ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                                    ast3.Name(
+                                        id=Con.JAC_FEATURE.value,
+                                        ctx=ast3.Load(),
+                                    )
                                 ),
                                 attr="disconnect",
                                 ctx=ast3.Load(),
@@ -2536,7 +2566,7 @@ class PyastGenPass(Pass):
                             ),
                         ],
                         keywords=[],
-                    )
+                    ),
                 )
             ]
         elif node.op.name in [Tok.KW_AND.value, Tok.KW_OR.value]:
@@ -2598,12 +2628,16 @@ class PyastGenPass(Pass):
         elif node.op.name in [Tok.KW_SPAWN]:
             self.needs_jac_feature()
             return [
-                self.sync(
+                self.is_awaitable(
+                    "spawn_call",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
                                 value=self.sync(
-                                    ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                                    ast3.Name(
+                                        id=Con.JAC_FEATURE.value,
+                                        ctx=ast3.Load(),
+                                    )
                                 ),
                                 attr="spawn_call",
                                 ctx=ast3.Load(),
@@ -2611,7 +2645,7 @@ class PyastGenPass(Pass):
                         ),
                         args=[node.left.gen.py_ast[0], node.right.gen.py_ast[0]],
                         keywords=[],
-                    )
+                    ),
                 )
             ]
         elif node.op.name in [
@@ -2637,7 +2671,8 @@ class PyastGenPass(Pass):
         elif node.op.name == Tok.ELVIS_OP:
             self.needs_jac_feature()
             return [
-                self.sync(
+                self.is_awaitable(
+                    "elvis",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
@@ -2650,7 +2685,7 @@ class PyastGenPass(Pass):
                         ),
                         args=[node.left.gen.py_ast[0], node.right.gen.py_ast[0]],
                         keywords=[],
-                    )
+                    ),
                 )
             ]
         else:
@@ -3071,12 +3106,16 @@ class PyastGenPass(Pass):
             ]
         elif isinstance(node.right, ast.AssignCompr):
             node.gen.py_ast = [
-                self.sync(
+                self.is_awaitable(
+                    "assign_compr",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
                                 value=self.sync(
-                                    ast3.Name(id=Con.JAC_FEATURE.value, ctx=ast3.Load())
+                                    ast3.Name(
+                                        id=Con.JAC_FEATURE.value,
+                                        ctx=ast3.Load(),
+                                    )
                                 ),
                                 attr="assign_compr",
                                 ctx=ast3.Load(),
@@ -3084,7 +3123,7 @@ class PyastGenPass(Pass):
                         ),
                         args=[node.target.gen.py_ast[0], node.right.gen.py_ast[0]],
                         keywords=[],
-                    )
+                    ),
                 )
             ]
         else:
@@ -3173,7 +3212,8 @@ class PyastGenPass(Pass):
                     self.sync(ast3.Name(id=_output_.split(".")[0], ctx=ast3.Load())),
                 )
             )
-            scope = self.sync(
+            scope = self.is_awaitable(
+                "obj_scope",
                 ast3.Call(
                     func=self.sync(
                         ast3.Attribute(
@@ -3197,9 +3237,10 @@ class PyastGenPass(Pass):
                         self.sync(ast3.Constant(value=_output_)),
                     ],
                     keywords=[],
-                )
+                ),
             )
-            outputs = self.sync(
+            outputs = self.is_awaitable(
+                "get_sem_type",
                 ast3.Call(
                     func=self.sync(
                         ast3.Attribute(
@@ -3223,14 +3264,15 @@ class PyastGenPass(Pass):
                         self.sync(ast3.Constant(value=str(_output_))),
                     ],
                     keywords=[],
-                )
+                ),
             )
             if node.params and node.params.items:
                 inputs = [
                     self.sync(
                         ast3.Tuple(
                             elts=[
-                                self.sync(
+                                self.is_awaitable(
+                                    "get_semstr_type",
                                     ast3.Call(
                                         func=self.sync(
                                             ast3.Attribute(
@@ -3265,9 +3307,10 @@ class PyastGenPass(Pass):
                                             self.sync(ast3.Constant(value=True)),
                                         ],
                                         keywords=[],
-                                    )
+                                    ),
                                 ),
-                                self.sync(
+                                self.is_awaitable(
+                                    "get_semstr_type",
                                     ast3.Call(
                                         func=self.sync(
                                             ast3.Attribute(
@@ -3302,7 +3345,7 @@ class PyastGenPass(Pass):
                                             self.sync(ast3.Constant(value=False)),
                                         ],
                                         keywords=[],
-                                    )
+                                    ),
                                 ),
                                 self.sync(
                                     ast3.Constant(
@@ -3387,7 +3430,8 @@ class PyastGenPass(Pass):
             ]
         elif node.name == Tok.KW_ROOT:
             node.gen.py_ast = [
-                self.sync(
+                self.is_awaitable(
+                    "get_root",
                     ast3.Call(
                         func=self.sync(
                             ast3.Attribute(
@@ -3403,7 +3447,7 @@ class PyastGenPass(Pass):
                         ),
                         args=[],
                         keywords=[],
-                    )
+                    ),
                 )
             ]
 
@@ -3487,7 +3531,8 @@ class PyastGenPass(Pass):
         edges_only: bool,
     ) -> ast3.AST:
         """Generate ast for edge op ref call."""
-        return self.sync(
+        return self.is_awaitable(
+            "edge_ref",
             ast3.Call(
                 func=self.sync(
                     ast3.Attribute(
@@ -3548,7 +3593,7 @@ class PyastGenPass(Pass):
                         )
                     ),
                 ],
-            )
+            ),
         )
 
     def exit_disconnect_op(self, node: ast.DisconnectOp) -> None:
@@ -3566,7 +3611,8 @@ class PyastGenPass(Pass):
         edge_dir: EdgeDir,
         """
         node.gen.py_ast = [
-            self.sync(
+            self.is_awaitable(
+                "build_edge",
                 ast3.Call(
                     func=self.sync(
                         ast3.Attribute(
@@ -3608,7 +3654,7 @@ class PyastGenPass(Pass):
                             )
                         ),
                     ],
-                )
+                ),
             )
         ]
 
