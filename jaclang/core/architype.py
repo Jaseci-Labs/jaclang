@@ -444,6 +444,13 @@ class NodeAnchor(Anchor):
                     ret_edges.append(src_arch)
         return ret_edges
 
+    def remove_edge(self, edge: EdgeAnchor) -> None:
+        """Remove reference without checking sync status."""
+        for idx, ed in enumerate(self.edges):
+            if ed.id == edge.id:
+                self.edges.pop(idx)
+                break
+
     def gen_dot(self, dot_file: Optional[str] = None) -> str:
         """Generate Dot file for visualizing nodes and edges."""
         visited_nodes: set[NodeAnchor] = set()
@@ -545,9 +552,9 @@ class EdgeAnchor(Anchor):
     def detach(self) -> None:
         """Detach edge from nodes."""
         if source := self.source:
-            source.edges.remove(self)
+            source.remove_edge(self)
         if target := self.target:
-            target.edges.remove(self)
+            target.remove_edge(self)
 
         self.source = None
         self.target = None
