@@ -173,7 +173,7 @@ class JacFeatureSpec:
     @hookspec(firstresult=True)
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,

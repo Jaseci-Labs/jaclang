@@ -13,6 +13,7 @@ from typing import (
     ClassVar,
     Iterable,
     Optional,
+    Type,
     TypeVar,
     cast,
 )
@@ -376,7 +377,7 @@ class NodeAnchor(Anchor):
         self,
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
-        target_obj: Optional[list[NodeArchitype]],
+        target_cls: Optional[list[Type[NodeArchitype]]],
     ) -> list[EdgeArchitype]:
         """Get edges connected to this node."""
         ret_edges: list[EdgeArchitype] = []
@@ -394,7 +395,7 @@ class NodeAnchor(Anchor):
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
                     and trg_arch
-                    and (not target_obj or trg_arch in target_obj)
+                    and (not target_cls or trg_arch.__class__ in target_cls)
                     and source.has_read_access(target)
                 ):
                     ret_edges.append(architype)
@@ -402,7 +403,7 @@ class NodeAnchor(Anchor):
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
                     and src_arch
-                    and (not target_obj or src_arch in target_obj)
+                    and (not target_cls or src_arch.__class__ in target_cls)
                     and target.has_read_access(source)
                 ):
                     ret_edges.append(architype)
@@ -412,7 +413,7 @@ class NodeAnchor(Anchor):
         self,
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
-        target_obj: Optional[list[NodeArchitype]],
+        target_cls: Optional[list[Type[NodeArchitype]]],
     ) -> list[NodeArchitype]:
         """Get set of nodes connected to this node."""
         ret_edges: list[NodeArchitype] = []
@@ -430,7 +431,7 @@ class NodeAnchor(Anchor):
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
                     and trg_arch
-                    and (not target_obj or trg_arch in target_obj)
+                    and (not target_cls or trg_arch.__class__ in target_cls)
                     and source.has_read_access(target)
                 ):
                     ret_edges.append(trg_arch)
@@ -438,7 +439,7 @@ class NodeAnchor(Anchor):
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
                     and src_arch
-                    and (not target_obj or src_arch in target_obj)
+                    and (not target_cls or src_arch.__class__ in target_cls)
                     and target.has_read_access(source)
                 ):
                     ret_edges.append(src_arch)

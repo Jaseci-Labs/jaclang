@@ -365,7 +365,7 @@ class JacFeatureDefaults:
     @hookimpl
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,
@@ -373,16 +373,14 @@ class JacFeatureDefaults:
         """Jac's apply_dir stmt feature."""
         if isinstance(node_obj, NodeArchitype):
             node_obj = [node_obj]
-        targ_obj_set: Optional[list[NodeArchitype]] = (
-            [target_obj]
-            if isinstance(target_obj, NodeArchitype)
-            else target_obj if target_obj else None
+        targ_cls_set: Optional[list[Type[NodeArchitype]]] = (
+            [target_cls] if isinstance(target_cls, type) else target_cls
         )
         if edges_only:
             connected_edges: list[EdgeArchitype] = []
             for node in node_obj:
                 connected_edges += node.__jac__.get_edges(
-                    dir, filter_func, target_obj=targ_obj_set
+                    dir, filter_func, target_cls=targ_cls_set
                 )
             return list(set(connected_edges))
         else:
@@ -390,7 +388,7 @@ class JacFeatureDefaults:
             for node in node_obj:
                 connected_nodes.extend(
                     node.__jac__.edges_to_nodes(
-                        dir, filter_func, target_obj=targ_obj_set
+                        dir, filter_func, target_cls=targ_cls_set
                     )
                 )
             return list(set(connected_nodes))

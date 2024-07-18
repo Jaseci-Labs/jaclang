@@ -188,7 +188,7 @@ class JacFeature:
     @staticmethod
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool = False,
@@ -196,7 +196,7 @@ class JacFeature:
         """Jac's apply_dir stmt feature."""
         return pm.hook.edge_ref(
             node_obj=node_obj,
-            target_obj=target_obj,
+            target_cls=target_cls,
             dir=dir,
             filter_func=filter_func,
             edges_only=edges_only,
