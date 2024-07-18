@@ -68,7 +68,7 @@ class JacFeatureDefaults:
     @hookimpl
     def context(options: Optional[dict[str, Any]]) -> ExecutionContext:
         """Get the execution context."""
-        return ExecutionContext.get(options)
+        return ExecutionContext.get_or_create(options)
 
     @staticmethod
     @hookimpl

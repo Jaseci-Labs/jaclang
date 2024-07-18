@@ -63,7 +63,7 @@ class ExecutionContext:
         return self.root.has_read_access(self.entry)
 
     @staticmethod
-    def get(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
+    def get_or_create(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
         """Get or create execution context."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
             EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))

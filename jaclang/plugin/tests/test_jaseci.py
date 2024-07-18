@@ -73,15 +73,15 @@ class TestJaseciPlugin(TestCase):
         global session
         session = self.fixture_abs_path("test_walker_simple_persistent.session")
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="create",
+            entrypoint="create",
         )
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="traverse",
+            entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
         self.assertEqual(output, "node a\nnode b")
@@ -91,18 +91,18 @@ class TestJaseciPlugin(TestCase):
         """Test entrypoint being root."""
         global session
         session = self.fixture_abs_path("test_entrypoint_root.session")
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="create",
+            entrypoint="create",
         )
         obj = cli.get_object(session=session, id="root")
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
             node=f"n::{obj['id']}",
-            walker="traverse",
+            entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
         self.assertEqual(output, "node a\nnode b")
@@ -112,21 +112,21 @@ class TestJaseciPlugin(TestCase):
         """Test entrypoint being non root node."""
         global session
         session = self.fixture_abs_path("test_entrypoint_non_root.session")
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="create",
+            entrypoint="create",
         )
         obj = cli.get_object(session=session, id="root")
         edge_obj = cli.get_object(session=session, id=obj["edges"][0])
         a_obj = cli.get_object(session=session, id=edge_obj["target"])
 
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
             node=f"n:a:{a_obj['id']}",
-            walker="traverse",
+            entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
         self.assertEqual(output, "node a\nnode b")
@@ -161,10 +161,10 @@ class TestJaseciPlugin(TestCase):
             session=session,
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_node_connection.jac"),
             session=session,
-            walker="filter_on_edge_get_edge",
+            entrypoint="filter_on_edge_get_edge",
         )
         self.assertEqual(
             self.capturedOutput.getvalue().strip(), "[simple_edge(index=1)]"
@@ -180,10 +180,10 @@ class TestJaseciPlugin(TestCase):
             session=session,
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_node_connection.jac"),
             session=session,
-            walker="filter_on_edge_get_node",
+            entrypoint="filter_on_edge_get_node",
         )
         self.assertEqual(
             self.capturedOutput.getvalue().strip(), "[simple(tag='second')]"
@@ -199,10 +199,10 @@ class TestJaseciPlugin(TestCase):
             session=session,
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_node_connection.jac"),
             session=session,
-            walker="filter_on_node_get_node",
+            entrypoint="filter_on_node_get_node",
         )
         self.assertEqual(
             self.capturedOutput.getvalue().strip(), "[simple(tag='second')]"
@@ -218,10 +218,10 @@ class TestJaseciPlugin(TestCase):
             session=session,
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_node_connection.jac"),
             session=session,
-            walker="filter_on_edge_visit",
+            entrypoint="filter_on_edge_visit",
         )
         self.assertEqual(self.capturedOutput.getvalue().strip(), "simple(tag='first')")
         self._del_session(session)
@@ -235,10 +235,10 @@ class TestJaseciPlugin(TestCase):
             session=session,
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_node_connection.jac"),
             session=session,
-            walker="filter_on_node_visit",
+            entrypoint="filter_on_node_visit",
         )
         self.assertEqual(self.capturedOutput.getvalue().strip(), "simple(tag='first')")
         self._del_session(session)
@@ -247,19 +247,106 @@ class TestJaseciPlugin(TestCase):
         """Test reference node indirectly without visiting."""
         global session
         session = self.fixture_abs_path("test_indirect_reference_node.session")
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="create",
+            entrypoint="create",
         )
         self._output2buffer()
-        cli.run(
+        cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            walker="indirect_ref",
+            entrypoint="indirect_ref",
         )
         self.assertEqual(
             self.capturedOutput.getvalue().strip(),
             "[b(name='node b')]\n[GenericEdge]",
         )
+        self._del_session(session)
+
+    def test_other_root_access(self) -> None:
+        """Test filtering on node, then visit."""
+        global session
+        session = self.fixture_abs_path("other_root_access.session")
+
+        ##############################################
+        #              CREATE OTHER ROOT             #
+        ##############################################
+
+        self._output2buffer()
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="create_other_root",
+        )
+        other_root_id = self.capturedOutput.getvalue().strip()
+
+        ##############################################
+        #           CREATE RESPECTIVE NODES          #
+        ##############################################
+
+        self._output2buffer()
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="create_node",
+            args=[1],
+        )
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="create_node",
+            root=other_root_id,
+            args=[2],
+        )
+        nodes = self.capturedOutput.getvalue().strip().split("\n")
+        self.assertTrue(len(nodes) == 2)
+        self.assertTrue(nodes[0].startswith("n:A:"))
+        self.assertTrue(nodes[1].startswith("n:A:"))
+
+        ##############################################
+        #           VISIT RESPECTIVE NODES           #
+        ##############################################
+
+        self._output2buffer()
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="check_node",
+        )
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="check_node",
+            root=other_root_id,
+        )
+        archs = self.capturedOutput.getvalue().strip().split("\n")
+        self.assertTrue(len(archs) == 2)
+        self.assertTrue(archs[0], "A(val=1)")
+        self.assertTrue(archs[1], "A(val=2)")
+
+        ##############################################
+        #              SWAP TARGET NODE              #
+        #      OTHER ROOT SHOULD NOT HAVE ACCESS     #
+        ##############################################
+
+        self._output2buffer()
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="check_node",
+            node=nodes[1],
+        )
+        cli.enter(
+            filename=self.fixture_abs_path("other_root_access.jac"),
+            session=session,
+            entrypoint="check_node",
+            root=other_root_id,
+            node=nodes[0],
+        )
+        nodes = self.capturedOutput.getvalue().strip().split("\n")
+        self.assertTrue(len(nodes) == 1)
+        self.assertTrue(nodes[0], "A(val=2)")
+        sys.stdout = sys.__stdout__
+
         self._del_session(session)

@@ -21,7 +21,8 @@ from uuid import UUID, uuid4
 
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
-from jaclang.vendor.orjson import dumps
+
+from orjson import dumps
 
 GENERIC_ID_REGEX = compile(
     r"^(g|n|e|w):([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
@@ -177,7 +178,7 @@ class Anchor:
                 self.connected = True
                 self.sync_hash()
                 self._save()
-            elif self.current_access_level == 0 and self.hash != (
+            elif self.current_access_level > 0 and self.hash != (
                 _hash := self.data_hash()
             ):
                 self.hash = _hash
@@ -196,7 +197,7 @@ class Anchor:
 
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get().datasource
+        jsrc = ExecutionContext.get_or_create().datasource
         anchor = jsrc.find_one(self.id)
 
         if anchor and (node or self).has_read_access(anchor):
@@ -208,7 +209,7 @@ class Anchor:
         """Allocate hashes and memory."""
         from .context import ExecutionContext
 
-        jctx = ExecutionContext.get()
+        jctx = ExecutionContext.get_or_create()
         self.root = jctx.root.id
         jctx.datasource.set(self, True)
 
@@ -228,11 +229,11 @@ class Anchor:
         """Access validation."""
         from .context import ExecutionContext
 
-        jctx = ExecutionContext.get()
+        jctx = ExecutionContext.get_or_create()
         jroot = jctx.root
         to.current_access_level = -1
 
-        if jroot == jctx.super_root or jroot.id == to.root:
+        if jroot == jctx.super_root or jroot.id == to.root or jroot == to:
             to.current_access_level = 2
 
         if (to_access := to.access).all > -1:
@@ -347,7 +348,7 @@ class NodeAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get().datasource
+        jsrc = ExecutionContext.get_or_create().datasource
 
         for edge in self.edges:
             edge.save()
@@ -359,7 +360,7 @@ class NodeAnchor(Anchor):
         if self.architype and self.current_access_level > 1:
             from .context import ExecutionContext
 
-            jsrc = ExecutionContext.get().datasource
+            jsrc = ExecutionContext.get_or_create().datasource
             for edge in self.edges:
                 edge.destroy()
 
@@ -507,7 +508,7 @@ class EdgeAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get().datasource
+        jsrc = ExecutionContext.get_or_create().datasource
 
         if source := self.source:
             source.save()
@@ -522,7 +523,7 @@ class EdgeAnchor(Anchor):
         if self.architype and self.current_access_level == 1:
             from .context import ExecutionContext
 
-            jsrc = ExecutionContext.get().datasource
+            jsrc = ExecutionContext.get_or_create().datasource
 
             source = self.source
             target = self.target
@@ -601,14 +602,14 @@ class WalkerAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        ExecutionContext.get().datasource.set(self)
+        ExecutionContext.get_or_create().datasource.set(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
         if self.architype and self.current_access_level > 1:
             from .context import ExecutionContext
 
-            ExecutionContext.get().datasource.remove(self)
+            ExecutionContext.get_or_create().datasource.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerArchitype]:
         """Retrieve the Architype from db and return."""

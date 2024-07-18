@@ -35,10 +35,6 @@ class Memory:
         self.__mem__.clear()
         self.__gc__.clear()
 
-    def __del__(self) -> None:
-        """On garbage collection cleanup."""
-        self.close()
-
     def find(
         self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
     ) -> Generator[Anchor, None, None]:
@@ -98,9 +94,9 @@ class ShelfStorage(Memory):
                 if not anchor.persistent:
                     anchor.destroy()
                 elif not MANUAL_SAVE:
-                    for id in self.__gc__:
-                        self.__shelf__.pop(id, None)
                     anchor.save()
+            for id in self.__gc__:
+                self.__shelf__.pop(id, None)
             self.__shelf__.sync()
 
         super().close()
@@ -134,15 +130,7 @@ class ShelfStorage(Memory):
 
         if not mem_only and isinstance(self.__shelf__, Shelf):
             for d in data if isinstance(data, list) else [data]:
-                _id = str(d.id)
-                json = d.serialize()
-                if _id not in self.__shelf__:
-                    self.__shelf__[_id] = json
-                else:
-                    if d.current_access_level > 0 and isinstance(d, NodeAnchor):
-                        self.__shelf__[_id]["edges"] = json["edges"]
-                    if d.current_access_level > 1:
-                        self.__shelf__[_id]["architype"] = json["architype"]
+                self.__shelf__[str(d.id)] = d.serialize()
 
     def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
         """Remove anchor/s from datasource."""
@@ -159,7 +147,6 @@ class ShelfStorage(Memory):
         name = cast(str, anchor.get("name"))
         architype = anchor.pop("architype")
         access = Permission.deserialize(anchor.pop("access"))
-
         match AnchorType(anchor.pop("type")):
             case AnchorType.node:
                 nanch = NodeAnchor(
