@@ -6,6 +6,27 @@ obj Calculator {
     can divide(x: float, y: float) -> float;
 }
 
+:obj:Calculator:can:add
+(number: float, *a: tuple) -> float {
+    return (number * sum(a));
+}
+
+:obj:Calculator:can:substract
+(number1: float, number2: float) -> float {
+    return (number1 - number2);
+}
+
+:obj:Calculator:can:multiply
+(number1: float, number2: float) -> float {
+    return (number1 * number2);
+}
+
+:obj:Calculator:can:divide
+(number1: float, number2: float) -> float {
+    return (number1 / number2);
+}
+
+
 obj BasicCalculator :Calculator: {
     can add(x: float, y: tuple) -> float {
         return (x + sum(y));
@@ -21,8 +42,7 @@ obj BasicCalculator :Calculator: {
     }
 }
 
-obj AdvancedCalculator:BasicCalculator{
-    
+obj AdvancedCalculator:BasicCalculator: {
     can power(x: float, y: float) -> float {
         return (x ** y);
         }
