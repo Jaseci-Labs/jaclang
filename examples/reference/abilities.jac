@@ -1,34 +1,54 @@
-obj Divider {
+
+obj Calculator {
+    can add(x: float, y: tuple) -> float;
+    can substract(x: float, y: float) -> float;
+    can multiply(x: float, y: float) -> float;
+    can divide(x: float, y: float) -> float;
+}
+
+obj BasicCalculator :Calculator: {
+    can add(x: float, y: tuple) -> float {
+        return (x + sum(y));
+    }
+    can substract(x: float, y: float) -> float {
+        return (x - y);
+    }
+    can multiply(x: float, y: float) -> float {
+        return (x * y);
+    }
     can divide(x: float, y: float) -> float {
         return (x / y);
     }
 }
-#this is an abstract class as it has the abstract method
 
-obj Calculator {
-    static can : priv multiply(a: float, b: float) -> float {
-        return a * b;
+obj AdvancedCalculator:BasicCalculator{
+    
+    can power(x: float, y: float) -> float {
+        return (x ** y);
+        }
+    can square_root(x: float) -> float {
+        return (x ** 0.5);
     }
-    can substract -> float abs;
-    can add(number: float, *a: tuple) -> float;
-}
-
-obj substractor :Calculator: {
-    can substract(x: float, y: float) -> float {
-        return (x - y);
+    can cube_root(x: float) -> float {
+        return (x ** (1/3));
     }
-}
 
-:obj:Calculator:can:add
-(number: float, *a: tuple) -> float {
-    return (number * sum(a));
+    can remainder(x: float, y: float) -> float {
+        return (x % y);
+    }
+
+    can absolute(x: float) -> float {
+        return (abs(x));
+    }
 }
 
 with entry {
-    div = Divider();
-    sub = substractor();
-    print(div.divide(55, 11));
-    print(Calculator.multiply(9, -2));
-    print(sub.add(5, 20, 34, 56));
-    print(sub.substract(9, -2));
+    cal = BasicCalculator();
+    advcal = AdvancedCalculator();
+    print(cal.add(1, (2, 3, 4)));
+    print(cal.substract(10, 5));
+    print(cal.multiply(2, 3));
+    print(cal.divide(10, 2));
+    print(advcal.power(2, 3));
+
 }
