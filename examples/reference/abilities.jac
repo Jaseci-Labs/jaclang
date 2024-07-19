@@ -1,14 +1,12 @@
 
 obj Calculator {
-    can add(x: float, y: tuple) -> float;
+    can add(x: float, *y: tuple) -> float;
     can substract(x: float, y: float) -> float;
-    can multiply(x: float, y: float) -> float;
-    can divide(x: float, y: float) -> float;
 }
 
 :obj:Calculator:can:add
-(number: float, *a: tuple) -> float {
-    return (number * sum(a));
+(x: float, *y: tuple) -> float {
+    return (x * sum(y));
 }
 
 :obj:Calculator:can:substract
@@ -16,22 +14,15 @@ obj Calculator {
     return (number1 - number2);
 }
 
-:obj:Calculator:can:multiply
-(number1: float, number2: float) -> float {
-    return (number1 * number2);
-}
-
-:obj:Calculator:can:divide
-(number1: float, number2: float) -> float {
-    return (number1 / number2);
-}
 
 
 obj BasicCalculator :Calculator: {
     can add(x: float, y: tuple) -> float {
+        print("Adding numbers, this overides the add method in Calculator");
         return (x + sum(y));
     }
     can substract(x: float, y: float) -> float {
+        print("Substracting numbers, this overides the substract method in Calculator");
         return (x - y);
     }
     can multiply(x: float, y: float) -> float {
