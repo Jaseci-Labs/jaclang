@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Calculator(ABC):
     """
     Abstract Base Class for basic calculator operations.
@@ -66,7 +67,8 @@ class BasicCalculator(Calculator):
 
     def divide(self, x: float, y: float) -> float:
         return x / y
-    
+
+
 class AdvanceCalculator(BasicCalculator):
     """
     Advance calculator implementation.
@@ -76,19 +78,19 @@ class AdvanceCalculator(BasicCalculator):
         """
         Raise x to the power of y.
         """
-        return x ** y
+        return x**y
 
     def square_root(self, x: float) -> float:
         """
         Compute the square root of x.
         """
-        return x ** 0.5
+        return x**0.5
 
     def cube_root(self, x: float) -> float:
         """
         Compute the cube root of x.
         """
-        return x ** (1/3)
+        return x ** (1 / 3)
 
     def remainder(self, x: float, y: float) -> float:
         """
