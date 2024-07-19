@@ -1,33 +1,27 @@
 
 obj Calculator {
-    can add(x: float, *y: tuple) -> float;
+    """ Add multiple numbers """
+    can add(x: float, *y: tuple) -> float {}
+
+    """ Substract second value from the first value """
     can substract(x: float, y: float) -> float;
 }
 
-:obj:Calculator:can:add
-(x: float, *y: tuple) -> float {
-    return (x * sum(y));
-}
-
 :obj:Calculator:can:substract
-(number1: float, number2: float) -> float {
-    return (number1 - number2);
+(x: float, y: float) -> float {
+    return (x - y);
 }
-
-
 
 obj BasicCalculator :Calculator: {
     can add(x: float, y: tuple) -> float {
         print("Adding numbers, this overides the add method in Calculator");
         return (x + sum(y));
     }
-    can substract(x: float, y: float) -> float {
-        print("Substracting numbers, this overides the substract method in Calculator");
-        return (x - y);
-    }
+
     can multiply(x: float, y: float) -> float {
         return (x * y);
     }
+    
     can divide(x: float, y: float) -> float {
         return (x / y);
     }
@@ -37,9 +31,11 @@ obj AdvancedCalculator:BasicCalculator: {
     can power(x: float, y: float) -> float {
         return (x ** y);
         }
+
     can square_root(x: float) -> float {
         return (x ** 0.5);
     }
+
     can cube_root(x: float) -> float {
         return (x ** (1/3));
     }
