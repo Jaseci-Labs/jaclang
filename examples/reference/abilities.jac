@@ -21,7 +21,7 @@ obj BasicCalculator :Calculator: {
     can multiply(x: float, y: float) -> float {
         return (x * y);
     }
-    
+
     can divide(x: float, y: float) -> float {
         return (x / y);
     }
