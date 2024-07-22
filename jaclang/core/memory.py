@@ -18,6 +18,7 @@ from .architype import (
     Permission,
     WalkerAnchor,
     WalkerArchitype,
+    populate_dataclasses,
 )
 
 IDS = Union[UUID, list[UUID]]
@@ -157,8 +158,9 @@ class ShelfStorage(Memory):
                     connected=True,
                     **anchor,
                 )
-                nanch.architype = NodeArchitype.get(name or "Root")(
-                    __jac__=nanch, **architype
+                narch = NodeArchitype.__get_class__(name or "Root")
+                nanch.architype = narch(
+                    __jac__=nanch, **populate_dataclasses(narch, architype)
                 )
                 nanch.sync_hash()
                 return nanch
@@ -170,14 +172,18 @@ class ShelfStorage(Memory):
                     connected=True,
                     **anchor,
                 )
-                eanch.architype = EdgeArchitype.get(name or "GenericEdge")(
-                    __jac__=eanch, **architype
+                earch = EdgeArchitype.__get_class__(name or "GenericEdge")
+                eanch.architype = earch(
+                    __jac__=eanch, **populate_dataclasses(earch, architype)
                 )
                 eanch.sync_hash()
                 return eanch
             case AnchorType.walker:
                 wanch = WalkerAnchor(access=access, connected=True, **anchor)
-                wanch.architype = WalkerArchitype.get(name)(__jac__=wanch, **architype)
+                warch = WalkerArchitype.__get_class__(name)
+                wanch.architype = warch(
+                    __jac__=wanch, **populate_dataclasses(warch, architype)
+                )
                 wanch.sync_hash()
                 return wanch
             case _:

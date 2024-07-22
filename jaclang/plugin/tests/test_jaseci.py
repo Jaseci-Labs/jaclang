@@ -6,7 +6,7 @@ import sys
 
 from jaclang import jac_import as orig_jac_import
 from jaclang.cli import cli
-from jaclang.core.constructs import ExecutionContext
+from jaclang.core.constructs import EdgeArchitype, ExecutionContext, NodeArchitype
 from jaclang.core.context import EXECUTION_CONTEXT
 from jaclang.utils.test import TestCase
 
@@ -44,6 +44,9 @@ class TestJaseciPlugin(TestCase):
         self._close = ExecutionContext.close
         ExecutionContext.close = close  # type: ignore
         cli.jac_import = jac_import  # type: ignore
+
+        EdgeArchitype.__jac_classes__ = {}
+        NodeArchitype.__jac_classes__ = {}
 
         if jctx := EXECUTION_CONTEXT.get(None):
             jctx.close()

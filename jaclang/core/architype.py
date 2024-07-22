@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, is_dataclass
+from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from enum import Enum
 from os import getenv
 from re import IGNORECASE, compile
@@ -16,8 +16,11 @@ from typing import (
     Type,
     TypeVar,
     cast,
+    get_type_hints,
 )
 from uuid import UUID, uuid4
+
+from dacite import from_dict
 
 from jaclang.compiler.constant import EdgeDir
 from jaclang.core.utils import collect_node_connections
@@ -42,6 +45,17 @@ WALKER_ID_REGEX = compile(
 )
 MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 TA = TypeVar("TA", bound="type[Architype]")
+
+
+def populate_dataclasses(cls: type, attributes: dict[str, Any]) -> dict[str, Any]:
+    """Populate nested dataclasses."""
+    if is_dataclass(cls) and issubclass(cls, Architype):
+        for attr in fields(cls):
+            if is_dataclass(
+                field_type := cls.__jac_hintings__[attr.name]
+            ) and isinstance(field_type, type):
+                attributes[attr.name] = from_dict(field_type, attributes[attr.name])
+    return attributes
 
 
 class AnchorType(Enum):
@@ -696,7 +710,8 @@ class Architype:
 
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
-    _jac_classes_: dict[str, type[Architype]]
+    __jac_classes__: dict[str, type[Architype]]
+    __jac_hintings__: dict[str, type]
 
     def __init__(self, __jac__: Optional[Anchor] = None) -> None:
         """Create default architype."""
@@ -721,14 +736,25 @@ class Architype:
         return f"{self.__class__.__name__}"
 
     @classmethod
-    def get(cls: TA, name: str) -> TA:
-        """Build class map from subclasses."""
-        if not (jac_class := getattr(cls, "_jac_class_", None)):
-            cls._jac_classes_ = jac_class = {
-                sub.__name__: sub for sub in cls.__subclasses__()
-            }
+    def __set_classes__(cls) -> dict[str, Any]:
+        """Initialize Jac Classes."""
+        jac_classes = {}
+        for sub in cls.__subclasses__():
+            sub.__jac_hintings__ = get_type_hints(sub)
+            jac_classes[sub.__name__] = sub
+        cls.__jac_classes__ = jac_classes
 
-        return jac_class.get(name, cls)
+        return jac_classes
+
+    @classmethod
+    def __get_class__(cls: TA, name: str) -> TA:
+        """Build class map from subclasses."""
+        jac_classes: dict[str, Any] | None = getattr(cls, "__jac_classes__", None)
+        if not jac_classes or not (jac_class := jac_classes.get(name)):
+            jac_classes = cls.__set_classes__()
+            jac_class = jac_classes.get(name, cls)
+
+        return jac_class
 
 
 class NodeArchitype(Architype):
