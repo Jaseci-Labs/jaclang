@@ -14,7 +14,6 @@ obj Calculator {
 
 obj BasicCalculator :Calculator: {
     can add(x: float, y: tuple) -> float {
-        print("Adding numbers, this overides the add method in Calculator");
         return (x + sum(y));
     }
 
