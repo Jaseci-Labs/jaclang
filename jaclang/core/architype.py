@@ -16,6 +16,7 @@ from typing import (
     Type,
     TypeVar,
     cast,
+    get_type_hints,
 )
 from uuid import UUID, uuid4
 
@@ -696,7 +697,8 @@ class Architype:
 
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
-    _jac_classes_: dict[str, type[Architype]]
+    __jac_classes__: dict[str, type[Architype]]
+    __jac_hintings__: dict[str, type]
 
     def __init__(self, __jac__: Optional[Anchor] = None) -> None:
         """Create default architype."""
@@ -723,10 +725,12 @@ class Architype:
     @classmethod
     def get(cls: TA, name: str) -> TA:
         """Build class map from subclasses."""
-        if not (jac_class := getattr(cls, "_jac_class_", None)):
-            cls._jac_classes_ = jac_class = {
-                sub.__name__: sub for sub in cls.__subclasses__()
-            }
+        if not (jac_class := getattr(cls, "__jac_classes__", None)):
+            jac_class = {}
+            for sub in cls.__subclasses__():
+                sub.__jac_hintings__ = get_type_hints(sub)
+                jac_class[sub.__name__] = sub
+            cls.__jac_classes__ = jac_class
 
         return jac_class.get(name, cls)
 
