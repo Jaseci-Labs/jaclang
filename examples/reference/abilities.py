@@ -7,7 +7,7 @@ class Calculator(ABC):
     """
 
     @abstractmethod
-    def add(self, x: float, y: float) -> float:
+    def add(self, x: float, y: tuple) -> float:
         """
         Add two numbers.
 
@@ -56,8 +56,8 @@ class BasicCalculator(Calculator):
     Basic calculator implementation.
     """
 
-    def add(self, x: float, y: float) -> float:
-        return x + y
+    def add(self, x: float, y: tuple) -> float:
+        return x + sum(y)
 
     def subtract(self, x: float, y: float) -> float:
         return x - y
@@ -107,7 +107,7 @@ class AdvanceCalculator(BasicCalculator):
 
 cal = BasicCalculator()
 adv_cal = AdvanceCalculator()
-print(cal.add(5, 10))
+print(cal.add(5, (10,11)))
 print(cal.subtract(5, 10))
 print(cal.multiply(5, 10))
 print(cal.divide(5, 10))

@@ -4,10 +4,10 @@ obj Calculator {
     can add(x: float, *y: tuple) -> float {}
 
     """ Substract second value from the first value """
-    can substract(x: float, y: float) -> float;
+    can subtract(x: float, y: float) -> float;
 }
 
-:obj:Calculator:can:substract
+:obj:Calculator:can:subtract
 (x: float, y: float) -> float {
     return (x - y);
 }
@@ -50,11 +50,14 @@ obj AdvancedCalculator:BasicCalculator: {
 
 with entry {
     cal = BasicCalculator();
-    advcal = AdvancedCalculator();
-    print(cal.add(1, (2, 3, 4)));
-    print(cal.substract(10, 5));
-    print(cal.multiply(2, 3));
-    print(cal.divide(10, 2));
-    print(advcal.power(2, 3));
-
+    adv_cal = AdvancedCalculator();
+    print(cal.add(5, (10,11)));
+    print(cal.subtract(5, 10));
+    print(cal.multiply(5, 10));
+    print(cal.divide(5, 10));
+    print(adv_cal.power(5, 10));
+    print(adv_cal.square_root(25));
+    print(adv_cal.cube_root(27));
+    print(adv_cal.remainder(10, 3));
+    print(adv_cal.absolute(-5));
 }
