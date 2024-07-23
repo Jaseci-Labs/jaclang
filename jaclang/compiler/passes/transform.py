@@ -7,6 +7,7 @@ from typing import Generic, Optional, Type
 
 from jaclang.compiler.absyntree import AstNode, T
 from jaclang.compiler.codeloc import CodeLocInfo
+from jaclang.utils.helpers import pretty_print_source_location
 from jaclang.utils.log import logging
 
 
@@ -42,73 +43,16 @@ class Alert:
 
     def pretty_print(self) -> str:
         """Pretty pritns the Alert to show the alert with source location."""
-        return self.as_log() + self._dump_pretty_print_location()
-
-    def _dump_pretty_print_location(self) -> str:
-        """Pretty print internal method for the pretty_print method.
-
-        Note that this wil return the string with the leading new line character
-        if it contains any location alert info, otherwise it'll return empty
-        string so the caller can just do a `+=`.
-        """
-        # NOTE: The Line numbers and the column numbers are starts with 1.
-        # We print totally 5 lines (error line and above 2 and bellow 2).
-
-        # The width of the line number we'll be printing (more of a settings).
-        line_num_width: int = 5
-
-        error_line = self.loc.first_line
-        file_source: str = self.loc.file_source
-        idx: int = self.loc.pos_start
-
-        if file_source == "" or self.loc.mod_path == "":
-            return ""
-
-        start_line: int = error_line - 2
-        if start_line < 1:
-            start_line = 1
-        end_line: int = start_line + 5  # Index is exclusive.
-
-        # Get the first character of the [start_line].
-        curr_line: int = error_line
-        while idx > 0 and curr_line >= start_line:
-            idx -= 1
-            if idx == 0:
-                break
-            if file_source[idx] == "\n":
-                curr_line -= 1
-
-        assert idx == 0 or file_source[idx] == "\n"
-        if idx != 0:
-            idx += 1  # Enter the line.
-
-        pretty_dump = ""
-
-        # Print each lines.
-        curr_line = start_line
-        while curr_line < end_line:
-            pretty_dump += f"%{line_num_width}d | " % curr_line
-
-            idx_line_start = idx
-            while idx < len(file_source) and file_source[idx] != "\n":
-                idx += 1  # Run to the line end.
-            pretty_dump += file_source[idx_line_start:idx]
-            pretty_dump += "\n"
-
-            if curr_line == error_line:  # Print the current line with indicator.
-                pretty_dump += f"%{line_num_width}s | " % " "
-
-                spaces = ""
-                for idx_pre in range(idx_line_start, self.loc.pos_start):
-                    spaces += "\t" if file_source[idx_pre] == "\t" else " "
-                pretty_dump += spaces + "~\n"
-
-            if idx == len(file_source):
-                break
-            curr_line += 1
-            idx += 1
-
-        return "\n" + pretty_dump
+        pretty_dump = pretty_print_source_location(
+            self.loc.mod_path,
+            self.loc.file_source,
+            self.loc.first_line,
+            self.loc.pos_start,
+            self.loc.pos_end,
+        )
+        if pretty_dump != "":
+            pretty_dump = "\n" + pretty_dump
+        return self.as_log() + pretty_dump
 
 
 class Transform(ABC, Generic[T]):
