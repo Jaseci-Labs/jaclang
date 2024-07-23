@@ -41,6 +41,7 @@ class JacParser(Pass):
                 return mod
             else:
                 raise self.ice()
+
         except jl.UnexpectedInput as e:
             catch_error = ast.EmptyToken()
             catch_error.file_path = self.mod_path
@@ -49,9 +50,19 @@ class JacParser(Pass):
             catch_error.end_line = e.line
             catch_error.c_start = e.column
             catch_error.c_end = e.column + 1
-            self.error(f"Syntax Error: {e}", node_override=catch_error)
+            catch_error.pos_start = e.pos_in_stream or 0
+            catch_error.pos_end = catch_error.pos_start + 1
+
+            # TODO: Based on the lark error generate the message (consice).
+            # Example:
+            #   Unexpected token, Unexpected End of File,
+            #   Non terminated string literal, Invalid hex number (0x1zfk),
+            #   Expected a semicollon, etc.
+            self.error("Syntax Error", node_override=catch_error)
+
         except Exception as e:
             self.error(f"Internal Error: {e}")
+
         return ast.Module(
             name="",
             source=self.source,

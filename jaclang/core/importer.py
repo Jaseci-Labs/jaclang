@@ -205,10 +205,13 @@ class Importer:
                 return marshal.load(f)
 
         result = compile_jac(full_target, cache_result=cachable)
+
         if result.errors_had or not result.ir.gen.py_bytecode:
-            for e in result.errors_had:
-                print(e)
+            for alert in result.errors_had:
+                # FIXME: This should be handled via a proper handler.
+                print(alert.pretty_print(), file=sys.stderr)
             return None
+
         if result.ir.gen.py_bytecode is not None:
             return marshal.loads(result.ir.gen.py_bytecode)
         else:
