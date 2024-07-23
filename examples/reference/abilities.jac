@@ -4,17 +4,17 @@ obj Calculator {
     can add(x: float, *y: tuple) -> float {}
 
     """ Substract second value from the first value """
-    can subtract(x: float, y: float) -> float;
+    can subtract(x: float, y: float) -> float {};
 }
 
-:obj:Calculator:can:subtract
-(x: float, y: float) -> float {
-    return (x - y);
-}
 
 obj BasicCalculator :Calculator: {
     can add(x: float, y: tuple) -> float {
         return (x + sum(y));
+    }
+
+    can subtract(x: float, y: float) -> float {
+        return (x - y);
     }
 
     can multiply(x: float, y: float) -> float {
