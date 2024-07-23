@@ -403,12 +403,12 @@ def py2jac(filename: str) -> None:
     """
     if filename.endswith(".py"):
         with open(filename, "r") as f:
-            source_code = f.read()
+            file_source = f.read()
             code = PyastBuildPass(
                 input_ir=ast.PythonModuleAst(
-                    ast3.parse(source_code),
+                    ast3.parse(file_source),
                     mod_path=filename,
-                    source_code=source_code,
+                    file_source=file_source,
                 ),
             ).ir.unparse()
         print(code)

@@ -145,7 +145,7 @@ class AstNode:
             name=name,
             value=value,
             file_path=self.loc.mod_path,
-            source_code=self.loc.source_code,
+            file_source=self.loc.file_source,
             col_start=self.loc.col_start,
             col_end=0,
             line=self.loc.first_line,
@@ -405,7 +405,7 @@ class AstImplOnlyNode(CodeBlockStmt, ElementStmt, AstSymbolNode):
         """Create impl name."""
         ret = Name(
             file_path=self.target.archs[-1].loc.mod_path,
-            source_code=self.target.archs[-1].loc.source_code,
+            file_source=self.target.archs[-1].loc.file_source,
             name=Tok.NAME.value,
             value=self.target.py_resolve_name(),
             col_start=self.target.archs[0].loc.col_start,
@@ -750,7 +750,7 @@ class Test(AstSymbolNode, ElementStmt):
             if isinstance(name, Name)
             else Name(
                 file_path=name.file_path,
-                source_code=name.source_code,
+                file_source=name.file_source,
                 name=Tok.NAME.value,
                 value=f"_jac_gen_{Test.TEST_COUNT}",
                 col_start=name.loc.col_start,
@@ -3728,7 +3728,7 @@ class MatchWild(MatchPattern):
             nodes=[
                 Name(
                     file_path=self.loc.mod_path,
-                    source_code=self.loc.source_code,
+                    file_source=self.loc.file_source,
                     name=Tok.NAME,
                     value="_",
                     col_start=self.loc.col_start,
@@ -3939,7 +3939,7 @@ class Token(AstNode):
     def __init__(
         self,
         file_path: str,
-        source_code: str,
+        file_source: str,
         name: str,
         value: str,
         line: int,
@@ -3951,7 +3951,7 @@ class Token(AstNode):
     ) -> None:
         """Initialize token."""
         self.file_path = file_path
-        self.source_code = source_code
+        self.file_source = file_source
         self.name = name
         self.value = value
         self.line_no = line
@@ -3977,7 +3977,7 @@ class Name(Token, NameAtom):
     def __init__(
         self,
         file_path: str,
-        source_code: str,
+        file_source: str,
         name: str,
         value: str,
         line: int,
@@ -3995,7 +3995,7 @@ class Name(Token, NameAtom):
         Token.__init__(
             self,
             file_path=file_path,
-            source_code=source_code,
+            file_source=file_source,
             name=name,
             value=value,
             line=line,
@@ -4027,7 +4027,7 @@ class Name(Token, NameAtom):
         """Generate name from node."""
         ret = Name(
             file_path=node.loc.mod_path,
-            source_code=node.loc.source_code,
+            file_source=node.loc.file_source,
             name=Tok.NAME.value,
             value=name_str,
             col_start=node.loc.col_start,
@@ -4055,7 +4055,7 @@ class SpecialVarRef(Name):
         Name.__init__(
             self,
             file_path=var.file_path,
-            source_code=var.source_code,
+            file_source=var.file_source,
             name=var.name,
             value=self.py_resolve_name(),  # TODO: This shouldnt be necessary
             line=var.line_no,
@@ -4112,7 +4112,7 @@ class Literal(Token, AtomExpr):
     def __init__(
         self,
         file_path: str,
-        source_code: str,
+        file_source: str,
         name: str,
         value: str,
         line: int,
@@ -4126,7 +4126,7 @@ class Literal(Token, AtomExpr):
         Token.__init__(
             self,
             file_path=file_path,
-            source_code=source_code,
+            file_source=file_source,
             name=name,
             value=value,
             line=line,
@@ -4257,7 +4257,7 @@ class EmptyToken(Token):
         super().__init__(
             name="EmptyToken",
             file_path="",
-            source_code="",
+            file_source="",
             value="",
             line=0,
             end_line=0,
@@ -4278,7 +4278,7 @@ class CommentToken(Token):
     def __init__(
         self,
         file_path: str,
-        source_code: str,
+        file_source: str,
         name: str,
         value: str,
         line: int,
@@ -4296,7 +4296,7 @@ class CommentToken(Token):
         Token.__init__(
             self,
             file_path=file_path,
-            source_code=source_code,
+            file_source=file_source,
             name=name,
             value=value,
             line=line,
@@ -4335,10 +4335,10 @@ class PythonModuleAst(EmptyToken):
         self,
         ast: ast3.Module,
         mod_path: str,
-        source_code: str,
+        file_source: str,
     ) -> None:
         """Initialize source string."""
         super().__init__()
         self.ast = ast
         self.file_path = mod_path
-        self.source_code = source_code
+        self.file_source = file_source

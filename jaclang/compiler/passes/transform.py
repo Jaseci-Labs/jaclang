@@ -58,10 +58,10 @@ class Alert:
         line_num_width: int = 5
 
         error_line = self.loc.first_line
-        source_code: str = self.loc.source_code
+        file_source: str = self.loc.file_source
         idx: int = self.loc.pos_start
 
-        if source_code == "" or self.loc.mod_path == "":
+        if file_source == "" or self.loc.mod_path == "":
             return ""
 
         start_line: int = error_line - 2
@@ -75,10 +75,10 @@ class Alert:
             idx -= 1
             if idx == 0:
                 break
-            if source_code[idx] == "\n":
+            if file_source[idx] == "\n":
                 curr_line -= 1
 
-        assert idx == 0 or source_code[idx] == "\n"
+        assert idx == 0 or file_source[idx] == "\n"
         if idx != 0:
             idx += 1  # Enter the line.
 
@@ -90,9 +90,9 @@ class Alert:
             pretty_dump += f"%{line_num_width}d | " % curr_line
 
             idx_line_start = idx
-            while idx < len(source_code) and source_code[idx] != "\n":
+            while idx < len(file_source) and file_source[idx] != "\n":
                 idx += 1  # Run to the line end.
-            pretty_dump += source_code[idx_line_start:idx]
+            pretty_dump += file_source[idx_line_start:idx]
             pretty_dump += "\n"
 
             if curr_line == error_line:  # Print the current line with indicator.
@@ -100,10 +100,10 @@ class Alert:
 
                 spaces = ""
                 for idx_pre in range(idx_line_start, self.loc.pos_start):
-                    spaces += "\t" if source_code[idx_pre] == "\t" else " "
+                    spaces += "\t" if file_source[idx_pre] == "\t" else " "
                 pretty_dump += spaces + "~\n"
 
-            if idx == len(source_code):
+            if idx == len(file_source):
                 break
             curr_line += 1
             idx += 1

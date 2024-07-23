@@ -45,7 +45,7 @@ class JacParser(Pass):
         except jl.UnexpectedInput as e:
             catch_error = ast.EmptyToken()
             catch_error.file_path = self.mod_path
-            catch_error.source_code = self.source.code
+            catch_error.file_source = self.source.code
             catch_error.line_no = e.line
             catch_error.end_line = e.line
             catch_error.c_start = e.column
@@ -78,7 +78,7 @@ class JacParser(Pass):
         """Process comment."""
         return ast.CommentToken(
             file_path=mod.loc.mod_path,
-            source_code=mod.loc.source_code,
+            file_source=mod.loc.file_source,
             name=token.type,
             value=token.value,
             line=token.line if token.line is not None else 0,
@@ -1226,7 +1226,7 @@ class JacParser(Pass):
                     ast.BuiltinType(
                         name=kid[0].name,
                         file_path=self.parse_ref.mod_path,
-                        source_code=self.parse_ref.source.code,
+                        file_source=self.parse_ref.source.code,
                         value=kid[0].value,
                         line=kid[0].loc.first_line,
                         end_line=kid[0].loc.last_line,
@@ -3983,7 +3983,7 @@ class JacParser(Pass):
                 token.value = token.value.replace("::py::", "")
             ret = ret_type(
                 file_path=self.parse_ref.mod_path,
-                source_code=self.parse_ref.source.code,
+                file_source=self.parse_ref.source.code,
                 name=token.type,
                 value=token.value[2:] if token.type == Tok.KWESC_NAME else token.value,
                 line=token.line if token.line is not None else 0,

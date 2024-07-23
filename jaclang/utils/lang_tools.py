@@ -214,10 +214,10 @@ class AstTool:
             base = base if base else "./"
 
             if file_name.endswith(".py"):
-                source_code = ""
+                file_source = ""
                 with open(file_name, "r") as f:
-                    source_code = f.read()
-                    parsed_ast = py_ast.parse(source_code)
+                    file_source = f.read()
+                    parsed_ast = py_ast.parse(file_source)
                 if output == "pyast":
                     return f"\n{py_ast.dump(parsed_ast, indent=2)}"
                 try:
@@ -225,7 +225,7 @@ class AstTool:
                         input_ir=ast.PythonModuleAst(
                             parsed_ast,
                             mod_path=file_name,
-                            source_code=source_code,
+                            file_source=file_source,
                         ),
                     ).ir
 

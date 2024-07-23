@@ -43,14 +43,14 @@ class CodeLocInfo:
         self.last_tok = last_tok
 
     @property
-    def mod_path(self) -> str:
+    def mod_path(self) -> str:  # TODO: Rename to file_path
         """Get line number."""
         return self.first_tok.file_path
 
     @property
-    def source_code(self) -> str:
+    def file_source(self) -> str:
         """Get the source code."""
-        return self.first_tok.source_code
+        return self.first_tok.file_source
 
     @property
     def first_line(self) -> int:
