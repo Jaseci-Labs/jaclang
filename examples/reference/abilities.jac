@@ -4,7 +4,13 @@ obj Calculator {
     can add(x: float, *y: tuple) -> float {}
 
     """ Substract second value from the first value """
-    can subtract(x: float, y: float) -> float {};
+    can subtract(x: float, y: float) -> float {}
+
+    """ Multiply two numbers """
+    can multiply(x: float, y: float) -> float {}
+
+    """ Divide first number by the second number """
+    can divide(x: float, y: float) -> float {}
 }
 
 
