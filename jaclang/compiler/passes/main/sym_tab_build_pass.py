@@ -53,6 +53,7 @@ class SymTabBuildPass(Pass):
         for obj in dir(builtins):
             builtin = ast.Name(
                 file_path=node.loc.mod_path,
+                source_code=node.loc.source_code,
                 name=Tok.NAME,
                 value=str(obj),
                 line=0,

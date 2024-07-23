@@ -214,13 +214,19 @@ class AstTool:
             base = base if base else "./"
 
             if file_name.endswith(".py"):
+                source_code = ""
                 with open(file_name, "r") as f:
-                    parsed_ast = py_ast.parse(f.read())
+                    source_code = f.read()
+                    parsed_ast = py_ast.parse(source_code)
                 if output == "pyast":
                     return f"\n{py_ast.dump(parsed_ast, indent=2)}"
                 try:
                     rep = PyastBuildPass(
-                        input_ir=ast.PythonModuleAst(parsed_ast, mod_path=file_name),
+                        input_ir=ast.PythonModuleAst(
+                            parsed_ast,
+                            mod_path=file_name,
+                            source_code=source_code,
+                        ),
                     ).ir
 
                     schedule = py_code_gen_typed

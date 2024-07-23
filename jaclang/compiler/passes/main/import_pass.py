@@ -252,10 +252,13 @@ class PyImportPass(JacImportPass):
                 if spec.origin in self.import_table:
                     return self.import_table[spec.origin]
                 with open(spec.origin, "r", encoding="utf-8") as f:
+                    source_code = f.read()
                     # print(f"\nImporting python module {node.path_str}")
                     mod = PyastBuildPass(
                         input_ir=ast.PythonModuleAst(
-                            py_ast.parse(f.read()), mod_path=spec.origin
+                            py_ast.parse(source_code),
+                            mod_path=spec.origin,
+                            source_code=source_code,
                         ),
                     ).ir
                 if mod:

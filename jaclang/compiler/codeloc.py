@@ -48,6 +48,11 @@ class CodeLocInfo:
         return self.first_tok.file_path
 
     @property
+    def source_code(self) -> str:
+        """Get the source code."""
+        return self.first_tok.source_code
+
+    @property
     def first_line(self) -> int:
         """Get line number."""
         return self.first_tok.line_no
