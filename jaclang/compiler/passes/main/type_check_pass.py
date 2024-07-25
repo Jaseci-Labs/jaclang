@@ -34,10 +34,11 @@ class JacTypeCheckPass(Pass):
 
     def after_pass(self) -> None:
         """Call mypy api after traversing all the modules."""
-        try:
-            self.api()
-        except Exception as e:
-            self.error(f"Unable to run type checking: {e}")
+        # try:
+        #     self.api()
+        # except Exception as e:
+        #     self.error(f"Unable to run type checking: {e}")
+        self.api()
         return super().after_pass()
 
     def default_message_cb(
@@ -75,6 +76,7 @@ class JacTypeCheckPass(Pass):
         mypy_graph: myab.Graph = {}
         new_modules = []
         for module in self.__modules:
+            print(f"TypeCheckPass::api: Building the ast for jac file at {module.loc.mod_path}")
             tree = myab.ASTConverter(
                 options=options,
                 is_stub=False,
@@ -83,6 +85,7 @@ class JacTypeCheckPass(Pass):
                 path=module.loc.mod_path,
             ).visit(module.gen.py_ast[0])
 
+            print(f"TypeCheckPass::api: Building State object for jac file at {module.loc.mod_path}")
             st = myab.State(
                 id=module.name,
                 path="File:" + module.loc.mod_path,
@@ -94,6 +97,7 @@ class JacTypeCheckPass(Pass):
             mypy_graph[module.name] = st
             new_modules.append(st)
 
+        print(f"TypeCheckPass::api: Building full mypy graph (Loading other dependencies)")
         graph = myab.load_graph(
             [
                 myab.BuildSource(

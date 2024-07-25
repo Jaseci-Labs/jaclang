@@ -53,6 +53,11 @@ class BuildManager(myb.BuildManager):
         t0 = myb.time.time()
         if ignore_errors:
             self.errors.ignored_files.add(path)
+        
+        if ast_override:
+            print("BuildManager::parse_file: Using ast_override instead of parsing the file")
+        else:
+            print(f"BuildManager::parse_file: Parsing {path}")
         tree = (
             ast_override
             if ast_override
@@ -170,6 +175,8 @@ class State(myb.State):
         ast_override: myb.MypyFile | None = None,
     ) -> None:
         """Override to mypy state for AST pass through."""
+        print("********* Creating a State Object ************")
+        print(f"State::__init__: Creating a state object for Module: \"{id}\", Path: \"{path}\"")
         if not temporary:
             assert id or path or source is not None, "Neither id, path nor source given"
         self.manager = manager
@@ -178,6 +185,7 @@ class State(myb.State):
         self.caller_state = caller_state
         self.caller_line = caller_line
         if caller_state:
+            print(f"State::__init__: Caller state is Module: \"{id}\", Path: \"{path}\"")
             self.import_context = caller_state.import_context.copy()
             self.import_context.append((caller_state.xpath, caller_line))
         else:
@@ -211,10 +219,12 @@ class State(myb.State):
         if path:
             self.abspath = myb.os.path.abspath(path)
         self.xpath = path or "<string>"
+        print(f"State::__init__: Checking if there is an available cache that can be used for {self.xpath}")
         if path and source is None and self.manager.cache_enabled:
             self.meta = myb.find_cache_meta(self.id, path, manager)
             # TODO: Get mtime if not cached.
             if self.meta is not None:
+                print(f"State::__init__: Found a cache file")
                 self.interface_hash = self.meta.interface_hash
                 self.meta_source_hash = self.meta.hash
         if path and source is None and self.manager.fscache.isdir(path):
@@ -230,16 +240,21 @@ class State(myb.State):
         if self.meta:
             # Make copies, since we may modify these and want to
             # compare them to the originals later.
+            print("State::__init__: Using cached version info")
             self.dependencies = list(self.meta.dependencies)
             self.dependencies_set = set(self.dependencies)
             self.suppressed = list(self.meta.suppressed)
             self.suppressed_set = set(self.suppressed)
             all_deps = self.dependencies + self.suppressed
+
+            print("State::__init__: Dependencies are", all_deps)
+
             assert len(all_deps) == len(self.meta.dep_prios)
             self.priorities = dict(zip(all_deps, self.meta.dep_prios))
 
             assert len(all_deps) == len(self.meta.dep_lines)
             self.dep_line_map = dict(zip(all_deps, self.meta.dep_lines))
+
             if temporary:
                 self.load_tree(temporary=True)
             if not manager.use_fine_grained_cache() and myb.exist_added_packages(
@@ -254,21 +269,28 @@ class State(myb.State):
                 # suppressed dependencies. Therefore, when the package with module is added,
                 # we need to re-calculate dependencies.
                 # NOTE: see comment below for why we skip this in fine grained mode.
+                print("State::__init__: Special scenario happened with fine grained mode, parsing the file from scratch")
                 self.parse_file(
                     ast_override=ast_override
                 )  # This is safe because the cache is anyway stale.
+                print("State::__init__: Computing dependencies...")
                 self.compute_dependencies()
+                print("State::__init__: Dependencies are", self.dependencies + self.suppressed)
         else:
             # When doing a fine-grained cache load, pretend we only
             # know about modules that have cache information and defer
             # handling new modules until the fine-grained update.
             if manager.use_fine_grained_cache():
-                manager.log(f"Deferring module to fine-grained update {path} ({id})")
+                manager.log(f"State::__init__: Deferring module to fine-grained update {path} ({id})")
                 raise myb.ModuleNotFound
 
             # Parse the file (and then some) to get the dependencies.
+            print("State::__init__: No cached version is found or file has been changed, parsing the file from scratch")
             self.parse_file(temporary=temporary, ast_override=ast_override)
+            print("State::__init__: Computing dependencies...")
             self.compute_dependencies()
+            print("State::__init__: Dependencies are", self.dependencies + self.suppressed)
+        print("*********************")
 
     def type_checker(self) -> myb.TypeChecker:
         """Return the type checker for this state."""
@@ -307,6 +329,7 @@ class State(myb.State):
             # The file was already parsed (in __init__()).
             return
 
+        print(f"State::parse_file: Parsing file at {self.xpath} ({self.id})")
         manager = self.manager
 
         # Can we reuse a previously parsed AST? This avoids redundant work in daemon.
@@ -314,8 +337,10 @@ class State(myb.State):
         modules = manager.modules
         if not cached:
             manager.log(f"Parsing {self.xpath} ({self.id})")
+            print(f"State::parse_file: Parsing {self.xpath} ({self.id})")
         else:
             manager.log(f"Using cached AST for {self.xpath} ({self.id})")
+            print(f"State::parse_file: Using cached AST for {self.xpath} ({self.id})")
 
         t0 = myb.time_ref()
 
@@ -323,6 +348,7 @@ class State(myb.State):
             source = self.source
             self.source = None  # We won't need it again.
             if self.path and source is None:
+                print(f"State::parse_file: Path is there but source is None !! (Maybe a compiled python)")
                 try:
                     path = manager.maybe_swap_for_shadow_path(self.path)
                     source = myb.decode_python_encoding(manager.fscache.read(path))
@@ -351,14 +377,17 @@ class State(myb.State):
                         [err], module_with_blocker=self.id
                     ) from decodeerr
             elif self.path and self.manager.fscache.isdir(self.path):
+                print(f"State::parse_file: Path is a directory")
                 source = ""
                 self.source_hash = ""
             else:
                 assert source is not None
+                print(f"State::parse_file: Path is a file and source code is available")
                 self.source_hash = myb.compute_hash(source)
 
             self.parse_inline_configuration(source)
             if not cached:
+                print(f"State::parse_file: Tree is not cached, Parsing the source")
                 self.tree = manager.parse_file(
                     self.id,
                     self.xpath,
@@ -370,6 +399,7 @@ class State(myb.State):
 
             else:
                 # Reuse a cached AST
+                print(f"State::parse_file: Tree is cached, Reusing it")
                 self.tree = manager.ast_cache[self.id][0]
                 manager.errors.set_file_ignored_lines(
                     self.xpath,
@@ -388,14 +418,17 @@ class State(myb.State):
             self.early_errors = manager.ast_cache[self.id][1]
 
         if not temporary:
+            print(f"State::parse_file: Adding the file to modules dict in 'manager.modules'")
             modules[self.id] = self.tree
 
         if not cached:
+            print(f"State::parse_file: Do first pass of sematic analysis (Analysis that only depends on the input file)")
             self.semantic_analysis_pass1()
 
         if not temporary:
             self.check_blockers()
 
+        print(f"State::parse_file: Adding the tree to the cache dict in manager")
         manager.ast_cache[self.id] = (self.tree, self.early_errors)
 
 

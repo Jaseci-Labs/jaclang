@@ -96,6 +96,7 @@ from mypy.types import Type
 from mypy.typestate import reset_global_state, type_state
 from mypy.version import __version__
 
+
 # Switch to True to produce debug output related to fine-grained incremental
 # mode only that is useful during development. This produces only a subset of
 # output compared to --verbose output. We use a global flag to enable this so
@@ -754,7 +755,7 @@ class BuildManager:
 
         Can generate blocking errors on bogus relative imports.
         """
-
+        print(f"BuildManager::all_imported_modules_in_file: Getting all import statements in the file")
         def correct_rel_imp(imp: ImportFrom | ImportAll) -> str:
             """Function to correct for relative imports."""
             file_id = file.fullname
@@ -788,6 +789,7 @@ class BuildManager:
                         for part in ancestor_parts:
                             ancestors.append(part)
                             res.append((ancestor_pri, ".".join(ancestors), imp.line))
+                
                 elif isinstance(imp, ImportFrom):
                     cur_id = correct_rel_imp(imp)
                     all_are_submodules = True
@@ -807,6 +809,7 @@ class BuildManager:
                     # priority.
                     pri = import_priority(imp, PRI_HIGH if not all_are_submodules else PRI_LOW)
                     res.append((pri, cur_id, imp.line))
+                
                 elif isinstance(imp, ImportAll):
                     pri = import_priority(imp, PRI_HIGH)
                     res.append((pri, correct_rel_imp(imp), imp.line))
@@ -1364,7 +1367,8 @@ def validate_meta(
     # contents is the same as it was when the cache data file was created. The second one is not
     # too obvious: we check that the cache data file mtime has not changed; it is needed because
     # we use cache data file mtime to propagate information about changes in the dependencies.
-
+    print(f"validate_meta:: Checking if the cache can be used for {path}")
+    
     if meta is None:
         manager.log(f"Metadata not found for {id}")
         return None
@@ -1902,6 +1906,7 @@ class State:
         # as error reporting should be avoided.
         temporary: bool = False,
     ) -> None:
+        print(f"Creating a state object for Module: \"{id}\", Path: \"{path}\"")
         if not temporary:
             assert id or path or source is not None, "Neither id, path nor source given"
         self.manager = manager
@@ -1910,6 +1915,7 @@ class State:
         self.caller_state = caller_state
         self.caller_line = caller_line
         if caller_state:
+            print(f"Caller state is Module: \"{id}\", Path: \"{path}\"")
             self.import_context = caller_state.import_context.copy()
             self.import_context.append((caller_state.xpath, caller_line))
         else:
@@ -1943,10 +1949,12 @@ class State:
         if path:
             self.abspath = os.path.abspath(path)
         self.xpath = path or "<string>"
+        print(f"Checking if there is an available cache that can be used for {self.xpath}")
         if path and source is None and self.manager.cache_enabled:
             self.meta = find_cache_meta(self.id, path, manager)
             # TODO: Get mtime if not cached.
             if self.meta is not None:
+                print(f"Found a cache in {self.meta.path}")
                 self.interface_hash = self.meta.interface_hash
                 self.meta_source_hash = self.meta.hash
         if path and source is None and self.manager.fscache.isdir(path):
@@ -1960,6 +1968,7 @@ class State:
         if self.meta:
             # Make copies, since we may modify these and want to
             # compare them to the originals later.
+            print("Cached version from the state is detected, Using it")
             self.dependencies = list(self.meta.dependencies)
             self.dependencies_set = set(self.dependencies)
             self.suppressed = list(self.meta.suppressed)
@@ -1993,7 +2002,9 @@ class State:
                 raise ModuleNotFound
 
             # Parse the file (and then some) to get the dependencies.
+            print("Parsing file...")
             self.parse_file(temporary=temporary)
+            print("Computing dependencies...")
             self.compute_dependencies()
 
     @property
@@ -2286,9 +2297,13 @@ class State:
         self.suppressed_set = set()
         self.priorities = {}  # id -> priority
         self.dep_line_map = {}  # id -> line
-        dep_entries = manager.all_imported_modules_in_file(
-            self.tree
-        ) + self.manager.plugin.get_additional_deps(self.tree)
+
+        __gamal__temp0 = manager.all_imported_modules_in_file(self.tree)
+        print("State::compute_dependencies Imported modules in the file is", __gamal__temp0)
+        print("State::compute_dependencies Plugins related modules", self.manager.plugin.get_additional_deps(self.tree))
+        dep_entries = __gamal__temp0 + self.manager.plugin.get_additional_deps(self.tree)
+
+        print("State::compute_dependencies Ordering the dependencies")
         for pri, id, line in dep_entries:
             self.priorities[id] = min(pri, self.priorities.get(id, PRI_ALL))
             if id == self.id:
