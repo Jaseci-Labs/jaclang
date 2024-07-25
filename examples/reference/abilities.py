@@ -50,6 +50,16 @@ class Calculator(ABC):
         """
         pass
 
+    @staticmethod
+    def is_positive(number: float) -> bool:
+        """
+        Check if a number is positive.
+
+        :param number: The number to check
+        :return: True if the number is positive, False otherwise
+        """
+        return number > 0
+
 
 class BasicCalculator(Calculator):
     """
@@ -107,12 +117,24 @@ class AdvanceCalculator(BasicCalculator):
 
 cal = BasicCalculator()
 adv_cal = AdvanceCalculator()
-print(cal.add(5, (10, 11)))
-print(cal.subtract(5, 10))
-print(cal.multiply(5, 10))
-print(cal.divide(5, 10))
-print(adv_cal.power(5, 10))
-print(adv_cal.square_root(25))
-print(adv_cal.cube_root(27))
-print(adv_cal.remainder(10, 3))
-print(adv_cal.absolute(-5))
+
+
+# Perform operations using BasicCalculator
+print("Basic Calculator Operations:")
+print("Addition:", cal.add(5, (10, 11)))
+print("Subtraction:", cal.subtract(5, 10))
+print("Multiplication:", cal.multiply(5, 10))
+print("Division:", cal.divide(5, 10))
+
+# Perform operations using AdvanceCalculator
+print("\nAdvance Calculator Operations:")
+print("Power:", adv_cal.power(5, 10))
+print("Square Root:", adv_cal.square_root(25))
+print("Cube Root:", adv_cal.cube_root(27))
+print("Remainder:", adv_cal.remainder(10, 3))
+print("Absolute Value:", adv_cal.absolute(-5))
+
+# Use the static method from the Calculator class
+print("\nStatic Method Check:")
+print("Is 10 positive?", Calculator.is_positive(10))
+print("Is -5 positive?", Calculator.is_positive(-5))

@@ -1,16 +1,21 @@
 
 obj Calculator {
     """ Add multiple numbers """
-    can add(x: float, *y: tuple) -> float {}
+    can add(x: float, *y: tuple) -> float abs;
 
     """ Substract second value from the first value """
-    can subtract(x: float, y: float) -> float {}
+    can subtract(x: float, y: float) -> float abs;
 
     """ Multiply two numbers """
-    can multiply(x: float, y: float) -> float {}
+    can multiply(x: float, y: float) -> float abs;
 
     """ Divide first number by the second number """
-    can divide(x: float, y: float) -> float {}
+    can divide(x: float, y: float) -> float abs;
+
+    """ Check if a number is positive """
+    static can is_positive(number: float) -> bool{
+        return number > 0;
+    }
 }
 
 
@@ -66,4 +71,7 @@ with entry {
     print(adv_cal.cube_root(27));
     print(adv_cal.remainder(10, 3));
     print(adv_cal.absolute(-5));
+
+    print(Calculator.is_positive(10));
+    print(Calculator.is_positive(-5));
 }
