@@ -1,34 +1,77 @@
-obj Divider {
+
+obj Calculator {
+    """ Add multiple numbers """
+    can add(x: float, *y: tuple) -> float abs;
+
+    """ Substract second value from the first value """
+    can subtract(x: float, y: float) -> float abs;
+
+    """ Multiply two numbers """
+    can multiply(x: float, y: float) -> float abs;
+
+    """ Divide first number by the second number """
+    can divide(x: float, y: float) -> float abs;
+
+    """ Check if a number is positive """
+    static can is_positive(number: float) -> bool{
+        return number > 0;
+    }
+}
+
+
+obj BasicCalculator :Calculator: {
+    can add(x: float, y: tuple) -> float {
+        return (x + sum(y));
+    }
+
+    can subtract(x: float, y: float) -> float {
+        return (x - y);
+    }
+
+    can multiply(x: float, y: float) -> float {
+        return (x * y);
+    }
+
     can divide(x: float, y: float) -> float {
         return (x / y);
     }
 }
-#this is an abstract class as it has the abstract method
 
-obj Calculator {
-    static can : priv multiply(a: float, b: float) -> float {
-        return a * b;
+obj AdvancedCalculator:BasicCalculator: {
+    can power(x: float, y: float) -> float {
+        return (x ** y);
+        }
+
+    can square_root(x: float) -> float {
+        return (x ** 0.5);
     }
-    can substract -> float abs;
-    can add(number: float, *a: tuple) -> float;
-}
 
-obj substractor :Calculator: {
-    can substract(x: float, y: float) -> float {
-        return (x - y);
+    can cube_root(x: float) -> float {
+        return (x ** (1/3));
     }
-}
 
-:obj:Calculator:can:add
-(number: float, *a: tuple) -> float {
-    return (number * sum(a));
+    can remainder(x: float, y: float) -> float {
+        return (x % y);
+    }
+
+    can absolute(x: float) -> float {
+        return (abs(x));
+    }
 }
 
 with entry {
-    div = Divider();
-    sub = substractor();
-    print(div.divide(55, 11));
-    print(Calculator.multiply(9, -2));
-    print(sub.add(5, 20, 34, 56));
-    print(sub.substract(9, -2));
+    cal = BasicCalculator();
+    adv_cal = AdvancedCalculator();
+    print(cal.add(5, (10,11)));
+    print(cal.subtract(5, 10));
+    print(cal.multiply(5, 10));
+    print(cal.divide(5, 10));
+    print(adv_cal.power(5, 10));
+    print(adv_cal.square_root(25));
+    print(adv_cal.cube_root(27));
+    print(adv_cal.remainder(10, 3));
+    print(adv_cal.absolute(-5));
+
+    print(Calculator.is_positive(10));
+    print(Calculator.is_positive(-5));
 }
