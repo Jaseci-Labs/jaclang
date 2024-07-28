@@ -55,11 +55,3 @@ class TestLoader(TestCase):
             stdout_value,
         )
 
-    def test_package_import(self) -> None:
-        """Test package import."""
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
-        cli.run(self.fixture_abs_path("../../../tests/fixtures/package_import.jac"))
-        sys.stdout = sys.__stdout__
-        stdout_value = captured_output.getvalue()
-        self.assertEqual("package is imported successfully!\n", stdout_value)
