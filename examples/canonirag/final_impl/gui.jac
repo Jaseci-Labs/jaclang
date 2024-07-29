@@ -1,5 +1,5 @@
 import:py streamlit as st;
-import:py from PIL, Image;
+import:py from PIL {Image}
 
 can page_build {
     st.set_page_config(

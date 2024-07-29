@@ -1,8 +1,8 @@
 import:py json;
 import:py random;
-import:py from mtllm.llms, OpenAI;
+import:py from mtllm.llms {OpenAI}
 import:jac gui;
-import:jac from rag, rag_engine;
+import:jac from rag {rag_engine}
 
 glob llm1 = OpenAI(model_name='gpt-3.5-turbo');
 glob llm2 = OpenAI(model_name='gpt-4');
