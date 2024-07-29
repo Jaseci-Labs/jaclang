@@ -34,14 +34,14 @@ obj rag_engine {
     }
 
     '''
-    This ability will create unique IDs for chunks. 
+    This ability will create unique IDs for chunks.
     Example: "books/Oxford Handbook.pdf:100:2:
     Template: "Page Source:Page Number:Chunk Index"
     '''
     can add_chunk_id(chunks:str){
         last_page_id = None;
         current_chunk_index = 0;
-        
+
         for chunk in chunks{
             source = chunk.metadata.get('source');
             page = chunk.metadata.get('page');
@@ -82,7 +82,7 @@ obj rag_engine {
             if chunk.metadata['id'] not in existing_ids{
                 new_chunks.append(chunk);
             }
-            
+
         }
 
         if len(new_chunks){
@@ -94,7 +94,7 @@ obj rag_engine {
         else{
             print('no new documents to add');
         }
-        
+
     }
 
     '''

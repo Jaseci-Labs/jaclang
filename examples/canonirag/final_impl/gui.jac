@@ -20,7 +20,7 @@ can chat_interface(query_walker:walker){
 
     if input := st.chat_input("What is up?") {
         query_walker.query = input;
-        query_walker.messages.append({  "role": "user", 
+        query_walker.messages.append({  "role": "user",
                                         "content": query_walker.query});
         with st.chat_message("user"){
             st.markdown(query_walker.query);

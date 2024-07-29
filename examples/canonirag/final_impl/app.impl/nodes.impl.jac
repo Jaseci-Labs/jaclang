@@ -38,7 +38,7 @@
 
 :node:RAG_chat:can:run_RAG {
     print('routed --> RAG');
-    
+
     response = self.chat_llm(
             todo_list=here.todo_list,
             user_data=here.user_data,

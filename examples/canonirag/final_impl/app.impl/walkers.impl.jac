@@ -42,6 +42,6 @@
 
     # gui.display_chat(self.messages);
     gui.chat_interface(query_walker=self);
-    
+
     visit [-->];
 }
