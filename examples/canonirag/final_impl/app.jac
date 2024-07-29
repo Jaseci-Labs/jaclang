@@ -163,9 +163,9 @@ walker save_data {
 
 can main {
     :g: state ;
-    
+
     :g: RagEngine ;
-    
+
     gui.page_build();
     if state == PR_states.init_PR {
         # Import the data from JSON file

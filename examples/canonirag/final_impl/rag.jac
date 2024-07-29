@@ -43,7 +43,7 @@ obj rag_engine {
     can add_chunk_id(chunks: str) {
         last_page_id = None;
         current_chunk_index = 0;
-        
+
         for chunk in chunks {
             source = chunk.metadata.get('source');
             page = chunk.metadata.get('page');
@@ -70,11 +70,11 @@ obj rag_engine {
             embedding_function=self.get_embedding_function()
         );
         chunks_with_ids = self.add_chunk_id(chunks);#Chunk ID Calculation
-        
+
         #Adding and Updating the documents
         existing_items = db.get(include=[]);
         existing_ids = set(existing_items['ids']);
-        
+
         #Only adding new documents that does not exist in the database
         new_chunks = [];
         for chunk in chunks_with_ids {
