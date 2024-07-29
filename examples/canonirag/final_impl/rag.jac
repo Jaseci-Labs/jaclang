@@ -69,7 +69,7 @@ obj rag_engine {
     '''
     can add_to_chroma(chunks: list[Document]){
         #Loading the existing database
-        db = Chroma(persist_directory=self.chroma_path, embedding_function=self.get_embedding_function()); 
+        db = Chroma(persist_directory=self.chroma_path, embedding_function=self.get_embedding_function());
         chunks_with_ids = self.add_chunk_id(chunks);    #Chunk ID Calculation
 
         #Adding and Updating the documents
