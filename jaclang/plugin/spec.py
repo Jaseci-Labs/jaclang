@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 import types
-from typing import Any, Callable, Optional, TYPE_CHECKING, Type, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    ParamSpec,
+    TYPE_CHECKING,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from jaclang.compiler.absyntree import Module
 
@@ -24,6 +33,7 @@ import pluggy
 hookspec = pluggy.HookspecMarker("jac")
 
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class JacFeatureSpec:
@@ -92,7 +102,9 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def make_impl_ability(file_loc: str) -> Callable:
+    def impl_patch_filename(
+        file_loc: str,
+    ) -> Callable[[Callable[P, T]], Callable[P, T]]:
         """Update impl file location."""
         raise NotImplementedError
 
@@ -108,6 +120,7 @@ class JacFeatureSpec:
         mod_bundle: Optional[Module | str],
         lng: Optional[str],
         items: Optional[dict[str, Union[str, Optional[str]]]],
+        reload_module: Optional[bool],
     ) -> tuple[types.ModuleType, ...]:
         """Core Import Process."""
         raise NotImplementedError
