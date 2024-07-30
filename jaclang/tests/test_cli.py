@@ -46,8 +46,18 @@ class JacCliTests(TestCase):
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         stdout_value = captured_output.getvalue()
-        # print(stdout_value)
+
         self.assertIn("Error", stdout_value)
+
+        expected_stdout_values = (
+            "can speak {",
+            '    "Hello" |> : print;',
+            "               ~",
+            "}",
+        )
+        logger_capture = "\n".join([rec.message for rec in self.caplog.records])
+        for exp in expected_stdout_values:
+            self.assertIn(exp, logger_capture)
 
     def test_jac_impl_err(self) -> None:
         """Basic test for pass."""
