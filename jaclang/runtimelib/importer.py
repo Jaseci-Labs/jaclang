@@ -214,10 +214,6 @@ class Importer:
 
         if result.errors_had or not result.ir.gen.py_bytecode:
             for alrt in result.errors_had:
-                # logger.error(
-                #     f"While importing {len(result.errors_had)} errors"
-                #     f" found in {full_target}"
-                # )
                 logger.error(alrt.pretty_print())
             return None
         if result.ir.gen.py_bytecode is not None:

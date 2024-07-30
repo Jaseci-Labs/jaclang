@@ -53,12 +53,10 @@ class JacParser(Pass):
             catch_error.pos_start = e.pos_in_stream or 0
             catch_error.pos_end = catch_error.pos_start + 1
 
-            # TODO: Based on the lark error generate the message (consice).
-            # Example:
-            #   Unexpected token, Unexpected End of File,
-            #   Non terminated string literal, Invalid hex number (0x1zfk),
-            #   Expected a semicollon, etc.
-            self.error("Syntax Error", node_override=catch_error)
+            error_msg = "Syntax Error"
+            if len(e.args) >= 1 and isinstance(e.args[0], str):
+                error_msg += e.args[0]
+            self.error(error_msg, node_override=catch_error)
 
         except Exception as e:
             self.error(f"Internal Error: {e}")
