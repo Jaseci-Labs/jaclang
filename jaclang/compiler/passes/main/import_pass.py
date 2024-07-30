@@ -248,9 +248,12 @@ class PyImportPass(JacImportPass):
                 if spec.origin in self.import_table:
                     return self.import_table[spec.origin]
                 with open(spec.origin, "r", encoding="utf-8") as f:
+                    file_source = f.read()
                     mod = PyastBuildPass(
                         input_ir=ast.PythonModuleAst(
-                            py_ast.parse(f.read()), mod_path=spec.origin
+                            py_ast.parse(file_source),
+                            mod_path=spec.origin,
+                            file_source=file_source,
                         ),
                     ).ir
                 if mod:

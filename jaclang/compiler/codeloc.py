@@ -43,38 +43,43 @@ class CodeLocInfo:
         self.last_tok = last_tok
 
     @property
-    def mod_path(self) -> str:
-        """Get line number."""
+    def mod_path(self) -> str:  # TODO: Rename to file_path.
+        """Get line file path."""
         return self.first_tok.file_path
 
     @property
+    def file_source(self) -> str:
+        """Get the file source."""
+        return self.first_tok.file_source
+
+    @property
     def first_line(self) -> int:
-        """Get line number."""
+        """Get the first line number (1 based)."""
         return self.first_tok.line_no
 
     @property
     def last_line(self) -> int:
-        """Get line number."""
+        """Get the last line number (1 based)."""
         return self.last_tok.end_line
 
     @property
     def col_start(self) -> int:
-        """Get column position number."""
+        """Get the start column position (1 based)."""
         return self.first_tok.c_start
 
     @property
     def col_end(self) -> int:
-        """Get column position number."""
+        """Get the column position (1 based)."""
         return self.last_tok.c_end
 
     @property
     def pos_start(self) -> int:
-        """Get column position number."""
+        """Get the start byte offset."""
         return self.first_tok.pos_start
 
     @property
     def pos_end(self) -> int:
-        """Get column position number."""
+        """Get the end byte offset."""
         return self.last_tok.pos_end
 
     @property

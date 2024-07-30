@@ -517,9 +517,12 @@ class JacLanguageTests(TestCase):
 
         py_out_path = os.path.join(self.fixture_abs_path("./"), "pyfunc_1.py")
         with open(py_out_path) as f:
+            file_source = f.read()
             output = PyastBuildPass(
                 input_ir=ast.PythonModuleAst(
-                    py_ast.parse(f.read()), mod_path=py_out_path
+                    py_ast.parse(file_source),
+                    mod_path=py_out_path,
+                    file_source=file_source,
                 ),
             ).ir.unparse()
         # print(output)
@@ -566,9 +569,12 @@ class JacLanguageTests(TestCase):
 
         py_out_path = os.path.join(self.fixture_abs_path("./"), "pyfunc_2.py")
         with open(py_out_path) as f:
+            file_source = f.read()
             output = PyastBuildPass(
                 input_ir=ast.PythonModuleAst(
-                    py_ast.parse(f.read()), mod_path=py_out_path
+                    py_ast.parse(file_source),
+                    mod_path=py_out_path,
+                    file_source=file_source,
                 ),
             ).ir.unparse()
         self.assertIn("class X {\n    with entry {\n        a_b = 67;", output)
