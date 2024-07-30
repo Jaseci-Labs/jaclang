@@ -1,6 +1,6 @@
 # Separating code Implementation from Declaration
 
-Jac-lang offers a unique feature which allows the coder to separate the functional declaration of the code and their declaration. This facilitate cleaner code without importing required files manually.
+Jac-Lang offers a unique feature which allows the coder to separate the functional declaration of the code and their declaration. This facilitate cleaner code without importing required files manually.
 
 ## Function Declaration and Function Body
 
@@ -27,11 +27,11 @@ print(car.name)
 print(Size.Medium.value)
 ```
 
-However, Jac-lang offers novel language features which allows a programmer to organize their code effortlessly.
+However, Jac-Lang offers novel language features which allows a programmer to organize their code effortlessly.
 
 ## Separating function/object bodies from their declaration
 
-In jaclang the declaration of functions and objects can be done independently, as shown in the below code snippet. By doing so, it creates an empty shell for the function/object/enum.
+In Jac-Lang the declaration of functions and objects can be done independently, as shown in the below code snippet. By doing so, it creates an empty shell for the function/object/enum.
 
 ```jac linenums="1"
 can foo();
