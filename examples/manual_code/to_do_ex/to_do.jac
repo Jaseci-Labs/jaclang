@@ -1,5 +1,6 @@
 import:py datetime;
-import:py from enum {Enum}
+import:py from enum { Enum }
+import:py from random { randint }
 
 enum TaskStatus {
     PENDING = "Pending",
@@ -80,21 +81,18 @@ can handle_input() {
         }
     }
 }
-
 # can test_add_task() {
 #     to_do_list = ToDoList();
 #     to_do_list.add_task("Test Task");
 #     assert len(to_do_list.tasks) == 1;
 #     assert to_do_list.tasks[0].description == "Test Task";
 # }
-
 # can test_mark_completed() {
 #     to_do_list = ToDoList();
 #     to_do_list.add_task("Test Task");
 #     to_do_list.mark_completed(0);
 #     assert to_do_list.tasks[0].status == TaskStatus.COMPLETED;
 # }
-
 # can test_invalid_task_number() {
 #     to_do_list = ToDoList();
 #     to_do_list.add_task("Test Task");
@@ -104,7 +102,4 @@ can handle_input() {
 
 with entry {
     handle_input();
-    # test_add_task();
-    # test_mark_completed();
-    # test_invalid_task_number();
 }
