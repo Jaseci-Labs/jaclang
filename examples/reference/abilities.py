@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Callable, Any, Dict, List
 
+
 # Custom Decorator
 def log_decorator(func: Callable) -> Callable:
     @wraps(func)
@@ -10,7 +11,9 @@ def log_decorator(func: Callable) -> Callable:
         result = func(*args, **kwargs)
         print(f"{func.__name__} returned {result}")
         return result
+
     return wrapper
+
 
 # Standalone function
 @log_decorator
@@ -18,11 +21,13 @@ def standalone_function(book_title: str) -> str:
     print(f"Standalone function: Adding book '{book_title}' to the library.")
     return book_title
 
+
 # Abstract Base Class
 class LibraryItem(ABC):
     @abstractmethod
     def item_info(self) -> str:
         pass
+
 
 # Derived Class with overridden abstract method
 class Book(LibraryItem):
@@ -40,8 +45,9 @@ class Book(LibraryItem):
 
     # Class method
     @classmethod
-    def create_from_dict(cls, info: Dict[str, str]) -> 'Book':
-        return cls(info['title'], info['author'])
+    def create_from_dict(cls, info: Dict[str, str]) -> "Book":
+        return cls(info["title"], info["author"])
+
 
 # Class with instance method and custom decorator
 class Library:
@@ -56,6 +62,7 @@ class Library:
     def display_catalog(self) -> None:
         for item in self.catalog:
             print(item.item_info())
+
 
 # Using the various functions and methods
 if __name__ == "__main__":
