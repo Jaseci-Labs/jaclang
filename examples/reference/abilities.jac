@@ -1,84 +1,84 @@
 
-obj Calculator {
-    """ Add multiple numbers """
-    can add(x: float, *y: tuple) -> float abs;
+import:py from functools, wraps;
+import:py from typing, Callable, List, Dict, Any;
 
-    """ Substract second value from the first value """
-    can subtract(x: float, y: float) -> float abs;
+#Custom Decorator
+can log_decorator(func: Callable) -> Callable {
+    @wraps(func)
+    can wrapper(*args: List, **kwargs: Dict) -> Any {
+        print(f"Calling {func.__name__} with args: {args} and kwargs: {kwargs}");
+        result = func(*args, **kwargs);
+        print(f"{func.__name__} returned {result}");
+        return result;
+    }
+    return wrapper;
+} 
 
-    """ Multiply two numbers """
-    can multiply(x: float, y: float) -> float abs;
+# Standalone function
+@log_decorator
+can standalone_function(book_title: str) ->str {
+    print(f"Standalone function: Adding book '{book_title}' to the library.");
+    return book_title;
+}
 
-    """ Divide first number by the second number """
-    can divide(x: float, y: float) -> float abs;
+obj LibraryItem{
+    can item_info() -> str abs;
+}
 
-    """ Check if a number is positive """
-    static can is_positive(number: float) -> bool{
-        return number > 0;
+obj Book:LibraryItem:{
+    can init(title: str) -> None {
+        self.title = title;
+        self.author = author;
+    }
+
+    can item_info() -> str {
+        return f"{"Book Title: "}{self.title}{", Author: "}{self.author}" ;
+    }
+
+    static can get_item_type() -> str {
+        return "Book";
+    }
+
+    @classmethod
+    can create_from_dict(cls:Any, info: Dict[str,str]) -> "Book" {
+        return cls(info['title'], info['author']);
     }
 }
 
-
-obj BasicCalculator :Calculator: {
-    can add(x: float, y: tuple) -> float {
-        return (x + sum(y));
+class Library{
+    can init() -> None{
+        self.catalog: List[LibraryItem] = [];
     }
 
-    can subtract(x: float, y: float) -> float {
-        return (x - y);
+    @log_decorator
+    can add_item(item: LibraryItem) -> None{
+        self.catalog.append(item);
+        print(f"Item '{item.item_info()}' added to the library catalog.");
     }
-
-    can multiply(x: float, y: float) -> float {
-        return (x * y);
-    }
-
-    can divide(x: float, y: float) -> float {
-        return (x / y);
-    }
-}
-
-obj AdvancedCalculator:BasicCalculator: {
-    can power(x: float, y: float) -> float {
-        return (x ** y);
+        
+    can display_catalog() -> None{
+        for item in self.catalog{
+            print(item.item_info());
         }
-
-    can square_root(x: float) -> float {
-        return (x ** 0.5);
-    }
-
-    can cube_root(x: float) -> float {
-        return (x ** (1/3));
-    }
-
-    can remainder(x: float, y: float) -> float {
-        return (x % y);
-    }
-
-    can absolute(x: float) -> float {
-        return (abs(x));
-    }
+            
+}
 }
 
 with entry {
-    cal = BasicCalculator();
-    adv_cal = AdvancedCalculator();
-    # Perform operations using BasicCalculator
-    print("Basic Calculator Operations:");
-    print("Addition:", cal.add(5, (10,11)));
-    print("Subtraction:", cal.subtract(5, 10));
-    print("Multiplication:", cal.multiply(5, 10));
-    print("Division:",cal.divide(5, 10));
+    # Using standalone function
+    book_title: str = standalone_function("Python Programming");
 
-    # Perform operations using AdvanceCalculator
-    print("\nAdvance Calculator Operations:");
-    print("Power:", adv_cal.power(5, 10));
-    print("Square Root:",adv_cal.square_root(25));
-    print("Cube Root:", adv_cal.cube_root(27));
-    print("Remainder:", adv_cal.remainder(10, 3));
-    print("Absolute Value:", adv_cal.absolute(-5));
+    # Creating a Book instance using a class method
+    book_info: Dict[str, str] = {"title": "Python Programming", "author": "John Doe"};
+    book: Book = Book.create_from_dict(book_info);
 
-    # Use the static method from the Calculator class
-    print("\nStatic Method Check:");
-    print("Is 10 positive?", Calculator.is_positive(10));
-    print("Is -5 positive?", Calculator.is_positive(-5));
+    # Using static method
+    print(f"Item Type: {Book.get_item_type()}");
+
+    # Creating a Library instance and adding a book to the catalog
+    library: Library = Library();
+    library.add_item(book);
+
+    # Displaying the catalog
+    library.display_catalog();
 }

@@ -1,140 +1,77 @@
 from abc import ABC, abstractmethod
+from functools import wraps
+from typing import Callable, Any, Dict, List
 
+# Custom Decorator
+def log_decorator(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        print(f"Calling {func.__name__} with {args} and {kwargs}")
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} returned {result}")
+        return result
+    return wrapper
 
-class Calculator(ABC):
-    """
-    Abstract Base Class for basic calculator operations.
-    """
+# Standalone function
+@log_decorator
+def standalone_function(book_title: str) -> str:
+    print(f"Standalone function: Adding book '{book_title}' to the library.")
+    return book_title
 
+# Abstract Base Class
+class LibraryItem(ABC):
     @abstractmethod
-    def add(self, x: float, y: tuple) -> float:
-        """
-        Add two numbers.
-
-        :param x: First number
-        :param y: Second number
-        :return: The sum of x and y
-        """
+    def item_info(self) -> str:
         pass
 
-    @abstractmethod
-    def subtract(self, x: float, y: float) -> float:
-        """
-        Subtract two numbers.
+# Derived Class with overridden abstract method
+class Book(LibraryItem):
+    def __init__(self, title: str, author: str) -> None:
+        self.title = title
+        self.author = author
 
-        :param x: First number
-        :param y: Second number
-        :return: The difference of x and y
-        """
-        pass
+    def item_info(self) -> str:
+        return f"Book Title: {self.title}, Author: {self.author}"
 
-    @abstractmethod
-    def multiply(self, x: float, y: float) -> float:
-        """
-        Multiply two numbers.
-
-        :param x: First number
-        :param y: Second number
-        :return: The product of x and y
-        """
-        pass
-
-    @abstractmethod
-    def divide(self, x: float, y: float) -> float:
-        """
-        Divide two numbers.
-
-        :param x: First number
-        :param y: Second number
-        :return: The quotient of x and y
-        """
-        pass
-
+    # Static method
     @staticmethod
-    def is_positive(number: float) -> bool:
-        """
-        Check if a number is positive.
+    def get_item_type() -> str:
+        return "Book"
 
-        :param number: The number to check
-        :return: True if the number is positive, False otherwise
-        """
-        return number > 0
+    # Class method
+    @classmethod
+    def create_from_dict(cls, info: Dict[str, str]) -> 'Book':
+        return cls(info['title'], info['author'])
 
+# Class with instance method and custom decorator
+class Library:
+    def __init__(self) -> None:
+        self.catalog: List[LibraryItem] = []
 
-class BasicCalculator(Calculator):
-    """
-    Basic calculator implementation.
-    """
+    @log_decorator
+    def add_item(self, item: LibraryItem) -> None:
+        self.catalog.append(item)
+        print(f"Item '{item.item_info()}' added to the library catalog.")
 
-    def add(self, x: float, y: tuple) -> float:
-        return x + sum(y)
+    def display_catalog(self) -> None:
+        for item in self.catalog:
+            print(item.item_info())
 
-    def subtract(self, x: float, y: float) -> float:
-        return x - y
+# Using the various functions and methods
+if __name__ == "__main__":
+    # Using standalone function
+    book_title: str = standalone_function("Python Programming")
 
-    def multiply(self, x: float, y: float) -> float:
-        return x * y
+    # Creating a Book instance using a class method
+    book_info: Dict[str, str] = {"title": "Python Programming", "author": "John Doe"}
+    book: Book = Book.create_from_dict(book_info)
 
-    def divide(self, x: float, y: float) -> float:
-        return x / y
+    # Using static method
+    print(f"Item Type: {Book.get_item_type()}")
 
+    # Creating a Library instance and adding a book to the catalog
+    library: Library = Library()
+    library.add_item(book)
 
-class AdvanceCalculator(BasicCalculator):
-    """
-    Advance calculator implementation.
-    """
-
-    def power(self, x: float, y: float) -> float:
-        """
-        Raise x to the power of y.
-        """
-        return x**y
-
-    def square_root(self, x: float) -> float:
-        """
-        Compute the square root of x.
-        """
-        return x**0.5
-
-    def cube_root(self, x: float) -> float:
-        """
-        Compute the cube root of x.
-        """
-        return x ** (1 / 3)
-
-    def remainder(self, x: float, y: float) -> float:
-        """
-        Compute the remainder of x divided by y.
-        """
-        return x % y
-
-    def absolute(self, x: float) -> float:
-        """
-        Compute the absolute value of x.
-        """
-        return abs(x)
-
-
-cal = BasicCalculator()
-adv_cal = AdvanceCalculator()
-
-
-# Perform operations using BasicCalculator
-print("Basic Calculator Operations:")
-print("Addition:", cal.add(5, (10, 11)))
-print("Subtraction:", cal.subtract(5, 10))
-print("Multiplication:", cal.multiply(5, 10))
-print("Division:", cal.divide(5, 10))
-
-# Perform operations using AdvanceCalculator
-print("\nAdvance Calculator Operations:")
-print("Power:", adv_cal.power(5, 10))
-print("Square Root:", adv_cal.square_root(25))
-print("Cube Root:", adv_cal.cube_root(27))
-print("Remainder:", adv_cal.remainder(10, 3))
-print("Absolute Value:", adv_cal.absolute(-5))
-
-# Use the static method from the Calculator class
-print("\nStatic Method Check:")
-print("Is 10 positive?", Calculator.is_positive(10))
-print("Is -5 positive?", Calculator.is_positive(-5))
+    # Displaying the catalog
+    library.display_catalog()
