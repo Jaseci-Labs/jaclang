@@ -10,7 +10,6 @@ from typing import Callable, Optional
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.compile import jac_str_to_pass
-from jaclang.compiler.constant import SymbolType
 from jaclang.compiler.parser import JacParser
 from jaclang.compiler.passes import Pass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
@@ -267,32 +266,8 @@ class JacLangServer(LanguageServer):
         ][3]
         value = self.get_node_info(node_selected) if node_selected else None
         if value:
-            # return lspt.Hover(
-            #     contents=lspt.MarkupContent(
-            #         kind=lspt.MarkupKind.PlainText, value=f"{value}"
-            #     ),
-            # )
-            # hover_info = """**Hover info**
-
-# ***
-# **Public Ability:**  
-# `apply_inner_red: base_module_structure.red.inner_red.enum_red`  
-# `( ) -> enum_red`
-# ```ruby
-# require 'redcarpet'
-# markdown = Redcarpet.new("Hello World!")
-# puts markdown.to_html
-# ```
-
-
-# """
-                
             return lspt.Hover(
-                contents=lspt.MarkupContent(
-                    kind=lspt.MarkupKind.Markdown,
-                    value=value
-                    # value=hover_info.strip()
-                ),
+                contents=lspt.MarkupContent(kind=lspt.MarkupKind.Markdown, value=value),
             )
 
         return None
@@ -303,15 +278,11 @@ class JacLangServer(LanguageServer):
             if isinstance(node, ast.NameAtom):
                 node = node.name_of
             access = node.sym.access.value + " " if node.sym else None
-            node_info = (
-                f"""`({access if access else ''}{node.sym_category.value})` 
-\n #### **{node.sym_name}**
+            node_info = f"""`({access if access else ''}{node.sym_category.value})`
+\n ##### **{node.sym_name}**
 """
-            )
             if node.name_spec.clean_type:
-                node_info += f""": 
-
-```python 
+                node_info += f"""```python
 "{node.name_spec.clean_type}"
 ```
 """

@@ -1117,9 +1117,11 @@ class Architype(ArchSpec, AstAccessNode, ArchBlockStmt, AstImplNeedingNode):
                         else (
                             SymbolType.WALKER_ARCH
                             if arch_type.name == Tok.KW_WALKER
-                            else SymbolType.CLASS
-                            if arch_type.name == Tok.KW_CLASS
-                            else SymbolType.TYPE
+                            else (
+                                SymbolType.CLASS
+                                if arch_type.name == Tok.KW_CLASS
+                                else SymbolType.TYPE
+                            )
                         )
                     )
                 )
