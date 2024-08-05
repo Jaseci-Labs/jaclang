@@ -72,36 +72,16 @@ class Access:
     """Access Structure."""
 
     whitelist: bool = True  # whitelist or blacklist
-    anchors: dict[Anchor, int] = field(default_factory=dict)
+    anchors: dict[str, int] = field(default_factory=dict)
 
     def check(
-        self, anchor: Anchor
+        self, anchor: str
     ) -> tuple[bool, int]:  # whitelist or blacklist, has_read_access, level
         """Validate access."""
         if self.whitelist:
             return self.whitelist, self.anchors.get(anchor, -1)
         else:
             return self.whitelist, self.anchors.get(anchor, 2)
-
-    def serialize(self) -> dict[str, object]:
-        """Serialize Access."""
-        return {
-            "whitelist": self.whitelist,
-            "anchors": {key.ref_id: val for key, val in self.anchors.items()},
-        }
-
-    @classmethod
-    def deserialize(cls, data: dict[str, Any]) -> Access:
-        """Deserialize Access."""
-        anchors = cast(dict[str, int], data.get("anchors"))
-        return Access(
-            whitelist=bool(data.get("whitelist")),
-            anchors={
-                anchor: val
-                for key, val in anchors.items()
-                if (anchor := Anchor.ref(key))
-            },
-        )
 
 
 @dataclass
@@ -113,34 +93,22 @@ class Permission:
     # types: dict[type[Architype], Access] = field(default_factory=dict)
     # nodes: Access = field(default_factory=Access)
 
-    def serialize(self) -> dict[str, object]:
-        """Serialize Permission."""
-        return {
-            "all": self.all,
-            "roots": self.roots.serialize(),
-            # "types": {
-            #     f"{'n' if issubclass(key, NodeArchitype) else 'e'}:{key.__name__}": value.serialize()
-            #     for key, value in self.types.items()
-            # },
-            # "nodes": self.nodes.serialize(),
-        }
-
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> Permission:
         """Deserialize Permission."""
         # types = cast(dict[str, dict[str, Any]], data.get("types", {}))
         return Permission(
             all=data.get("all", -1),
-            roots=Access.deserialize(data.get("roots", {})),
+            roots=Access(**data.get("roots", {})),
             # types={
             #     (
             #         NodeArchitype.get(key[2:])
             #         if key[0] == "n"
             #         else EdgeArchitype.get(key[2:])
-            #     ): Access.deserialize(value)
+            #     ): Access(**value)
             #     for key, value in types.items()
             # },
-            # nodes=Access.deserialize(data.get("nodes", {})),
+            # nodes=Access(**data.get("nodes", {})),
         )
 
 
@@ -286,7 +254,7 @@ class Anchor:
         #     elif whitelist and level > -1 and to.state.current_access_level == -1:
         #         to.state.current_access_level = level
 
-        whitelist, level = to_access.roots.check(jroot)
+        whitelist, level = to_access.roots.check(jroot.ref_id)
         if not whitelist and level < 0:
             to.state.current_access_level = -1
             return to.state.current_access_level
@@ -294,7 +262,7 @@ class Anchor:
             to.state.current_access_level = level
 
         if to.root and (to_root := jctx.datasource.find_one(to.root)):
-            whitelist, level = to_root.access.roots.check(jroot)
+            whitelist, level = to_root.access.roots.check(jroot.ref_id)
             if not whitelist and level < 0:
                 to.state.current_access_level = -1
                 return to.state.current_access_level
@@ -310,7 +278,7 @@ class Anchor:
             "name": self.name,
             "id": self.id,
             "root": self.root,
-            "access": self.access.serialize(),
+            "access": asdict(self.access),
             "architype": (
                 asdict(self.architype)
                 if is_dataclass(self.architype) and not isinstance(self.architype, type)
