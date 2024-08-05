@@ -53,8 +53,11 @@ class TestJaseciPlugin(TestCase):
         sys.stdout = sys.__stdout__
 
     def _del_session(self, session: str) -> None:
-        if os.path.exists(session):
-            os.remove(session)
+        path = os.path.dirname(session)
+        prefix = os.path.basename(session)
+        for file in os.listdir(path):
+            if file.startswith(prefix):
+                os.remove(f"{path}/{file}")
 
     def test_walker_simple_persistent(self) -> None:
         """Test simple persistent object."""

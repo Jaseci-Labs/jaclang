@@ -239,7 +239,8 @@ class Anchor:
         from .context import ExecutionContext
 
         jctx = ExecutionContext.get_or_create()
-        self.root = jctx.root.id
+        if self.root is None and not isinstance(self.architype, Root):
+            self.root = jctx.root.id
         jctx.datasource.set(self, True)
 
     def has_read_access(self, to: Anchor) -> bool:
@@ -729,8 +730,10 @@ class Architype:
 
     def __init__(self, __jac__: Optional[Anchor] = None) -> None:
         """Create default architype."""
-        self.__jac__ = __jac__ or Anchor(architype=self)
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = Anchor(architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
     def __eq__(self, other: object) -> bool:
         """Override equal implementation."""
@@ -778,10 +781,10 @@ class NodeArchitype(Architype):
 
     def __init__(self, __jac__: Optional[NodeAnchor] = None) -> None:
         """Create node architype."""
-        self.__jac__ = __jac__ or NodeAnchor(
-            name=self.__class__.__name__, architype=self
-        )
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = NodeAnchor(name=self.__class__.__name__, architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
 
 class EdgeArchitype(Architype):
@@ -791,10 +794,10 @@ class EdgeArchitype(Architype):
 
     def __init__(self, __jac__: Optional[EdgeAnchor] = None) -> None:
         """Create edge architype."""
-        self.__jac__ = __jac__ or EdgeAnchor(
-            name=self.__class__.__name__, architype=self
-        )
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = EdgeAnchor(name=self.__class__.__name__, architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
 
 class WalkerArchitype(Architype):
@@ -804,10 +807,10 @@ class WalkerArchitype(Architype):
 
     def __init__(self, __jac__: Optional[WalkerAnchor] = None) -> None:
         """Create walker architype."""
-        self.__jac__ = __jac__ or WalkerAnchor(
-            name=self.__class__.__name__, architype=self
-        )
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = WalkerAnchor(name=self.__class__.__name__, architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
 
 class GenericEdge(EdgeArchitype):
@@ -818,8 +821,10 @@ class GenericEdge(EdgeArchitype):
 
     def __init__(self, __jac__: Optional[EdgeAnchor] = None) -> None:
         """Create walker architype."""
-        self.__jac__ = __jac__ or EdgeAnchor(architype=self)
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = EdgeAnchor(architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
 
 class Root(NodeArchitype):
@@ -832,8 +837,10 @@ class Root(NodeArchitype):
 
     def __init__(self, __jac__: Optional[NodeAnchor] = None) -> None:
         """Create walker architype."""
-        self.__jac__ = __jac__ or NodeAnchor(architype=self)
-        self.__jac__.allocate()
+        if not __jac__:
+            __jac__ = NodeAnchor(architype=self)
+            __jac__.allocate()
+        self.__jac__ = __jac__
 
     def reset(self) -> None:
         """Reset the root."""
