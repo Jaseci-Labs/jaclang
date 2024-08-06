@@ -3,9 +3,11 @@ import datetime
 # Enum for task status
 from enum import Enum
 
+
 class TaskStatus(Enum):
     PENDING = "Pending"
     COMPLETED = "Completed"
+
 
 # Dataclass style for a Task
 class Task:
@@ -20,6 +22,7 @@ class Task:
         self.description = description
         self.status = status
         self.created_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 # Dataclass style for the ToDoList
 class ToDoList:
@@ -42,7 +45,9 @@ class ToDoList:
         View all tasks in the to-do list.
         """
         for i, task in enumerate(self.tasks):
-            print(f"{i+1}. {task.description} [{task.status.value}] (Created at: {task.created_at})")
+            print(
+                f"{i+1}. {task.description} [{task.status.value}] (Created at: {task.created_at})"
+            )
 
     def mark_completed(self, index):
         """
@@ -55,6 +60,7 @@ class ToDoList:
             return
         self.tasks[index].status = TaskStatus.COMPLETED
 
+
 # Function to display menu
 def display_menu():
     """
@@ -65,6 +71,7 @@ def display_menu():
     print("2. View Tasks")
     print("3. Mark Task as Completed")
     print("4. Exit")
+
 
 # Function to handle user input
 def handle_input():
@@ -88,6 +95,7 @@ def handle_input():
             break
         else:
             print("Invalid choice! Please enter a number between 1 and 4.")
+
 
 # Entry point of the app
 if __name__ == "__main__":
