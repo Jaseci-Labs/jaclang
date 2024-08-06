@@ -1,6 +1,11 @@
 """Constants across the project."""
 
 from enum import Enum, IntEnum, IntFlag, StrEnum
+from typing import ParamSpec, TypeVar
+
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class SymbolType(Enum):
@@ -125,6 +130,12 @@ class EdgeDir(Enum):
     IN = 1  # <--
     OUT = 2  # -->
     ANY = 3  # <-->
+
+    def __eq__(self, other: object) -> bool:
+        """Support string comparator."""
+        if isinstance(other, str):
+            return self.name == other
+        return super().__eq__(other)
 
 
 class Values(int, Enum):
