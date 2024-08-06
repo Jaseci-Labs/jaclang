@@ -9,6 +9,7 @@ import traceback
 
 from jaclang.cli import cli
 from jaclang.plugin.builtin import dotgen
+from jaclang.runtimelib.context import ExecutionContext
 from jaclang.utils.test import TestCase
 
 
@@ -17,6 +18,7 @@ class JacCliTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
+        ExecutionContext.cleanup()
         return super().setUp()
 
     def test_jac_cli_run(self) -> None:
