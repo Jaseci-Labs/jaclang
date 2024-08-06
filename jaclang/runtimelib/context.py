@@ -4,76 +4,82 @@ from __future__ import annotations
 
 import unittest
 from contextvars import ContextVar
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, Union
 from uuid import UUID
 
-from .architype import Architype, Root
+from .architype import AnchorState, NodeAnchor, Root
 from .machine import JacMachine
-from .memory import Memory, ShelveStorage
+from .memory import ShelfStorage
+
+
+EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
 
 
 class ExecutionContext:
-    """Default Execution Context implementation."""
+    """Execution Context."""
 
-    mem: Optional[Memory]
-    root: Optional[Root]
-
-    def __init__(self) -> None:
-        """Create execution context."""
-        super().__init__()
-        self.mem = ShelveStorage()
-        self.root = None
-        self.jac_machine = JacMachine()
-
-    def init_memory(self, base_path: str = "", session: str = "") -> None:
-        """Initialize memory."""
-        if session:
-            self.mem = ShelveStorage(session)
-        else:
-            self.mem = Memory()
+    def __init__(
+        self,
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[NodeAnchor] = None,
+        entry: Optional[NodeAnchor] = None,
+    ) -> None:
+        """Create JacContext."""
         self.jac_machine = JacMachine(base_path)
+        self.datasource: ShelfStorage = ShelfStorage(session)
+        self.reports: list[Any] = []
+        self.super_root = self.load(
+            NodeAnchor(id=UUID(int=0)), self.generate_super_root
+        )
+        self.root: NodeAnchor = self.load(root, self.super_root)
+        self.entry: NodeAnchor = self.load(entry, self.root)
 
-    def get_root(self) -> Root:
-        """Get the root object."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
+    def generate_super_root(self) -> NodeAnchor:
+        """Generate default super root."""
+        super_root = NodeAnchor(
+            id=UUID(int=0), state=AnchorState(current_access_level=2)
+        )
+        architype = super_root.architype = object.__new__(Root)
+        architype.__jac__ = super_root
+        self.datasource.set(super_root, True)
+        return super_root
 
-        if not self.root:
-            root = self.mem.get_obj(UUID(int=0))
-            if root is None:
-                self.root = Root()
-                self.mem.save_obj(self.root, persistent=self.root._jac_.persistent)
-            elif not isinstance(root, Root):
-                raise ValueError(f"Invalid root object: {root}")
-            else:
-                self.root = root
-        return self.root
+    def load(
+        self,
+        anchor: Optional[NodeAnchor],
+        default: Union[NodeAnchor, Callable[[], NodeAnchor]],
+    ) -> NodeAnchor:
+        """Load initial anchors."""
+        if anchor and (_anchor := self.datasource.find_one(anchor.id)):
+            anchor.__dict__.update(_anchor.__dict__)
+            anchor.state.current_access_level = 2
+        else:
+            anchor = default() if callable(default) else default
 
-    def get_obj(self, obj_id: UUID) -> Architype | None:
-        """Get object from memory."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
+        return anchor
 
-        return self.mem.get_obj(obj_id)
+    def close(self) -> None:
+        """Clean up context."""
+        self.datasource.close()
 
-    def save_obj(self, item: Architype, persistent: bool) -> None:
-        """Save object to memory."""
-        if self.mem is None:
-            raise ValueError("Memory not initialized")
+    def validate_access(self) -> bool:
+        """Validate access."""
+        return self.root.has_read_access(self.entry)
 
-        self.mem.save_obj(item, persistent)
+    @staticmethod
+    def get_or_create(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
+        """Get or create execution context."""
+        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
+            EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))
+        return ctx
 
-    def reset(self) -> None:
-        """Reset the execution context."""
-        if self.mem:
-            self.mem.close()
-        self.mem = None
-        self.root = None
-
-
-exec_context: ContextVar[ExecutionContext | None] = ContextVar(
-    "ExecutionContext", default=None
-)
+    @staticmethod
+    def cleanup() -> None:
+        """Get or create execution context."""
+        if ctx := EXECUTION_CONTEXT.get(None):
+            ctx.close()
+            EXECUTION_CONTEXT.set(None)
 
 
 class JacTestResult(unittest.TextTestResult):
