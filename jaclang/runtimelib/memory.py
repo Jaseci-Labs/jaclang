@@ -1,99 +1,199 @@
-"""Core constructs for Jac Language."""
+"""Memory abstraction for jaseci plugin."""
 
-from __future__ import annotations
-
-import shelve
+from copy import deepcopy
+from dataclasses import dataclass, field
+from shelve import Shelf, open
+from typing import Any, Callable, Generator, Optional, Union, cast
 from uuid import UUID
 
-from .architype import Architype
+from .architype import (
+    Anchor,
+    AnchorState,
+    AnchorType,
+    Architype,
+    EdgeAnchor,
+    EdgeArchitype,
+    MANUAL_SAVE,
+    NodeAnchor,
+    NodeArchitype,
+    Permission,
+    WalkerAnchor,
+    WalkerAnchorState,
+    WalkerArchitype,
+    populate_dataclasses,
+)
+
+IDS = Union[UUID, list[UUID]]
 
 
+@dataclass
 class Memory:
-    """Memory module interface."""
+    """Generic Memory Handler."""
 
-    mem: dict[UUID, Architype] = {}
-    save_obj_list: dict[UUID, Architype] = {}
-
-    def __init__(self) -> None:
-        """init."""
-        pass
-
-    def get_obj(self, obj_id: UUID) -> Architype | None:
-        """Get object from memory."""
-        return self.get_obj_from_store(obj_id)
-
-    def get_obj_from_store(self, obj_id: UUID) -> Architype | None:
-        """Get object from the underlying store."""
-        ret = self.mem.get(obj_id)
-        return ret
-
-    def has_obj(self, obj_id: UUID) -> bool:
-        """Check if the object exists."""
-        return self.has_obj_in_store(obj_id)
-
-    def has_obj_in_store(self, obj_id: UUID) -> bool:
-        """Check if the object exists in the underlying store."""
-        return obj_id in self.mem
-
-    def save_obj(self, item: Architype, persistent: bool) -> None:
-        """Save object."""
-        self.mem[item._jac_.id] = item
-        if persistent:
-            # TODO: check if it needs to be saved, i.e. dirty or not
-            self.save_obj_list[item._jac_.id] = item
-
-    def commit(self) -> None:
-        """Commit changes to persistent storage, if applicable."""
-        pass
+    __mem__: dict[str, Anchor] = field(default_factory=dict)
+    __gc__: set[str] = field(default_factory=set)
 
     def close(self) -> None:
-        """Close any connection, if applicable."""
-        self.mem.clear()
+        """Close memory handler."""
+        self.__mem__.clear()
+        self.__gc__.clear()
 
+    def find(
+        self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
+    ) -> Generator[Anchor, None, None]:
+        """Find anchors from memory by ids with filter."""
+        if not isinstance(ids, list):
+            ids = [ids]
 
-class ShelveStorage(Memory):
-    """Shelve storage for jaclang runtime object."""
-
-    storage: shelve.Shelf | None = None
-
-    def __init__(self, session: str = "") -> None:
-        """Init shelve storage."""
-        super().__init__()
-        if session:
-            self.connect(session)
-
-    def get_obj_from_store(self, obj_id: UUID) -> Architype | None:
-        """Get object from the underlying store."""
-        obj = super().get_obj_from_store(obj_id)
-        if obj is None and self.storage:
-            obj = self.storage.get(str(obj_id))
-            if obj is not None:
-                self.mem[obj_id] = obj
-
-        return obj
-
-    def has_obj_in_store(self, obj_id: UUID | str) -> bool:
-        """Check if the object exists in the underlying store."""
-        return obj_id in self.mem or (
-            str(obj_id) in self.storage if self.storage else False
+        return (
+            anchor
+            for id in ids
+            if (anchor := self.__mem__.get(str(id))) and (not filter or filter(anchor))
         )
 
-    def commit(self) -> None:
-        """Commit changes to persistent storage."""
-        if self.storage is not None:
-            for obj_id, obj in self.save_obj_list.items():
-                self.storage[str(obj_id)] = obj
-        self.save_obj_list.clear()
+    def find_one(
+        self,
+        ids: IDS,
+        filter: Optional[Callable[[Anchor], Anchor]] = None,
+    ) -> Optional[Anchor]:
+        """Find one anchor from memory by ids with filter."""
+        return next(self.find(ids, filter), None)
 
-    def connect(self, session: str) -> None:
-        """Connect to storage."""
-        self.session = session
-        self.storage = shelve.open(session)
+    def set(self, data: Union[Anchor, list[Anchor]]) -> None:
+        """Save anchor/s to memory."""
+        if isinstance(data, list):
+            for d in data:
+                if str(d.id) not in self.__gc__:
+                    self.__mem__[str(d.id)] = d
+        elif str(data.id) not in self.__gc__:
+            self.__mem__[str(data.id)] = data
+
+    def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
+        """Remove anchor/s from memory."""
+        if isinstance(data, list):
+            for d in data:
+                self.__mem__.pop(str(d.id), None)
+                self.__gc__.add(str(d.id))
+        else:
+            self.__mem__.pop(str(data.id), None)
+            self.__gc__.add(str(data.id))
+
+
+@dataclass
+class ShelfStorage(Memory):
+    """Shelf Handler."""
+
+    __shelf__: Optional[Shelf[dict[str, object]]] = None
+
+    def __init__(self, session: Optional[str] = None) -> None:
+        """Initialize memory handler."""
+        super().__init__()
+        self.__shelf__ = open(session) if session else None  # noqa: SIM115
 
     def close(self) -> None:
-        """Close the storage."""
+        """Close memory handler."""
+        if isinstance(self.__shelf__, Shelf):
+            for anchor in set(self.__mem__.values()):
+                if not anchor.state.persistent:
+                    anchor.destroy()
+                elif not MANUAL_SAVE:
+                    anchor.save()
+            for id in self.__gc__:
+                self.__shelf__.pop(id, None)
+            self.__shelf__.sync()
+
         super().close()
-        self.commit()
-        if self.storage:
-            self.storage.close()
-        self.storage = None
+
+    def find(
+        self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
+    ) -> Generator[Anchor, None, None]:
+        """Find anchors from datasource by ids with filter."""
+        if not isinstance(ids, list):
+            ids = [ids]
+
+        if isinstance(self.__shelf__, Shelf):
+            for id in ids:
+                _id = str(id)
+                anchor = self.__mem__.get(_id)
+
+                if (
+                    not anchor
+                    and _id not in self.__gc__
+                    and (_anchor := self.__shelf__.get(_id))
+                ):
+                    self.__mem__[_id] = anchor = self.get(deepcopy(_anchor))
+                if anchor and (not filter or filter(anchor)):
+                    yield anchor
+        else:
+            yield from super().find(ids, filter)
+
+    def set(self, data: Union[Anchor, list[Anchor]], mem_only: bool = False) -> None:
+        """Save anchor/s to datasource."""
+        super().set(data)
+
+        if not mem_only and isinstance(self.__shelf__, Shelf):
+            for d in data if isinstance(data, list) else [data]:
+                self.__shelf__[str(d.id)] = d.serialize()
+
+    def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
+        """Remove anchor/s from datasource."""
+        super().remove(data)
+        if isinstance(self.__shelf__, Shelf) and MANUAL_SAVE:
+            if isinstance(data, list):
+                for d in data:
+                    self.__shelf__.pop(str(d.id), None)
+            else:
+                self.__shelf__.pop(str(data.id), None)
+
+    def get(self, anchor: dict[str, Any]) -> Anchor:
+        """Get Anchor Instance."""
+        name = cast(str, anchor.get("name"))
+        architype = anchor.pop("architype")
+        access = Permission.deserialize(anchor.pop("access"))
+        match AnchorType(anchor.pop("type")):
+            case AnchorType.node:
+                nanch = NodeAnchor(
+                    edges=[
+                        e for edge in anchor.pop("edges") if (e := EdgeAnchor.ref(edge))
+                    ],
+                    access=access,
+                    state=AnchorState(connected=True),
+                    **anchor,
+                )
+                narch = NodeArchitype.__get_class__(name or "Root")
+                nanch.architype = narch(
+                    __jac__=nanch, **populate_dataclasses(narch, architype)
+                )
+                nanch.sync_hash()
+                return nanch
+            case AnchorType.edge:
+                eanch = EdgeAnchor(
+                    source=NodeAnchor.ref(anchor.pop("source")),
+                    target=NodeAnchor.ref(anchor.pop("target")),
+                    access=access,
+                    state=AnchorState(connected=True),
+                    **anchor,
+                )
+                earch = EdgeArchitype.__get_class__(name or "GenericEdge")
+                eanch.architype = earch(
+                    __jac__=eanch, **populate_dataclasses(earch, architype)
+                )
+                eanch.sync_hash()
+                return eanch
+            case AnchorType.walker:
+                wanch = WalkerAnchor(
+                    access=access, state=WalkerAnchorState(connected=True), **anchor
+                )
+                warch = WalkerArchitype.__get_class__(name)
+                wanch.architype = warch(
+                    __jac__=wanch, **populate_dataclasses(warch, architype)
+                )
+                wanch.sync_hash()
+                return wanch
+            case _:
+                oanch = Anchor(
+                    access=access, state=AnchorState(connected=True), **anchor
+                )
+                oanch.architype = Architype(__jac__=oanch)
+                oanch.sync_hash()
+                return oanch
