@@ -7,6 +7,7 @@ import marshal
 import os
 import pickle
 import shutil
+import sys
 import types
 from typing import Optional
 from uuid import UUID
@@ -454,4 +455,12 @@ def start_cli() -> None:
 
 
 if __name__ == "__main__":
+    # FIXME: This is hardcoded here, not sure where to put it.
+    MIN_SUPPORTED_VER = (3, 11)
+    if sys.version_info < MIN_SUPPORTED_VER:
+        ver_maj, ver_min = MIN_SUPPORTED_VER
+        print(
+            f"Error: Minimum supported python version is {ver_maj}.{ver_min}.",
+            file=sys.stderr,
+        )
     start_cli()
