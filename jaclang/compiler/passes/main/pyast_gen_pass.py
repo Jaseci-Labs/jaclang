@@ -3630,7 +3630,7 @@ class PyastGenPass(Pass):
                 keywords=[
                     self.sync(
                         ast3.keyword(
-                            arg="target_obj",
+                            arg="target_cls",
                             value=(
                                 targ if targ else self.sync(ast3.Constant(value=None))
                             ),
