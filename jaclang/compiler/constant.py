@@ -12,6 +12,7 @@ class SymbolType(Enum):
     IMM_VAR = "immutable"  # LSP: Constant
     ABILITY = "ability"  # LSP: Function
     OBJECT_ARCH = "object"  # LSP: Class
+    CLASS = "class"  # LSP: Class
     NODE_ARCH = "node"  # LSP: Class
     EDGE_ARCH = "edge"  # LSP: Class
     WALKER_ARCH = "walker"  # LSP: Class
