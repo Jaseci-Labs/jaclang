@@ -3,10 +3,11 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 from shelve import Shelf, open
-from typing import Any, Callable, Generator, Optional, Union, cast
+from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 from uuid import UUID
 
 from .architype import (
+    AccessLevel,
     Anchor,
     AnchorState,
     AnchorType,
@@ -96,16 +97,45 @@ class ShelfStorage(Memory):
             for id in self.__gc__:
                 self.__shelf__.pop(id, None)
                 self.__mem__.pop(id, None)
-            for anchor in set(self.__mem__.values()):
-                if (
-                    anchor.state.deleted is None
-                    and anchor.state.persistent
-                    and not MANUAL_SAVE
-                ):
-                    anchor.save()
-            self.__shelf__.sync()
+
+            if not MANUAL_SAVE:
+                self.sync(set(self.__mem__.values()))
 
         super().close()
+
+    def sync(self, data: Union[Anchor, Iterable[Anchor]]) -> None:
+        """Sync data to Shelf."""
+        if isinstance(self.__shelf__, Shelf):
+            if not isinstance(data, Iterable):
+                data = [data]
+
+            for d in data:
+                _id = str(d.id)
+                if d.architype and d.state.persistent:
+                    if d.state.deleted is False:
+                        self.__shelf__.pop(_id, None)
+                    elif not d.state.connected:
+                        self.__shelf__[_id] = d.serialize()
+                    elif d.state.hash != d.data_hash():
+                        new_data = d.serialize()
+                        ref_data = self.__shelf__[_id]
+
+                        if (
+                            isinstance(d, NodeAnchor)
+                            and new_data["edges"] != ref_data["edges"]
+                            and d.state.current_access_level > AccessLevel.READ
+                        ):
+                            ref_data["edges"] = new_data["edges"]
+
+                        if d.state.current_access_level > AccessLevel.CONNECT:
+                            if new_data["access"] != ref_data["access"]:
+                                ref_data["access"] = new_data["access"]
+                            if new_data["architype"] != ref_data["architype"]:
+                                ref_data["architype"] = new_data["architype"]
+
+                        self.__shelf__[_id] = ref_data
+
+            self.__shelf__.sync()
 
     def find(
         self, ids: IDS, filter: Optional[Callable[[Anchor], Anchor]] = None
@@ -129,14 +159,6 @@ class ShelfStorage(Memory):
                     yield anchor
         else:
             yield from super().find(ids, filter)
-
-    def set(self, data: Union[Anchor, list[Anchor]], mem_only: bool = False) -> None:
-        """Save anchor/s to datasource."""
-        super().set(data)
-
-        if not mem_only and isinstance(self.__shelf__, Shelf):
-            for d in data if isinstance(data, list) else [data]:
-                self.__shelf__[str(d.id)] = d.serialize()
 
     def remove(self, data: Union[Anchor, list[Anchor]], from_db: bool = False) -> None:
         """Remove anchor/s from datasource."""

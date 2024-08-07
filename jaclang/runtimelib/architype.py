@@ -305,7 +305,7 @@ class Anchor:
         ctx = ExecutionContext.get()
         if self.root is None and not isinstance(self.architype, Root):
             self.root = ctx.root.id
-        ctx.datasource.set(self, True)
+        ctx.datasource.set(self)
 
     def has_read_access(self, to: Anchor) -> bool:
         """Read Access Validation."""
@@ -454,7 +454,7 @@ class NodeAnchor(Anchor):
         for edge in self.edges:
             edge.save()
 
-        ctx_src.set(self)
+        ctx_src.sync(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
@@ -616,7 +616,7 @@ class EdgeAnchor(Anchor):
         if target := self.target:
             target.save()
 
-        ctx_src.set(self)
+        ctx_src.sync(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
@@ -695,7 +695,7 @@ class WalkerAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        ExecutionContext.get_datasource().set(self)
+        ExecutionContext.get_datasource().sync(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerArchitype]:
         """Retrieve the Architype from db and return."""

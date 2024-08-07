@@ -44,7 +44,7 @@ class ExecutionContext:
         )
         architype = system_root.architype = object.__new__(Root)
         architype.__jac__ = system_root
-        self.datasource.set(system_root, True)
+        self.datasource.set(system_root)
         return system_root
 
     def load(
