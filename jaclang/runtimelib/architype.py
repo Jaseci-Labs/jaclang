@@ -252,7 +252,7 @@ class Anchor:
         """Write Access Validation."""
         return self.access_level(to) > AccessLevel.CONNECT
 
-    def access_level(self, to: Anchor) -> int:
+    def access_level(self, to: "Anchor") -> AccessLevel:
         """Access validation."""
         from .context import ExecutionContext
 
@@ -265,37 +265,47 @@ class Anchor:
         # if current root is the target anchor
         if jroot == jctx.system_root or jroot.id == to.root or jroot == to:
             to.state.current_access_level = AccessLevel.WRITE
+            return to.state.current_access_level
 
         # if target anchor have set access.all
         if (to_access := to.access).all > AccessLevel.NO_ACESSS:
             to.state.current_access_level = to_access.all
 
-        # if target anchor have set allowed roots
-        # if current root is allowed to target anchor
-        whitelist, level = to_access.roots.check(jroot.ref_id)
-        if not whitelist and level < AccessLevel.READ:
-            to.state.current_access_level = AccessLevel.NO_ACESSS
-            return to.state.current_access_level
-        elif (
-            whitelist
-            and level > AccessLevel.NO_ACESSS
-            and to.state.current_access_level == AccessLevel.NO_ACESSS
-        ):
-            to.state.current_access_level = level
-
         # if target anchor's root have set allowed roots
         # if current root is allowed to the whole graph of target anchor's root
         if to.root and (to_root := jctx.datasource.find_one(to.root)):
+            if to_root.access.all > to.state.current_access_level:
+                to.state.current_access_level = to_root.access.all
+
             whitelist, level = to_root.access.roots.check(jroot.ref_id)
-            if not whitelist and level < AccessLevel.READ:
-                to.state.current_access_level = AccessLevel.NO_ACESSS
-                return to.state.current_access_level
+            if not whitelist:
+                if level < AccessLevel.READ:
+                    to.state.current_access_level = AccessLevel.NO_ACESSS
+                    return to.state.current_access_level
+                elif level < to.state.current_access_level:
+                    level = to.state.current_access_level
             elif (
                 whitelist
                 and level > AccessLevel.NO_ACESSS
                 and to.state.current_access_level == AccessLevel.NO_ACESSS
             ):
                 to.state.current_access_level = level
+
+        # if target anchor have set allowed roots
+        # if current root is allowed to target anchor
+        whitelist, level = to_access.roots.check(jroot.ref_id)
+        if not whitelist:
+            if level < AccessLevel.READ:
+                to.state.current_access_level = AccessLevel.NO_ACESSS
+                return to.state.current_access_level
+            elif level < to.state.current_access_level:
+                level = to.state.current_access_level
+        elif (
+            whitelist
+            and level > AccessLevel.NO_ACESSS
+            and to.state.current_access_level == AccessLevel.NO_ACESSS
+        ):
+            to.state.current_access_level = level
 
         return to.state.current_access_level
 
