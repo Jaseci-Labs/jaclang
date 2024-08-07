@@ -1,0 +1,7 @@
+chromadb==0.5.3
+jaclang
+langchain==0.2.6
+langchain-community==0.2.6
+mtllm
+pypdf==4.2.0
+streamlit
