@@ -192,6 +192,47 @@ class Anchor:
             return anchor(name=matched.group(2), id=UUID(matched.group(3)))
         return None
 
+    def whitelist_roots(self, whitelist: bool = True) -> None:
+        """Toggle root whitelist/blacklist."""
+        if whitelist != self.access.roots.whitelist:
+            self.access.roots.whitelist = whitelist
+
+    def allow_root(
+        self, root: Anchor, level: AccessLevel | int | str = AccessLevel.READ
+    ) -> None:
+        """Allow all access from target root graph to current Architype."""
+        level = AccessLevel.cast(level)
+        access = self.access.roots
+        if access.whitelist:
+            if (ref_id := root.ref_id) and level != access.anchors.get(
+                ref_id, AccessLevel.NO_ACESSS
+            ):
+                access.anchors[ref_id] = level
+        else:
+            self.disallow_root(root, level)
+
+    def disallow_root(
+        self, root: Anchor, level: AccessLevel | int | str = AccessLevel.READ
+    ) -> None:
+        """Disallow all access from target root graph to current Architype."""
+        level = AccessLevel.cast(level)
+        access = self.access.roots
+        if access.whitelist:
+            access.anchors.pop(root.ref_id, None)
+        else:
+            self.allow_root(root, level)
+
+    def unrestrict(self, level: AccessLevel | int | str = AccessLevel.READ) -> None:
+        """Allow everyone to access current Architype."""
+        level = AccessLevel.cast(level)
+        if level != self.access.all:
+            self.access.all = level
+
+    def restrict(self) -> None:
+        """Disallow others to access current Architype."""
+        if self.access.all > AccessLevel.NO_ACESSS:
+            self.access.all = AccessLevel.NO_ACESSS
+
     def _save(self) -> None:
         """Save Anchor."""
         raise NotImplementedError("_save must be implemented in subclasses")
