@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 from os import getenv
 from re import IGNORECASE, compile
 from types import UnionType
@@ -67,48 +67,76 @@ class AnchorType(Enum):
     walker = "w"
 
 
+class AccessLevel(IntEnum):
+    """Access level enum."""
+
+    NO_ACESSS = -1
+    READ = 0
+    CONNECT = 1
+    WRITE = 2
+
+    @staticmethod
+    def cast(val: int | str | AccessLevel) -> AccessLevel:
+        """Cast access level."""
+        match val:
+            case int():
+                return AccessLevel(val)
+            case str():
+                return AccessLevel[val]
+            case _:
+                return val
+
+
 @dataclass
 class Access:
     """Access Structure."""
 
     whitelist: bool = True  # whitelist or blacklist
-    anchors: dict[str, int] = field(default_factory=dict)
+    anchors: dict[str, AccessLevel] = field(default_factory=dict)
 
     def check(
         self, anchor: str
-    ) -> tuple[bool, int]:  # whitelist or blacklist, has_read_access, level
+    ) -> tuple[bool, AccessLevel]:  # whitelist or blacklist, has_read_access, level
         """Validate access."""
         if self.whitelist:
-            return self.whitelist, self.anchors.get(anchor, -1)
+            return self.whitelist, self.anchors.get(anchor, AccessLevel.NO_ACESSS)
         else:
-            return self.whitelist, self.anchors.get(anchor, 2)
+            return self.whitelist, self.anchors.get(anchor, AccessLevel.WRITE)
+
+    def serialize(self) -> dict[str, object]:
+        """Serialize Access."""
+        return {
+            "whitelist": self.whitelist,
+            "anchors": {key: val.name for key, val in self.anchors.items()},
+        }
+
+    @classmethod
+    def deserialize(cls, data: dict[str, Any]) -> Access:
+        """Deserialize Access."""
+        anchors = cast(dict[str, str], data.get("anchors"))
+        return Access(
+            whitelist=bool(data.get("whitelist")),
+            anchors={key: AccessLevel[val] for key, val in anchors.items()},
+        )
 
 
 @dataclass
 class Permission:
     """Anchor Access Handler."""
 
-    all: int = -1
+    all: AccessLevel = AccessLevel.NO_ACESSS
     roots: Access = field(default_factory=Access)
-    # types: dict[type[Architype], Access] = field(default_factory=dict)
-    # nodes: Access = field(default_factory=Access)
+
+    def serialize(self) -> dict[str, object]:
+        """Serialize Permission."""
+        return {"all": self.all.name, "roots": self.roots.serialize()}
 
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> Permission:
         """Deserialize Permission."""
-        # types = cast(dict[str, dict[str, Any]], data.get("types", {}))
         return Permission(
-            all=data.get("all", -1),
-            roots=Access(**data.get("roots", {})),
-            # types={
-            #     (
-            #         NodeArchitype.get(key[2:])
-            #         if key[0] == "n"
-            #         else EdgeArchitype.get(key[2:])
-            #     ): Access(**value)
-            #     for key, value in types.items()
-            # },
-            # nodes=Access(**data.get("nodes", {})),
+            all=AccessLevel[data.get("all", AccessLevel.NO_ACESSS.name)],
+            roots=Access.deserialize(data.get("roots", {})),
         )
 
 
@@ -117,7 +145,7 @@ class AnchorState:
     """Anchor state handler."""
 
     connected: bool = False
-    current_access_level: int = -1
+    current_access_level: AccessLevel = AccessLevel.NO_ACESSS
     persistent: bool = field(default=not MANUAL_SAVE)
     hash: int = 0
 
@@ -149,19 +177,19 @@ class Anchor:
 
     @staticmethod
     def ref(ref_id: str) -> Optional[Anchor]:
-        """Return ObjectAnchor instance if ."""
+        """Return Anchor instance if valid."""
         if matched := GENERIC_ID_REGEX.search(ref_id):
-            cls: type = Anchor
+            anchor: type = Anchor
             match AnchorType(matched.group(1)):
                 case AnchorType.node:
-                    cls = NodeAnchor
+                    anchor = NodeAnchor
                 case AnchorType.edge:
-                    cls = EdgeAnchor
+                    anchor = EdgeAnchor
                 case AnchorType.walker:
-                    cls = WalkerAnchor
+                    anchor = WalkerAnchor
                 case _:
                     pass
-            return cls(name=matched.group(2), id=UUID(matched.group(3)))
+            return anchor(name=matched.group(2), id=UUID(matched.group(3)))
         return None
 
     def _save(self) -> None:
@@ -175,8 +203,9 @@ class Anchor:
                 self.state.connected = True
                 self.sync_hash()
                 self._save()
-            elif self.state.current_access_level > 0 and self.state.hash != (
-                _hash := self.data_hash()
+            elif (
+                self.state.current_access_level > AccessLevel.READ
+                and self.state.hash != (_hash := self.data_hash())
             ):
                 self.state.hash = _hash
                 self._save()
@@ -194,8 +223,8 @@ class Anchor:
 
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get_or_create().datasource
-        anchor = jsrc.find_one(self.id)
+        ctx_src = ExecutionContext.get_datasource()
+        anchor = ctx_src.find_one(self.id)
 
         if anchor and (node or self).has_read_access(anchor):
             self.__dict__.update(anchor.__dict__)
@@ -213,15 +242,15 @@ class Anchor:
 
     def has_read_access(self, to: Anchor) -> bool:
         """Read Access Validation."""
-        return self.access_level(to) > -1
+        return self.access_level(to) > AccessLevel.NO_ACESSS
 
     def has_connect_access(self, to: Anchor) -> bool:
         """Write Access Validation."""
-        return self.access_level(to) > 0
+        return self.access_level(to) > AccessLevel.READ
 
     def has_write_access(self, to: Anchor) -> bool:
         """Write Access Validation."""
-        return self.access_level(to) > 1
+        return self.access_level(to) > AccessLevel.CONNECT
 
     def access_level(self, to: Anchor) -> int:
         """Access validation."""
@@ -229,44 +258,43 @@ class Anchor:
 
         jctx = ExecutionContext.get_or_create()
         jroot = jctx.root
-        to.state.current_access_level = -1
+        to.state.current_access_level = AccessLevel.NO_ACESSS
 
-        if jroot == jctx.super_root or jroot.id == to.root or jroot == to:
-            to.state.current_access_level = 2
+        # if current root is system_root
+        # if current root id is equal to target anchor's root id
+        # if current root is the target anchor
+        if jroot == jctx.system_root or jroot.id == to.root or jroot == to:
+            to.state.current_access_level = AccessLevel.WRITE
 
-        if (to_access := to.access).all > -1:
+        # if target anchor have set access.all
+        if (to_access := to.access).all > AccessLevel.NO_ACESSS:
             to.state.current_access_level = to_access.all
 
-        # whitelist, level = to_access.nodes.check(self)
-        # if not whitelist and level < 0:
-        #     to.state.current_access_level = -1
-        #     return to.state.current_access_level
-        # elif whitelist and level > -1:
-        #     to.state.current_access_level = level
-
-        # if (architype := self.architype) and (
-        #     access_type := to_access.types.get(architype.__class__)
-        # ):
-        #     whitelist, level = access_type.check(self)
-        #     if not whitelist and level < 0:
-        #         to.state.current_access_level = -1
-        #         return to.state.current_access_level
-        #     elif whitelist and level > -1 and to.state.current_access_level == -1:
-        #         to.state.current_access_level = level
-
+        # if target anchor have set allowed roots
+        # if current root is allowed to target anchor
         whitelist, level = to_access.roots.check(jroot.ref_id)
-        if not whitelist and level < 0:
-            to.state.current_access_level = -1
+        if not whitelist and level < AccessLevel.READ:
+            to.state.current_access_level = AccessLevel.NO_ACESSS
             return to.state.current_access_level
-        elif whitelist and level > -1 and to.state.current_access_level == -1:
+        elif (
+            whitelist
+            and level > AccessLevel.NO_ACESSS
+            and to.state.current_access_level == AccessLevel.NO_ACESSS
+        ):
             to.state.current_access_level = level
 
+        # if target anchor's root have set allowed roots
+        # if current root is allowed to the whole graph of target anchor's root
         if to.root and (to_root := jctx.datasource.find_one(to.root)):
             whitelist, level = to_root.access.roots.check(jroot.ref_id)
-            if not whitelist and level < 0:
-                to.state.current_access_level = -1
+            if not whitelist and level < AccessLevel.READ:
+                to.state.current_access_level = AccessLevel.NO_ACESSS
                 return to.state.current_access_level
-            elif whitelist and level > -1 and to.state.current_access_level == -1:
+            elif (
+                whitelist
+                and level > AccessLevel.NO_ACESSS
+                and to.state.current_access_level == AccessLevel.NO_ACESSS
+            ):
                 to.state.current_access_level = level
 
         return to.state.current_access_level
@@ -278,7 +306,7 @@ class Anchor:
             "name": self.name,
             "id": self.id,
             "root": self.root,
-            "access": asdict(self.access),
+            "access": self.access.serialize(),
             "architype": (
                 asdict(self.architype)
                 if is_dataclass(self.architype) and not isinstance(self.architype, type)
@@ -335,7 +363,7 @@ class NodeAnchor(Anchor):
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[NodeAnchor]:
-        """Return NodeAnchor instance if existing."""
+        """Return NodeAnchor instance if valid."""
         if match := NODE_ID_REGEX.search(ref_id):
             return cls(
                 name=match.group(1),
@@ -346,31 +374,31 @@ class NodeAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get_or_create().datasource
+        ctx_src = ExecutionContext.get_datasource()
 
         for edge in self.edges:
             edge.save()
 
-        jsrc.set(self)
+        ctx_src.set(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype and self.state.current_access_level > 1:
+        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
             from .context import ExecutionContext
 
-            jsrc = ExecutionContext.get_or_create().datasource
+            ctx_src = ExecutionContext.get_datasource()
             for edge in self.edges:
                 edge.destroy()
 
-            jsrc.remove(self)
+            ctx_src.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeArchitype]:
         """Retrieve the Architype from db and return."""
         return cast(Optional[NodeArchitype], super().sync(node))
 
-    def connect_node(self, nd: NodeAnchor, edg: EdgeAnchor) -> None:
+    def connect_node(self, node: NodeAnchor, edge: EdgeAnchor) -> None:
         """Connect a node with given edge."""
-        edg.attach(self, nd)
+        edge.attach(self, node)
 
     def get_edges(
         self,
@@ -495,7 +523,7 @@ class EdgeAnchor(Anchor):
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
-        """Return EdgeAnchor instance if existing."""
+        """Return EdgeAnchor instance if valid."""
         if match := EDGE_ID_REGEX.search(ref_id):
             return cls(
                 name=match.group(1),
@@ -506,7 +534,7 @@ class EdgeAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        jsrc = ExecutionContext.get_or_create().datasource
+        ctx_src = ExecutionContext.get_datasource()
 
         if source := self.source:
             source.save()
@@ -514,14 +542,14 @@ class EdgeAnchor(Anchor):
         if target := self.target:
             target.save()
 
-        jsrc.set(self)
+        ctx_src.set(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype and self.state.current_access_level > 1:
+        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
             from .context import ExecutionContext
 
-            jsrc = ExecutionContext.get_or_create().datasource
+            ctx_src = ExecutionContext.get_datasource()
 
             source = self.source
             target = self.target
@@ -532,7 +560,7 @@ class EdgeAnchor(Anchor):
             if target:
                 target.save()
 
-            jsrc.remove(self)
+            ctx_src.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeArchitype]:
         """Retrieve the Architype from db and return."""
@@ -588,7 +616,7 @@ class WalkerAnchor(Anchor):
 
     @classmethod
     def ref(cls, ref_id: str) -> Optional[WalkerAnchor]:
-        """Return EdgeAnchor instance if existing."""
+        """Return WalkerAnchor instance if valid."""
         if ref_id and (match := WALKER_ID_REGEX.search(ref_id)):
             return cls(
                 name=match.group(1),
@@ -599,14 +627,14 @@ class WalkerAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        ExecutionContext.get_or_create().datasource.set(self)
+        ExecutionContext.get_datasource().set(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype and self.state.current_access_level > 1:
+        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
             from .context import ExecutionContext
 
-            ExecutionContext.get_or_create().datasource.remove(self)
+            ExecutionContext.get_datasource().remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerArchitype]:
         """Retrieve the Architype from db and return."""
@@ -644,41 +672,41 @@ class WalkerAnchor(Anchor):
         """Disengage walker from traversal."""
         self.state.disengaged = True
 
-    def spawn_call(self, nd: Anchor) -> WalkerArchitype:
+    def spawn_call(self, node: Anchor) -> WalkerArchitype:
         """Invoke data spatial call."""
         if walker := self.sync():
             self.path = []
-            self.next = [nd]
+            self.next = [node]
             while len(self.next):
-                if node := self.next.pop(0).sync():
-                    for i in node._jac_entry_funcs_:
+                if current_node := self.next.pop(0).sync():
+                    for i in current_node._jac_entry_funcs_:
                         if not i.trigger or isinstance(walker, i.trigger):
                             if i.func:
-                                i.func(node, walker)
+                                i.func(current_node, walker)
                             else:
                                 raise ValueError(f"No function {i.name} to call.")
                         if self.state.disengaged:
                             return walker
                     for i in walker._jac_entry_funcs_:
-                        if not i.trigger or isinstance(node, i.trigger):
+                        if not i.trigger or isinstance(current_node, i.trigger):
                             if i.func:
-                                i.func(walker, node)
+                                i.func(walker, current_node)
                             else:
                                 raise ValueError(f"No function {i.name} to call.")
                         if self.state.disengaged:
                             return walker
                     for i in walker._jac_exit_funcs_:
-                        if not i.trigger or isinstance(node, i.trigger):
+                        if not i.trigger or isinstance(current_node, i.trigger):
                             if i.func:
-                                i.func(walker, node)
+                                i.func(walker, current_node)
                             else:
                                 raise ValueError(f"No function {i.name} to call.")
                         if self.state.disengaged:
                             return walker
-                    for i in node._jac_exit_funcs_:
+                    for i in current_node._jac_exit_funcs_:
                         if not i.trigger or isinstance(walker, i.trigger):
                             if i.func:
-                                i.func(node, walker)
+                                i.func(current_node, walker)
                             else:
                                 raise ValueError(f"No function {i.name} to call.")
                         if self.state.disengaged:
