@@ -35,6 +35,8 @@ class ExecutionContext:
         self.root: NodeAnchor = self.load(root, self.system_root)
         self.entry: NodeAnchor = self.load(entry, self.root)
 
+        EXECUTION_CONTEXT.set(self)
+
     def generate_system_root(self) -> NodeAnchor:
         """Generate default system root."""
         system_root = NodeAnchor(
@@ -68,18 +70,16 @@ class ExecutionContext:
         return self.root.has_read_access(self.entry)
 
     @staticmethod
-    def get_or_create(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
-        """Get or create execution context."""
+    def get() -> ExecutionContext:
+        """Get current ExecutionContext."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))
+            raise Exception("ExecutionContext is not yet available!")
         return ctx
 
     @staticmethod
     def get_datasource() -> ShelfStorage:
         """Get current datasource."""
-        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            raise Exception("Wrong usage of get_datasource!")
-        return ctx.datasource
+        return ExecutionContext.get().datasource
 
     @staticmethod
     def cleanup() -> None:

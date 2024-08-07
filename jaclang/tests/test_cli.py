@@ -18,8 +18,13 @@ class JacCliTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
-        ExecutionContext.cleanup()
+        ExecutionContext()
         return super().setUp()
+
+    def tearDown(self) -> None:
+        """Tear down test."""
+        ExecutionContext.cleanup()
+        return super().tearDown()
 
     def test_jac_cli_run(self) -> None:
         """Basic test for pass."""

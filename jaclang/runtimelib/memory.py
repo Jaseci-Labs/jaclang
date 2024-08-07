@@ -93,13 +93,16 @@ class ShelfStorage(Memory):
     def close(self) -> None:
         """Close memory handler."""
         if isinstance(self.__shelf__, Shelf):
-            for anchor in set(self.__mem__.values()):
-                if not anchor.state.persistent:
-                    anchor.destroy()
-                elif not MANUAL_SAVE:
-                    anchor.save()
             for id in self.__gc__:
                 self.__shelf__.pop(id, None)
+                self.__mem__.pop(id, None)
+            for anchor in set(self.__mem__.values()):
+                if (
+                    anchor.state.deleted is None
+                    and anchor.state.persistent
+                    and not MANUAL_SAVE
+                ):
+                    anchor.save()
             self.__shelf__.sync()
 
         super().close()
@@ -135,10 +138,10 @@ class ShelfStorage(Memory):
             for d in data if isinstance(data, list) else [data]:
                 self.__shelf__[str(d.id)] = d.serialize()
 
-    def remove(self, data: Union[Anchor, list[Anchor]]) -> None:
+    def remove(self, data: Union[Anchor, list[Anchor]], from_db: bool = False) -> None:
         """Remove anchor/s from datasource."""
         super().remove(data)
-        if isinstance(self.__shelf__, Shelf) and MANUAL_SAVE:
+        if isinstance(self.__shelf__, Shelf) and from_db:
             if isinstance(data, list):
                 for d in data:
                     self.__shelf__.pop(str(d.id), None)
