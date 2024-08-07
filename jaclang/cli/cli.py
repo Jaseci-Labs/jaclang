@@ -120,8 +120,8 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
 
     response = {}
     if id == "root":
-        super_root = jctx.super_root
-        response = super_root.serialize()
+        system_root = jctx.system_root
+        response = system_root.serialize()
     elif (anchor := Anchor.ref(id)) and anchor.sync():
         response = anchor.serialize()
 

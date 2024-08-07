@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from typing import Any, Callable, Optional, Union
 from uuid import UUID
 
-from .architype import AnchorState, NodeAnchor, Root
+from .architype import AccessLevel, AnchorState, NodeAnchor, Root
 from .machine import JacMachine, JacProgram
 from .memory import ShelfStorage
 
@@ -30,21 +30,21 @@ class ExecutionContext:
         self.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
         self.datasource: ShelfStorage = ShelfStorage(session)
         self.reports: list[Any] = []
-        self.super_root = self.load(
-            NodeAnchor(id=UUID(int=0)), self.generate_super_root
+        self.system_root = self.load(
+            NodeAnchor(id=UUID(int=0)), self.generate_system_root
         )
-        self.root: NodeAnchor = self.load(root, self.super_root)
+        self.root: NodeAnchor = self.load(root, self.system_root)
         self.entry: NodeAnchor = self.load(entry, self.root)
 
-    def generate_super_root(self) -> NodeAnchor:
-        """Generate default super root."""
-        super_root = NodeAnchor(
-            id=UUID(int=0), state=AnchorState(current_access_level=2)
+    def generate_system_root(self) -> NodeAnchor:
+        """Generate default system root."""
+        system_root = NodeAnchor(
+            id=UUID(int=0), state=AnchorState(current_access_level=AccessLevel.WRITE)
         )
-        architype = super_root.architype = object.__new__(Root)
-        architype.__jac__ = super_root
-        self.datasource.set(super_root, True)
-        return super_root
+        architype = system_root.architype = object.__new__(Root)
+        architype.__jac__ = system_root
+        self.datasource.set(system_root, True)
+        return system_root
 
     def load(
         self,
@@ -54,7 +54,7 @@ class ExecutionContext:
         """Load initial anchors."""
         if anchor and (_anchor := self.datasource.find_one(anchor.id)):
             anchor.__dict__.update(_anchor.__dict__)
-            anchor.state.current_access_level = 2
+            anchor.state.current_access_level = AccessLevel.WRITE
         else:
             anchor = default() if callable(default) else default
 
@@ -74,6 +74,13 @@ class ExecutionContext:
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
             EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))
         return ctx
+
+    @staticmethod
+    def get_datasource() -> ShelfStorage:
+        """Get current datasource."""
+        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
+            raise Exception("Wrong usage of get_datasource!")
+        return ctx.datasource
 
     @staticmethod
     def cleanup() -> None:
