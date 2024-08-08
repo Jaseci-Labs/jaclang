@@ -21,6 +21,7 @@ from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.runtimelib.constructs import Anchor, NodeAnchor, WalkerArchitype
+from jaclang.runtimelib.context import ExecutionContext
 from jaclang.runtimelib.machine import JacProgram
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
@@ -84,7 +85,7 @@ def run(
     base = base if base else "./"
     mod = mod[:-4]
 
-    jctx = Jac.context({"base_path": base, "session": session})
+    ctx = ExecutionContext(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         jac_import(
@@ -96,7 +97,7 @@ def run(
     elif filename.endswith(".jir"):
         with open(filename, "rb") as f:
             ir = pickle.load(f)
-            jctx.jac_machine.attach_program(JacProgram(mod_bundle=ir, bytecode=None))
+            ctx.jac_machine.attach_program(JacProgram(mod_bundle=ir, bytecode=None))
             jac_import(
                 target=mod,
                 base_path=base,
@@ -107,7 +108,7 @@ def run(
         print("Not a .jac file.")
         return
 
-    jctx.close()
+    ctx.close()
 
 
 @cmd_registry.register
@@ -116,16 +117,16 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    jctx = Jac.context({"session": session})
+    ctx = ExecutionContext(session=session)
 
     response = {}
     if id == "root":
-        system_root = jctx.system_root
+        system_root = ctx.system_root
         response = system_root.serialize()
     elif (anchor := Anchor.ref(id)) and anchor.sync():
         response = anchor.serialize()
 
-    jctx.close()
+    ctx.close()
     return response
 
 
@@ -193,12 +194,8 @@ def enter(
     :param node: starting node if entrypoint is walker.
     :param args: Arguments to pass to the entrypoint function.
     """
-    jctx = Jac.context(
-        {
-            "session": session,
-            "root": NodeAnchor.ref(root),
-            "entry": NodeAnchor.ref(node),
-        }
+    ctx = ExecutionContext(
+        session=session, root=NodeAnchor.ref(root), entry=NodeAnchor.ref(node)
     )
 
     if filename.endswith(".jac"):
@@ -213,15 +210,15 @@ def enter(
             result = getattr(mod, entrypoint)(*args or [])
             if (
                 isinstance(result, WalkerArchitype)
-                and jctx.validate_access()
-                and (architype := jctx.entry.architype)
+                and ctx.validate_access()
+                and (architype := ctx.entry.architype)
             ):
                 Jac.spawn_call(architype, result)
 
     else:
         print("Not a .jac file.")
 
-    jctx.close()
+    ctx.close()
 
 
 @cmd_registry.register
@@ -244,6 +241,8 @@ def test(
 
     jac test => jac test -d .
     """
+    ctx = ExecutionContext()
+
     failcount = Jac.run_test(
         filepath=filepath,
         filter=filter,
@@ -252,6 +251,9 @@ def test(
         directory=directory,
         verbose=verbose,
     )
+
+    ctx.close()
+
     if failcount:
         raise SystemExit(f"Tests failed: {failcount}")
 
@@ -354,7 +356,7 @@ def dot(
     base = base if base else "./"
     mod = mod[:-4]
 
-    jctx = Jac.context({"base_path": base, "session": session})
+    ctx = ExecutionContext(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         jac_import(
@@ -387,7 +389,7 @@ def dot(
     else:
         print("Not a .jac file.")
 
-    jctx.close()
+    ctx.close()
 
 
 @cmd_registry.register
