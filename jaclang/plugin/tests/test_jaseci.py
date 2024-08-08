@@ -35,13 +35,12 @@ class TestJaseciPlugin(TestCase):
         cli.jac_import = jac_import  # type: ignore
         EdgeArchitype.__jac_classes__ = {}
         NodeArchitype.__jac_classes__ = {}
-        ExecutionContext()
+        ExecutionContext.cleanup()
 
     def tearDown(self) -> None:
         """Tear down test."""
         sys.stdout = sys.__stdout__
         cli.jac_import = orig_jac_import
-        ExecutionContext.cleanup()
         super().tearDown()
 
     def execution_reset(self) -> None:
