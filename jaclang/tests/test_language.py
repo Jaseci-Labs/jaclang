@@ -12,7 +12,6 @@ from jaclang import jac_import
 from jaclang.cli import cli
 from jaclang.compiler.compile import jac_file_to_pass, jac_pass_to_pass, jac_str_to_pass
 from jaclang.compiler.passes.main.schedules import py_code_gen_typed
-from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.runtimelib.context import ExecutionContext
 from jaclang.settings import settings
 from jaclang.utils.test import TestCase
@@ -23,7 +22,7 @@ class JacLanguageTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
-        ExecutionContext.cleanup()
+        ExecutionContext()
         return super().setUp()
 
     def test_sub_abilities(self) -> None:
@@ -62,7 +61,7 @@ class JacLanguageTests(TestCase):
 
     def test_simple_jac_red(self) -> None:
         """Parse micro jac file."""
-        Jac.context({"base_path": self.examples_abs_path("")})
+        ExecutionContext(base_path=self.examples_abs_path(""))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("micro.simple_walk", base_path=self.examples_abs_path(""))
@@ -153,7 +152,7 @@ class JacLanguageTests(TestCase):
 
     def test_filter_compr(self) -> None:
         """Testing filter comprehension."""
-        Jac.context({"base_path": self.examples_abs_path("./")})
+        ExecutionContext(base_path=self.examples_abs_path("./"))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import(
@@ -209,7 +208,7 @@ class JacLanguageTests(TestCase):
 
     def test_deep_imports(self) -> None:
         """Parse micro jac file."""
-        Jac.context({"base_path": self.fixture_abs_path("./")})
+        ExecutionContext(base_path=self.fixture_abs_path("./"))
         captured_output = io.StringIO()
         sys.stdout = captured_output
 
@@ -232,7 +231,7 @@ class JacLanguageTests(TestCase):
         for i in targets:
             if i in sys.modules:
                 del sys.modules[i]
-        Jac.context({"base_path": self.fixture_abs_path("./")})
+        ExecutionContext(base_path=self.fixture_abs_path("./"))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import("deep_import_mods", base_path=self.fixture_abs_path("./"))
@@ -245,7 +244,7 @@ class JacLanguageTests(TestCase):
 
     def test_deep_outer_imports_one(self) -> None:
         """Parse micro jac file."""
-        Jac.context({"base_path": self.fixture_abs_path("./")})
+        ExecutionContext(base_path=self.fixture_abs_path("./"))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import(
@@ -258,7 +257,7 @@ class JacLanguageTests(TestCase):
 
     def test_deep_outer_imports_from_loc(self) -> None:
         """Parse micro jac file."""
-        Jac.context({"base_path": self.fixture_abs_path("./deep/deeper/")})
+        ExecutionContext(base_path=self.fixture_abs_path("./deep/deeper/"))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         os.chdir(self.fixture_abs_path("./deep/deeper/"))
@@ -401,7 +400,7 @@ class JacLanguageTests(TestCase):
 
     def test_typed_filter_compr(self) -> None:
         """Parse micro jac file."""
-        Jac.context({"base_path": self.examples_abs_path("")})
+        ExecutionContext(base_path=self.examples_abs_path(""))
         captured_output = io.StringIO()
         sys.stdout = captured_output
         jac_import(

@@ -65,9 +65,9 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(options: Optional[dict[str, Any]]) -> ExecutionContext:
+    def context() -> ExecutionContext:
         """Get the execution context."""
-        return ExecutionContext.get_or_create(options)
+        return ExecutionContext.get()
 
     @staticmethod
     @hookimpl
@@ -246,15 +246,14 @@ class JacFeatureDefaults:
             lng,
             items,
         )
-        if not Jac.context().jac_machine.jac_program:
+        ctx = ExecutionContext.get()
+        if not ctx.jac_machine.jac_program:
             jac_program = JacProgram(mod_bundle, {})
-            Jac.context().jac_machine.attach_program(jac_program)
+            ctx.jac_machine.attach_program(jac_program)
         if lng == "py":
-            import_result = PythonImporter(Jac.context().jac_machine).run_import(spec)
+            import_result = PythonImporter(ctx.jac_machine).run_import(spec)
         else:
-            import_result = JacImporter(Jac.context().jac_machine).run_import(
-                spec, reload_module
-            )
+            import_result = JacImporter(ctx.jac_machine).run_import(spec, reload_module)
         return (
             (import_result.ret_mod,)
             if absorb or not items
@@ -485,25 +484,24 @@ class JacFeatureDefaults:
                     and (source := anchor.source)
                     and (target := anchor.target)
                     and (not filter_func or filter_func([architype]))
+                    and (src_arch := source.sync())
+                    and (trg_arch := target.sync())
                 ):
-                    src_arch = source.sync()
-                    trg_arch = target.sync()
-
                     if (
                         dir in [EdgeDir.OUT, EdgeDir.ANY]
-                        and i == source
+                        and node == source
                         and trg_arch in right
                         and source.has_write_access(target)
                     ):
-                        anchor.detach()
+                        anchor.destroy()
                         disconnect_occurred = True
                     if (
                         dir in [EdgeDir.IN, EdgeDir.ANY]
-                        and i == target
+                        and node == target
                         and src_arch in right
                         and target.has_write_access(source)
                     ):
-                        anchor.detach()
+                        anchor.destroy()
                         disconnect_occurred = True
 
         return disconnect_occurred

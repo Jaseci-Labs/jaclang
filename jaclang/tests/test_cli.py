@@ -18,7 +18,7 @@ class JacCliTests(TestCase):
 
     def setUp(self) -> None:
         """Set up test."""
-        ExecutionContext.cleanup()
+        ExecutionContext()
         return super().setUp()
 
     def test_jac_cli_run(self) -> None:
