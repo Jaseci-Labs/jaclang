@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast as ast3
 import fnmatch
 import html
 import os
@@ -10,10 +11,12 @@ import types
 from collections import OrderedDict
 from dataclasses import field
 from functools import wraps
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, Type, Union
 
+import jaclang.compiler.absyntree as ast
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.constant import EdgeDir, colors
+from jaclang.compiler.passes.main.pyast_gen_pass import PyastGenPass
 from jaclang.compiler.semtable import SemInfo, SemRegistry, SemScope
 from jaclang.runtimelib.constructs import (
     Architype,
@@ -677,8 +680,44 @@ class JacFeatureDefaults:
         inputs: list[tuple[str, str, str, Any]],
         outputs: tuple,
         action: str,
+        _globals: dict,
+        _locals: Mapping,
     ) -> Any:  # noqa: ANN401
         """Jac's with_llm feature."""
+        raise ImportError(
+            "mtllm is not installed. Please install it with `pip install mtllm`."
+        )
+
+    @staticmethod
+    @hookimpl
+    def gen_llm_body(_pass: PyastGenPass, node: ast.Ability) -> list[ast3.AST]:
+        """Generate the by LLM body."""
+        raise ImportError(
+            "mtllm is not installed. Please install it with `pip install mtllm`."
+        )
+
+    @staticmethod
+    @hookimpl
+    def by_llm_call(
+        _pass: PyastGenPass,
+        model: ast3.AST,
+        model_params: dict[str, ast.Expr],
+        scope: ast3.AST,
+        inputs: Sequence[Optional[ast3.AST]],
+        outputs: Sequence[Optional[ast3.AST]] | ast3.Call,
+        action: Optional[ast3.AST],
+        include_info: list[tuple[str, ast3.AST]],
+        exclude_info: list[tuple[str, ast3.AST]],
+    ) -> ast3.Call:
+        """Return the LLM Call, e.g. _Jac.with_llm()."""
+        raise ImportError(
+            "mtllm is not installed. Please install it with `pip install mtllm`."
+        )
+
+    @staticmethod
+    @hookimpl
+    def get_by_llm_call_args(_pass: PyastGenPass, node: ast.FuncCall) -> dict:
+        """Get the by LLM call args."""
         raise ImportError(
             "mtllm is not installed. Please install it with `pip install mtllm`."
         )
