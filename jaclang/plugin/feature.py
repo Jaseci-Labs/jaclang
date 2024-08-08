@@ -39,9 +39,9 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
+    def context() -> ExecutionContext:
         """Create execution context."""
-        return pm.hook.context(options=options)
+        return pm.hook.context()
 
     @staticmethod
     def make_architype(

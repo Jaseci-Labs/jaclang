@@ -67,7 +67,7 @@ def traverse_graph(
     """Traverse the graph using Breadth-First Search (BFS) or Depth-First Search (DFS)."""
     for edge in node.__jac__.edges:
         is_self_loop = id(edge.source) == id(edge.target)
-        is_in_edge = edge.target == node
+        is_in_edge = edge.target == node.__jac__
         if (traverse and is_in_edge) or edge.architype.__class__.__name__ in edge_type:
             continue
         if is_self_loop:

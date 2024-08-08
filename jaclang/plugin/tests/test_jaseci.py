@@ -7,7 +7,6 @@ import sys
 from jaclang import jac_import as orig_jac_import
 from jaclang.cli import cli
 from jaclang.runtimelib.constructs import EdgeArchitype, NodeArchitype
-from jaclang.runtimelib.context import ExecutionContext
 from jaclang.utils.test import TestCase
 
 loaded_mod: dict[str, object] = {}
@@ -35,7 +34,6 @@ class TestJaseciPlugin(TestCase):
         cli.jac_import = jac_import  # type: ignore
         EdgeArchitype.__jac_classes__ = {}
         NodeArchitype.__jac_classes__ = {}
-        ExecutionContext.cleanup()
 
     def tearDown(self) -> None:
         """Tear down test."""
@@ -268,7 +266,6 @@ class TestJaseciPlugin(TestCase):
         node_1 = "" if give_access_to_full_graph else self.nodes[0]
         node_2 = "" if give_access_to_full_graph else self.nodes[1]
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -277,7 +274,6 @@ class TestJaseciPlugin(TestCase):
             node=node_1,
             args=[self.roots[1], 0, via_all],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -287,7 +283,6 @@ class TestJaseciPlugin(TestCase):
             args=[self.roots[0], 0, via_all],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -296,7 +291,6 @@ class TestJaseciPlugin(TestCase):
             node=self.nodes[1],
             args=[20],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -306,7 +300,6 @@ class TestJaseciPlugin(TestCase):
             args=[10],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -314,7 +307,6 @@ class TestJaseciPlugin(TestCase):
             root=self.roots[0],
             node=self.nodes[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -331,7 +323,6 @@ class TestJaseciPlugin(TestCase):
         self.assertTrue(archs[1], "A(val=1)")
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -340,7 +331,6 @@ class TestJaseciPlugin(TestCase):
             node=node_1,
             args=[self.roots[1], via_all],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -350,7 +340,6 @@ class TestJaseciPlugin(TestCase):
             args=[self.roots[0], via_all],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -358,7 +347,6 @@ class TestJaseciPlugin(TestCase):
             root=self.roots[0],
             node=self.nodes[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -372,7 +360,6 @@ class TestJaseciPlugin(TestCase):
         #             ALLOW WRITE ACCESS             #
         ##############################################
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -381,7 +368,6 @@ class TestJaseciPlugin(TestCase):
             node=node_1,
             args=[self.roots[1], "WRITE", via_all],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -391,7 +377,6 @@ class TestJaseciPlugin(TestCase):
             args=[self.roots[0], "WRITE", via_all],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -400,7 +385,6 @@ class TestJaseciPlugin(TestCase):
             node=self.nodes[1],
             args=[20],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -410,7 +394,6 @@ class TestJaseciPlugin(TestCase):
             args=[10],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -418,7 +401,6 @@ class TestJaseciPlugin(TestCase):
             root=self.roots[0],
             node=self.nodes[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -435,7 +417,6 @@ class TestJaseciPlugin(TestCase):
         self.assertTrue(archs[1], "A(val=10)")
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -444,7 +425,6 @@ class TestJaseciPlugin(TestCase):
             node=node_1,
             args=[self.roots[1], via_all],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -454,7 +434,6 @@ class TestJaseciPlugin(TestCase):
             args=[self.roots[0], via_all],
         )
 
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -462,7 +441,6 @@ class TestJaseciPlugin(TestCase):
             root=self.roots[0],
             node=self.nodes[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -482,7 +460,6 @@ class TestJaseciPlugin(TestCase):
         ##############################################
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -491,7 +468,6 @@ class TestJaseciPlugin(TestCase):
         root1 = self.capturedOutput.getvalue().strip()
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -504,7 +480,6 @@ class TestJaseciPlugin(TestCase):
         ##############################################
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -512,7 +487,6 @@ class TestJaseciPlugin(TestCase):
             root=root1,
             args=[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -530,14 +504,12 @@ class TestJaseciPlugin(TestCase):
         ##############################################
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
             entrypoint="check_node",
             root=root1,
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -555,7 +527,6 @@ class TestJaseciPlugin(TestCase):
         ##############################################
 
         self._output2buffer()
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,
@@ -563,7 +534,6 @@ class TestJaseciPlugin(TestCase):
             root=root1,
             node=nodes[1],
         )
-        ExecutionContext.cleanup()
         cli.enter(
             filename=self.fixture_abs_path("other_root_access.jac"),
             session=session,

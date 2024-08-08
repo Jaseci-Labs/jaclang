@@ -144,6 +144,10 @@ class Permission:
 class AnchorState:
     """Anchor state handler."""
 
+    # None == do nothing
+    # False == to be deleted
+    # True == already deleted
+    deleted: bool | None = None
     connected: bool = False
     current_access_level: AccessLevel = AccessLevel.NO_ACESSS
     persistent: bool = field(default=not MANUAL_SAVE)
@@ -240,7 +244,10 @@ class Anchor:
     def save(self) -> None:
         """Save Anchor."""
         if self.architype:
-            if not self.state.connected:
+            if self.state.deleted is False:
+                self.state.deleted = True
+                self._destroy()
+            elif not self.state.connected:
                 self.state.connected = True
                 self.sync_hash()
                 self._save()
@@ -251,12 +258,31 @@ class Anchor:
                 self.state.hash = _hash
                 self._save()
 
+    def _destroy(self) -> None:
+        """Destroy Anchor."""
+        from .context import ExecutionContext
+
+        ExecutionContext.get_datasource().remove(self, from_db=True)
+
     def destroy(self) -> None:
-        """Save Anchor."""
-        raise NotImplementedError("destroy must be implemented in subclasses")
+        """Destroy Anchor."""
+        if (
+            self.architype
+            and self.state.current_access_level > AccessLevel.CONNECT
+            and self.state.deleted is None
+        ):
+            from .context import ExecutionContext
+
+            ctx_src = ExecutionContext.get_datasource()
+
+            self.state.deleted = False
+            ctx_src.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[Architype]:
         """Retrieve the Architype from db and return."""
+        if self.state.deleted is not None:
+            return None
+
         if architype := self.architype:
             if (node or self).has_read_access(self):
                 return architype
@@ -276,10 +302,10 @@ class Anchor:
         """Allocate hashes and memory."""
         from .context import ExecutionContext
 
-        jctx = ExecutionContext.get_or_create()
+        ctx = ExecutionContext.get()
         if self.root is None and not isinstance(self.architype, Root):
-            self.root = jctx.root.id
-        jctx.datasource.set(self, True)
+            self.root = ctx.root.id
+        ctx.datasource.set(self)
 
     def has_read_access(self, to: Anchor) -> bool:
         """Read Access Validation."""
@@ -297,14 +323,14 @@ class Anchor:
         """Access validation."""
         from .context import ExecutionContext
 
-        jctx = ExecutionContext.get_or_create()
-        jroot = jctx.root
+        ctx = ExecutionContext.get()
+        jroot = ctx.root
         to.state.current_access_level = AccessLevel.NO_ACESSS
 
         # if current root is system_root
         # if current root id is equal to target anchor's root id
         # if current root is the target anchor
-        if jroot == jctx.system_root or jroot.id == to.root or jroot == to:
+        if jroot == ctx.system_root or jroot.id == to.root or jroot == to:
             to.state.current_access_level = AccessLevel.WRITE
             return to.state.current_access_level
 
@@ -314,7 +340,7 @@ class Anchor:
 
         # if target anchor's root have set allowed roots
         # if current root is allowed to the whole graph of target anchor's root
-        if to.root and (to_root := jctx.datasource.find_one(to.root)):
+        if to.root and (to_root := ctx.datasource.find_one(to.root)):
             if to_root.access.all > to.state.current_access_level:
                 to.state.current_access_level = to_root.access.all
 
@@ -398,8 +424,6 @@ class Anchor:
                 and self.architype == self.architype
                 and self.state.connected == other.state.connected
             )
-        elif isinstance(other, Architype):
-            return self == other.__jac__
 
         return False
 
@@ -430,17 +454,22 @@ class NodeAnchor(Anchor):
         for edge in self.edges:
             edge.save()
 
-        ctx_src.set(self)
+        ctx_src.sync(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
+        if (
+            self.architype
+            and self.state.current_access_level > AccessLevel.CONNECT
+            and self.state.deleted is None
+        ):
             from .context import ExecutionContext
 
             ctx_src = ExecutionContext.get_datasource()
+
+            self.state.deleted = False
             for edge in self.edges:
                 edge.destroy()
-
             ctx_src.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[NodeArchitype]:
@@ -465,14 +494,12 @@ class NodeAnchor(Anchor):
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
+                and (src_arch := source.sync())
+                and (trg_arch := target.sync())
             ):
-                src_arch = source.sync()
-                trg_arch = target.sync()
-
                 if (
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
-                    and trg_arch
                     and (not target_cls or trg_arch.__class__ in target_cls)
                     and source.has_read_access(target)
                 ):
@@ -480,7 +507,6 @@ class NodeAnchor(Anchor):
                 if (
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
-                    and src_arch
                     and (not target_cls or src_arch.__class__ in target_cls)
                     and target.has_read_access(source)
                 ):
@@ -501,14 +527,12 @@ class NodeAnchor(Anchor):
                 and (source := anchor.source)
                 and (target := anchor.target)
                 and (not filter_func or filter_func([architype]))
+                and (src_arch := source.sync())
+                and (trg_arch := target.sync())
             ):
-                src_arch = source.sync()
-                trg_arch = target.sync()
-
                 if (
                     dir in [EdgeDir.OUT, EdgeDir.ANY]
                     and self == source
-                    and trg_arch
                     and (not target_cls or trg_arch.__class__ in target_cls)
                     and source.has_read_access(target)
                 ):
@@ -516,7 +540,6 @@ class NodeAnchor(Anchor):
                 if (
                     dir in [EdgeDir.IN, EdgeDir.ANY]
                     and self == target
-                    and src_arch
                     and (not target_cls or src_arch.__class__ in target_cls)
                     and target.has_read_access(source)
                 ):
@@ -593,24 +616,21 @@ class EdgeAnchor(Anchor):
         if target := self.target:
             target.save()
 
-        ctx_src.set(self)
+        ctx_src.sync(self)
 
     def destroy(self) -> None:
         """Delete Anchor."""
-        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
+        if (
+            self.architype
+            and self.state.current_access_level > AccessLevel.CONNECT
+            and self.state.deleted is None
+        ):
             from .context import ExecutionContext
 
             ctx_src = ExecutionContext.get_datasource()
 
-            source = self.source
-            target = self.target
+            self.state.deleted = False
             self.detach()
-
-            if source:
-                source.save()
-            if target:
-                target.save()
-
             ctx_src.remove(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[EdgeArchitype]:
@@ -634,9 +654,6 @@ class EdgeAnchor(Anchor):
             source.remove_edge(self)
         if target := self.target:
             target.remove_edge(self)
-
-        self.source = None
-        self.target = None
 
     def spawn_call(self, walk: WalkerAnchor) -> WalkerArchitype:
         """Invoke data spatial call."""
@@ -678,14 +695,7 @@ class WalkerAnchor(Anchor):
     def _save(self) -> None:
         from .context import ExecutionContext
 
-        ExecutionContext.get_datasource().set(self)
-
-    def destroy(self) -> None:
-        """Delete Anchor."""
-        if self.architype and self.state.current_access_level > AccessLevel.CONNECT:
-            from .context import ExecutionContext
-
-            ExecutionContext.get_datasource().remove(self)
+        ExecutionContext.get_datasource().sync(self)
 
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[WalkerArchitype]:
         """Retrieve the Architype from db and return."""
@@ -781,15 +791,6 @@ class Architype:
             __jac__ = Anchor(architype=self)
             __jac__.allocate()
         self.__jac__ = __jac__
-
-    def __eq__(self, other: object) -> bool:
-        """Override equal implementation."""
-        if isinstance(other, Architype):
-            return super().__eq__(other)
-        elif isinstance(other, Anchor):
-            return self.__jac__ == other
-
-        return False
 
     def __hash__(self) -> int:
         """Override hash for architype."""

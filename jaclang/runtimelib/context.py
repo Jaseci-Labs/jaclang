@@ -36,6 +36,10 @@ class ExecutionContext:
         self.root: NodeAnchor = self.load(root, self.system_root)
         self.entry: NodeAnchor = self.load(entry, self.root)
 
+        if ctx := EXECUTION_CONTEXT.get(None):
+            ctx.close()
+        EXECUTION_CONTEXT.set(self)
+
     def generate_system_root(self) -> NodeAnchor:
         """Generate default system root."""
         system_root = NodeAnchor(
@@ -43,7 +47,7 @@ class ExecutionContext:
         )
         architype = system_root.architype = object.__new__(Root)
         architype.__jac__ = system_root
-        self.datasource.set(system_root, True)
+        self.datasource.set(system_root)
         return system_root
 
     def load(
@@ -69,25 +73,16 @@ class ExecutionContext:
         return self.root.has_read_access(self.entry)
 
     @staticmethod
-    def get_or_create(options: Optional[dict[str, Any]] = None) -> ExecutionContext:
-        """Get or create execution context."""
+    def get() -> ExecutionContext:
+        """Get current ExecutionContext."""
         if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            EXECUTION_CONTEXT.set(ctx := ExecutionContext(**options or {}))
+            raise Exception("ExecutionContext is not yet available!")
         return ctx
 
     @staticmethod
     def get_datasource() -> ShelfStorage:
         """Get current datasource."""
-        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            raise Exception("Wrong usage of get_datasource!")
-        return ctx.datasource
-
-    @staticmethod
-    def cleanup() -> None:
-        """Get or create execution context."""
-        if ctx := EXECUTION_CONTEXT.get(None):
-            ctx.close()
-            EXECUTION_CONTEXT.set(None)
+        return ExecutionContext.get().datasource
 
 
 class JacTestResult(unittest.TextTestResult):
