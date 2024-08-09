@@ -70,7 +70,7 @@ class AnchorType(Enum):
 class AccessLevel(IntEnum):
     """Access level enum."""
 
-    NO_ACESSS = -1
+    NO_ACCESS = -1
     READ = 0
     CONNECT = 1
     WRITE = 2
@@ -99,7 +99,7 @@ class Access:
     ) -> tuple[bool, AccessLevel]:  # whitelist or blacklist, has_read_access, level
         """Validate access."""
         if self.whitelist:
-            return self.whitelist, self.anchors.get(anchor, AccessLevel.NO_ACESSS)
+            return self.whitelist, self.anchors.get(anchor, AccessLevel.NO_ACCESS)
         else:
             return self.whitelist, self.anchors.get(anchor, AccessLevel.WRITE)
 
@@ -124,7 +124,7 @@ class Access:
 class Permission:
     """Anchor Access Handler."""
 
-    all: AccessLevel = AccessLevel.NO_ACESSS
+    all: AccessLevel = AccessLevel.NO_ACCESS
     roots: Access = field(default_factory=Access)
 
     def serialize(self) -> dict[str, object]:
@@ -135,7 +135,7 @@ class Permission:
     def deserialize(cls, data: dict[str, Any]) -> Permission:
         """Deserialize Permission."""
         return Permission(
-            all=AccessLevel[data.get("all", AccessLevel.NO_ACESSS.name)],
+            all=AccessLevel[data.get("all", AccessLevel.NO_ACCESS.name)],
             roots=Access.deserialize(data.get("roots", {})),
         )
 
@@ -149,7 +149,7 @@ class AnchorState:
     # True == already deleted
     deleted: bool | None = None
     connected: bool = False
-    current_access_level: AccessLevel = AccessLevel.NO_ACESSS
+    current_access_level: AccessLevel = AccessLevel.NO_ACCESS
     persistent: bool = field(default=not MANUAL_SAVE)
     hash: int = 0
 
@@ -209,7 +209,7 @@ class Anchor:
         access = self.access.roots
         if access.whitelist:
             if (ref_id := root.ref_id) and level != access.anchors.get(
-                ref_id, AccessLevel.NO_ACESSS
+                ref_id, AccessLevel.NO_ACCESS
             ):
                 access.anchors[ref_id] = level
         else:
@@ -234,8 +234,8 @@ class Anchor:
 
     def restrict(self) -> None:
         """Disallow others to access current Architype."""
-        if self.access.all > AccessLevel.NO_ACESSS:
-            self.access.all = AccessLevel.NO_ACESSS
+        if self.access.all > AccessLevel.NO_ACCESS:
+            self.access.all = AccessLevel.NO_ACCESS
 
     def _save(self) -> None:
         """Save Anchor."""
@@ -309,7 +309,7 @@ class Anchor:
 
     def has_read_access(self, to: Anchor) -> bool:
         """Read Access Validation."""
-        return self.access_level(to) > AccessLevel.NO_ACESSS
+        return self.access_level(to) > AccessLevel.NO_ACCESS
 
     def has_connect_access(self, to: Anchor) -> bool:
         """Write Access Validation."""
@@ -325,7 +325,7 @@ class Anchor:
 
         ctx = ExecutionContext.get()
         jroot = ctx.root
-        to.state.current_access_level = AccessLevel.NO_ACESSS
+        to.state.current_access_level = AccessLevel.NO_ACCESS
 
         # if current root is system_root
         # if current root id is equal to target anchor's root id
@@ -335,7 +335,7 @@ class Anchor:
             return to.state.current_access_level
 
         # if target anchor have set access.all
-        if (to_access := to.access).all > AccessLevel.NO_ACESSS:
+        if (to_access := to.access).all > AccessLevel.NO_ACCESS:
             to.state.current_access_level = to_access.all
 
         # if target anchor's root have set allowed roots
@@ -347,14 +347,14 @@ class Anchor:
             whitelist, level = to_root.access.roots.check(jroot.ref_id)
             if not whitelist:
                 if level < AccessLevel.READ:
-                    to.state.current_access_level = AccessLevel.NO_ACESSS
+                    to.state.current_access_level = AccessLevel.NO_ACCESS
                     return to.state.current_access_level
                 elif level < to.state.current_access_level:
                     level = to.state.current_access_level
             elif (
                 whitelist
-                and level > AccessLevel.NO_ACESSS
-                and to.state.current_access_level == AccessLevel.NO_ACESSS
+                and level > AccessLevel.NO_ACCESS
+                and to.state.current_access_level == AccessLevel.NO_ACCESS
             ):
                 to.state.current_access_level = level
 
@@ -363,14 +363,14 @@ class Anchor:
         whitelist, level = to_access.roots.check(jroot.ref_id)
         if not whitelist:
             if level < AccessLevel.READ:
-                to.state.current_access_level = AccessLevel.NO_ACESSS
+                to.state.current_access_level = AccessLevel.NO_ACCESS
                 return to.state.current_access_level
             elif level < to.state.current_access_level:
                 level = to.state.current_access_level
         elif (
             whitelist
-            and level > AccessLevel.NO_ACESSS
-            and to.state.current_access_level == AccessLevel.NO_ACESSS
+            and level > AccessLevel.NO_ACCESS
+            and to.state.current_access_level == AccessLevel.NO_ACCESS
         ):
             to.state.current_access_level = level
 
@@ -668,6 +668,7 @@ class EdgeAnchor(Anchor):
             **super().serialize(),
             "source": self.source.ref_id if self.source else None,
             "target": self.target.ref_id if self.target else None,
+            "is_undirected": self.is_undirected,
         }
 
 
