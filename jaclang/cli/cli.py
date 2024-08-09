@@ -2,14 +2,12 @@
 
 import ast as ast3
 import importlib
-import inspect
 import marshal
 import os
 import pickle
 import shutil
 import types
 from typing import Optional
-from uuid import UUID
 
 import jaclang.compiler.absyntree as ast
 from jaclang import jac_import
@@ -22,7 +20,8 @@ from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
-from jaclang.runtimelib.constructs import Architype
+from jaclang.runtimelib.constructs import Anchor, NodeAnchor, WalkerArchitype
+from jaclang.runtimelib.context import ExecutionContext
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
 
@@ -67,12 +66,7 @@ def format(path: str, outfile: str = "", debug: bool = False) -> None:
 
 @cmd_registry.register
 def run(
-    filename: str,
-    session: str = "",
-    main: bool = True,
-    cache: bool = True,
-    walker: str = "",
-    node: str = "",
+    filename: str, session: str = "", main: bool = True, cache: bool = True
 ) -> None:
     """Run the specified .jac file."""
     # if no session specified, check if it was defined when starting the command shell
@@ -89,77 +83,50 @@ def run(
     base, mod = os.path.split(filename)
     base = base if base else "./"
     mod = mod[:-4]
-    Jac.context().init_memory(base_path=base, session=session)
+
+    ctx = ExecutionContext(base_path=base, session=session)
+
     if filename.endswith(".jac"):
-        ret_module = jac_import(
+        jac_import(
             target=mod,
             base_path=base,
             cachable=cache,
             override_name="__main__" if main else None,
         )
-        if ret_module is None:
-            loaded_mod = None
-        else:
-            (loaded_mod,) = ret_module
     elif filename.endswith(".jir"):
         with open(filename, "rb") as f:
             ir = pickle.load(f)
-            ret_module = jac_import(
+            jac_import(
                 target=mod,
                 base_path=base,
                 cachable=cache,
                 override_name="__main__" if main else None,
                 mod_bundle=ir,
             )
-            if ret_module is None:
-                loaded_mod = None
-            else:
-                (loaded_mod,) = ret_module
     else:
         print("Not a .jac file.")
         return
 
-    if not node or node == "root":
-        entrypoint: Architype = Jac.get_root()
-    else:
-        obj = Jac.context().get_obj(UUID(node))
-        if obj is None:
-            print(f"Entrypoint {node} not found.")
-            return
-        entrypoint = obj
-
-    # TODO: handle no override name
-    if walker:
-        walker_module = dict(inspect.getmembers(loaded_mod)).get(walker)
-        if walker_module:
-            Jac.spawn_call(entrypoint, walker_module())
-        else:
-            print(f"Walker {walker} not found.")
-
-    Jac.reset_context()
+    ctx.close()
 
 
 @cmd_registry.register
-def get_object(id: str, session: str = "") -> dict:
+def get_object(id: str, session: str = "") -> dict[str, object]:
     """Get the object with the specified id."""
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    Jac.context().init_memory(session=session)
+    ctx = ExecutionContext(session=session)
 
+    response = {}
     if id == "root":
-        id_uuid = UUID(int=0)
-    else:
-        id_uuid = UUID(id)
+        system_root = ctx.system_root
+        response = system_root.serialize()
+    elif (anchor := Anchor.ref(id)) and anchor.sync():
+        response = anchor.serialize()
 
-    obj = Jac.context().get_obj(id_uuid)
-    if obj is None:
-        print(f"Object with id {id} not found.")
-        Jac.reset_context()
-        return {}
-    else:
-        Jac.reset_context()
-        return obj.__getstate__()
+    ctx.close()
+    return response
 
 
 @cmd_registry.register
@@ -209,13 +176,27 @@ def lsp() -> None:
 
 
 @cmd_registry.register
-def enter(filename: str, entrypoint: str, args: list) -> None:
-    """Run the specified entrypoint function in the given .jac file.
+def enter(
+    filename: str,
+    session: str = "",
+    entrypoint: str = "",
+    root: str = "",
+    node: str = "",
+    args: Optional[list] = None,
+) -> None:
+    """
+    Run the specified entrypoint function in the given .jac file.
 
     :param filename: The path to the .jac file.
     :param entrypoint: The name of the entrypoint function.
+    :param root: root executor.
+    :param node: starting node if entrypoint is walker.
     :param args: Arguments to pass to the entrypoint function.
     """
+    ctx = ExecutionContext(
+        session=session, root=NodeAnchor.ref(root), entry=NodeAnchor.ref(node)
+    )
+
     if filename.endswith(".jac"):
         base, mod_name = os.path.split(filename)
         base = base if base else "./"
@@ -225,9 +206,18 @@ def enter(filename: str, entrypoint: str, args: list) -> None:
             print("Errors occurred while importing the module.")
             return
         else:
-            getattr(mod, entrypoint)(*args)
+            result = getattr(mod, entrypoint)(*args or [])
+            if (
+                isinstance(result, WalkerArchitype)
+                and ctx.validate_access()
+                and (architype := ctx.entry.architype)
+            ):
+                Jac.spawn_call(architype, result)
+
     else:
         print("Not a .jac file.")
+
+    ctx.close()
 
 
 @cmd_registry.register
@@ -250,6 +240,8 @@ def test(
 
     jac test => jac test -d .
     """
+    ctx = ExecutionContext()
+
     failcount = Jac.run_test(
         filepath=filepath,
         filter=filter,
@@ -258,6 +250,9 @@ def test(
         directory=directory,
         verbose=verbose,
     )
+
+    ctx.close()
+
     if failcount:
         raise SystemExit(f"Tests failed: {failcount}")
 
@@ -359,7 +354,9 @@ def dot(
     base, mod = os.path.split(filename)
     base = base if base else "./"
     mod = mod[:-4]
-    Jac.context().init_memory(base_path=base, session=session)
+
+    ctx = ExecutionContext(base_path=base, session=session)
+
     if filename.endswith(".jac"):
         jac_import(
             target=mod,
@@ -378,21 +375,20 @@ def dot(
                 edge_limit=edge_limit,
                 node_limit=node_limit,
             )
+
+            file_name = saveto if saveto else f"{mod}.dot"
+            with open(file_name, "w") as file:
+                file.write(graph)
+            print(f">>> Graph content saved to {os.path.join(os.getcwd(), file_name)}")
         except Exception as e:
             print(f"Error while generating graph: {e}")
             import traceback
 
             traceback.print_exc()
-            Jac.reset_context()
-            return
-        file_name = saveto if saveto else f"{mod}.dot"
-        with open(file_name, "w") as file:
-            file.write(graph)
-        print(f">>> Graph content saved to {os.path.join(os.getcwd(), file_name)}")
     else:
         print("Not a .jac file.")
 
-    Jac.reset_context()
+    ctx.close()
 
 
 @cmd_registry.register

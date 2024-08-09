@@ -6,6 +6,7 @@ from jaclang.plugin.default import (  # noqa: E402
     JacFeatureDefaults,
 )
 from jaclang.plugin.feature import JacFeature, pm  # noqa: E402
+from jaclang.runtimelib import architype  # noqa
 
 jac_import = JacFeature.jac_import
 
