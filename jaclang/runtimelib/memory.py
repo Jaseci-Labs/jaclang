@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from os import getenv
 from shelve import Shelf, open
 from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
 from uuid import UUID
@@ -18,12 +19,14 @@ from .architype import (
     NodeAnchor,
     NodeArchitype,
     Permission,
+    Root,
     WalkerAnchor,
     WalkerAnchorState,
     WalkerArchitype,
     populate_dataclasses,
 )
 
+DISABLE_AUTO_CLEANUP = getenv("DISABLE_AUTO_CLEANUP") == "true"
 IDS = Union[UUID, list[UUID]]
 
 
@@ -116,6 +119,13 @@ class ShelfStorage(Memory):
                         self.__shelf__.pop(_id, None)
                     elif not d.state.connected:
                         self.__shelf__[_id] = d.serialize()
+                    elif (
+                        not DISABLE_AUTO_CLEANUP
+                        and isinstance(d, NodeAnchor)
+                        and not isinstance(d.architype, Root)
+                        and not d.edges
+                    ):
+                        self.__shelf__.pop(_id, None)
                     elif d.state.hash != d.data_hash():
                         new_data = d.serialize()
                         ref_data = self.__shelf__[_id]
