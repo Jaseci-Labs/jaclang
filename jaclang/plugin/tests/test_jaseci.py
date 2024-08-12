@@ -249,7 +249,7 @@ class TestJaseciPlugin(TestCase):
         )
         self.assertEqual(
             self.capturedOutput.getvalue().strip(),
-            "[b(name='node b')]\n[GenericEdge]",
+            "[b(name='node b')]\n[GenericEdge()]",
         )
         self._del_session(session)
 

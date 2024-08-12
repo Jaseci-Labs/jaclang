@@ -49,25 +49,24 @@ TA = TypeVar("TA", bound="Architype")
 def to_dataclass(cls: type[T], data: dict[str, Any], **kwargs: object) -> T:
     """Parse dict to dataclass."""
     hintings = get_type_hints(cls)
-    if is_dataclass(cls):
-        for attr in fields(cls):
-            if target := data.get(attr.name):
-                hint = hintings[attr.name]
-                if is_dataclass(hint):
-                    data[attr.name] = to_dataclass(hint, target)
-                else:
-                    origin = get_origin(hint)
-                    if origin == dict and isinstance(target, dict):
-                        if is_dataclass(inner_cls := get_args(hint)[-1]):
-                            for key, value in target.items():
-                                target[key] = to_dataclass(inner_cls, value)
-                    elif (
-                        origin == list
-                        and isinstance(target, list)
-                        and is_dataclass(inner_cls := get_args(hint)[-1])
-                    ):
-                        for key, value in enumerate(target):
+    for attr in fields(cls):  # type: ignore[arg-type]
+        if target := data.get(attr.name):
+            hint = hintings[attr.name]
+            if is_dataclass(hint):
+                data[attr.name] = to_dataclass(hint, target)
+            else:
+                origin = get_origin(hint)
+                if origin == dict and isinstance(target, dict):
+                    if is_dataclass(inner_cls := get_args(hint)[-1]):
+                        for key, value in target.items():
                             target[key] = to_dataclass(inner_cls, value)
+                elif (
+                    origin == list
+                    and isinstance(target, list)
+                    and is_dataclass(inner_cls := get_args(hint)[-1])
+                ):
+                    for key, value in enumerate(target):
+                        target[key] = to_dataclass(inner_cls, value)
     return cls(**data, **kwargs)
 
 
@@ -885,11 +884,12 @@ class WalkerArchitype(Architype):
         self.__jac__ = __jac__
 
 
+@dataclass(eq=False)
 class GenericEdge(EdgeArchitype):
     """Generic Root Node."""
 
-    _jac_entry_funcs_ = []
-    _jac_exit_funcs_ = []
+    _jac_entry_funcs_: ClassVar[list[DSFunc]] = []  # type: ignore[misc]
+    _jac_exit_funcs_: ClassVar[list[DSFunc]] = []  # type: ignore[misc]
 
     def __init__(self, __jac__: Optional[EdgeAnchor] = None) -> None:
         """Create walker architype."""
@@ -899,13 +899,12 @@ class GenericEdge(EdgeArchitype):
         self.__jac__ = __jac__
 
 
+@dataclass(eq=False)
 class Root(NodeArchitype):
     """Generic Root Node."""
 
-    _jac_entry_funcs_ = []
-    _jac_exit_funcs_ = []
-    reachable_nodes: list[NodeArchitype] = []
-    connections: set[tuple[NodeArchitype, NodeArchitype, EdgeArchitype]] = set()
+    _jac_entry_funcs_: ClassVar[list[DSFunc]] = []  # type: ignore[misc]
+    _jac_exit_funcs_: ClassVar[list[DSFunc]] = []  # type: ignore[misc]
 
     def __init__(self, __jac__: Optional[NodeAnchor] = None) -> None:
         """Create walker architype."""
@@ -913,12 +912,6 @@ class Root(NodeArchitype):
             __jac__ = NodeAnchor(architype=self)
             __jac__.allocate()
         self.__jac__ = __jac__
-
-    def reset(self) -> None:
-        """Reset the root."""
-        self.reachable_nodes = []
-        self.connections = set()
-        self.__jac__.edges = []
 
 
 @dataclass(eq=False)
