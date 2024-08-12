@@ -131,12 +131,6 @@ class EdgeDir(Enum):
     OUT = 2  # -->
     ANY = 3  # <-->
 
-    def __eq__(self, other: object) -> bool:
-        """Support string comparator."""
-        if isinstance(other, str):
-            return self.name == other
-        return super().__eq__(other)
-
 
 class Values(int, Enum):
     """Token constants for Jac."""
