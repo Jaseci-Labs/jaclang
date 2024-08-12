@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from enum import Enum, IntEnum
+from json import JSONEncoder, dumps
 from os import getenv
 from re import IGNORECASE, compile
 from types import UnionType
@@ -16,14 +17,14 @@ from typing import (
     Type,
     TypeVar,
     cast,
+    get_args,
+    get_origin,
     get_type_hints,
 )
 from uuid import UUID, uuid4
 
-from jaclang.compiler.constant import EdgeDir
+from jaclang.compiler.constant import EdgeDir, T
 from jaclang.runtimelib.utils import collect_node_connections
-
-from orjson import dumps
 
 GENERIC_ID_REGEX = compile(
     r"^(g|n|e|w):([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
@@ -42,20 +43,42 @@ WALKER_ID_REGEX = compile(
     IGNORECASE,
 )
 MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
-TA = TypeVar("TA", bound="type[Architype]")
+TA = TypeVar("TA", bound="Architype")
 
 
-def populate_dataclasses(cls: type, attributes: dict[str, Any]) -> dict[str, Any]:
-    """Populate nested dataclasses."""
-    from dacite import from_dict
-
-    if is_dataclass(cls) and issubclass(cls, Architype):
+def to_dataclass(cls: type[T], data: dict[str, Any], **kwargs: object) -> T:
+    """Parse dict to dataclass."""
+    hintings = get_type_hints(cls)
+    if is_dataclass(cls):
         for attr in fields(cls):
-            if is_dataclass(
-                field_type := cls.__jac_hintings__[attr.name]
-            ) and isinstance(field_type, type):
-                attributes[attr.name] = from_dict(field_type, attributes[attr.name])
-    return attributes
+            if target := data.get(attr.name):
+                hint = hintings[attr.name]
+                if is_dataclass(hint):
+                    data[attr.name] = to_dataclass(hint, target)
+                else:
+                    origin = get_origin(hint)
+                    if origin == dict and isinstance(target, dict):
+                        if is_dataclass(inner_cls := get_args(hint)[-1]):
+                            for key, value in target.items():
+                                target[key] = to_dataclass(inner_cls, value)
+                    elif (
+                        origin == list
+                        and isinstance(target, list)
+                        and is_dataclass(inner_cls := get_args(hint)[-1])
+                    ):
+                        for key, value in enumerate(target):
+                            target[key] = to_dataclass(inner_cls, value)
+    return cls(**data, **kwargs)
+
+
+class UUIDEncoder(JSONEncoder):
+    """UUID JSON Handler."""
+
+    def default(self, obj: object) -> Any:  # noqa: ANN401
+        """Override default handler."""
+        if isinstance(obj, UUID):
+            return obj.hex
+        return super().default(obj)
 
 
 class AnchorType(Enum):
@@ -393,7 +416,7 @@ class Anchor:
 
     def data_hash(self) -> int:
         """Get current serialization hash."""
-        return hash(dumps(self.serialize()))
+        return hash(dumps(self.serialize(), cls=UUIDEncoder))
 
     def sync_hash(self) -> None:
         """Sync current serialization hash."""
@@ -813,7 +836,7 @@ class Architype:
         return jac_classes
 
     @classmethod
-    def __get_class__(cls: TA, name: str) -> TA:
+    def __get_class__(cls: type[TA], name: str) -> type[TA]:
         """Build class map from subclasses."""
         jac_classes: dict[str, Any] | None = getattr(cls, "__jac_classes__", None)
         if not jac_classes or not (jac_class := jac_classes.get(name)):

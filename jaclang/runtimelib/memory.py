@@ -23,7 +23,7 @@ from .architype import (
     WalkerAnchor,
     WalkerAnchorState,
     WalkerArchitype,
-    populate_dataclasses,
+    to_dataclass,
 )
 
 DISABLE_AUTO_CLEANUP = getenv("DISABLE_AUTO_CLEANUP") == "true"
@@ -196,9 +196,7 @@ class ShelfStorage(Memory):
                     **anchor,
                 )
                 narch = NodeArchitype.__get_class__(name or "Root")
-                nanch.architype = narch(
-                    __jac__=nanch, **populate_dataclasses(narch, architype)
-                )
+                nanch.architype = to_dataclass(narch, architype, __jac__=nanch)
                 nanch.sync_hash()
                 return nanch
             case AnchorType.edge:
@@ -210,9 +208,7 @@ class ShelfStorage(Memory):
                     **anchor,
                 )
                 earch = EdgeArchitype.__get_class__(name or "GenericEdge")
-                eanch.architype = earch(
-                    __jac__=eanch, **populate_dataclasses(earch, architype)
-                )
+                eanch.architype = to_dataclass(earch, architype, __jac__=eanch)
                 eanch.sync_hash()
                 return eanch
             case AnchorType.walker:
@@ -220,9 +216,7 @@ class ShelfStorage(Memory):
                     access=access, state=WalkerAnchorState(connected=True), **anchor
                 )
                 warch = WalkerArchitype.__get_class__(name)
-                wanch.architype = warch(
-                    __jac__=wanch, **populate_dataclasses(warch, architype)
-                )
+                wanch.architype = to_dataclass(warch, architype, __jac__=wanch)
                 wanch.sync_hash()
                 return wanch
             case _:
