@@ -1,30 +1,12 @@
 """Memory abstraction for jaseci plugin."""
 
-from copy import deepcopy
 from dataclasses import dataclass, field
 from os import getenv
 from shelve import Shelf, open
-from typing import Any, Callable, Generator, Iterable, Optional, Union, cast
+from typing import Callable, Generator, Iterable, Optional, Union
 from uuid import UUID
 
-from .architype import (
-    AccessLevel,
-    Anchor,
-    AnchorState,
-    AnchorType,
-    Architype,
-    EdgeAnchor,
-    EdgeArchitype,
-    MANUAL_SAVE,
-    NodeAnchor,
-    NodeArchitype,
-    Permission,
-    Root,
-    WalkerAnchor,
-    WalkerAnchorState,
-    WalkerArchitype,
-    to_dataclass,
-)
+from .architype import AccessLevel, Anchor, MANUAL_SAVE, NodeAnchor, Root
 
 DISABLE_AUTO_CLEANUP = getenv("DISABLE_AUTO_CLEANUP") == "true"
 IDS = Union[UUID, list[UUID]]
@@ -87,7 +69,7 @@ class Memory:
 class ShelfStorage(Memory):
     """Shelf Handler."""
 
-    __shelf__: Optional[Shelf[dict[str, object]]] = None
+    __shelf__: Optional[Shelf[Anchor]] = None
 
     def __init__(self, session: Optional[str] = None) -> None:
         """Initialize memory handler."""
@@ -118,7 +100,7 @@ class ShelfStorage(Memory):
                     if d.state.deleted is False:
                         self.__shelf__.pop(_id, None)
                     elif not d.state.connected:
-                        self.__shelf__[_id] = d.serialize()
+                        self.__shelf__[_id] = d
                     elif (
                         not DISABLE_AUTO_CLEANUP
                         and isinstance(d, NodeAnchor)
@@ -127,23 +109,23 @@ class ShelfStorage(Memory):
                     ):
                         self.__shelf__.pop(_id, None)
                     elif d.state.hash != d.data_hash():
-                        new_data = d.serialize()
-                        ref_data = self.__shelf__[_id]
+                        _d = self.__shelf__[_id]
 
                         if (
                             isinstance(d, NodeAnchor)
-                            and new_data["edges"] != ref_data["edges"]
+                            and isinstance(_d, NodeAnchor)
+                            and d.edges != _d.edges
                             and d.state.current_access_level > AccessLevel.READ
                         ):
-                            ref_data["edges"] = new_data["edges"]
+                            _d.edges = d.edges
 
                         if d.state.current_access_level > AccessLevel.CONNECT:
-                            if new_data["access"] != ref_data["access"]:
-                                ref_data["access"] = new_data["access"]
-                            if new_data["architype"] != ref_data["architype"]:
-                                ref_data["architype"] = new_data["architype"]
+                            if d.access != _d.access:
+                                _d.access = d.access
+                            if d.architype != _d.architype:
+                                _d.architype = d.architype
 
-                        self.__shelf__[_id] = ref_data
+                        self.__shelf__[_id] = _d
 
             self.__shelf__.sync()
 
@@ -164,7 +146,7 @@ class ShelfStorage(Memory):
                     and _id not in self.__gc__
                     and (_anchor := self.__shelf__.get(_id))
                 ):
-                    self.__mem__[_id] = anchor = self.get(deepcopy(_anchor))
+                    self.__mem__[_id] = anchor = _anchor
                 if anchor and (not filter or filter(anchor)):
                     yield anchor
         else:
@@ -179,50 +161,3 @@ class ShelfStorage(Memory):
                     self.__shelf__.pop(str(d.id), None)
             else:
                 self.__shelf__.pop(str(data.id), None)
-
-    def get(self, anchor: dict[str, Any]) -> Anchor:
-        """Get Anchor Instance."""
-        name = cast(str, anchor.get("name"))
-        architype = anchor.pop("architype")
-        access = Permission.deserialize(anchor.pop("access"))
-        match AnchorType(anchor.pop("type")):
-            case AnchorType.node:
-                nanch = NodeAnchor(
-                    edges=[
-                        e for edge in anchor.pop("edges") if (e := EdgeAnchor.ref(edge))
-                    ],
-                    access=access,
-                    state=AnchorState(connected=True),
-                    **anchor,
-                )
-                narch = NodeArchitype.__get_class__(name or "Root")
-                nanch.architype = to_dataclass(narch, architype, __jac__=nanch)
-                nanch.sync_hash()
-                return nanch
-            case AnchorType.edge:
-                eanch = EdgeAnchor(
-                    source=NodeAnchor.ref(anchor.pop("source")),
-                    target=NodeAnchor.ref(anchor.pop("target")),
-                    access=access,
-                    state=AnchorState(connected=True),
-                    **anchor,
-                )
-                earch = EdgeArchitype.__get_class__(name or "GenericEdge")
-                eanch.architype = to_dataclass(earch, architype, __jac__=eanch)
-                eanch.sync_hash()
-                return eanch
-            case AnchorType.walker:
-                wanch = WalkerAnchor(
-                    access=access, state=WalkerAnchorState(connected=True), **anchor
-                )
-                warch = WalkerArchitype.__get_class__(name)
-                wanch.architype = to_dataclass(warch, architype, __jac__=wanch)
-                wanch.sync_hash()
-                return wanch
-            case _:
-                oanch = Anchor(
-                    access=access, state=AnchorState(connected=True), **anchor
-                )
-                oanch.architype = Architype(__jac__=oanch)
-                oanch.sync_hash()
-                return oanch

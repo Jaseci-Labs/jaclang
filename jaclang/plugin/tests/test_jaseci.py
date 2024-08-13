@@ -90,7 +90,7 @@ class TestJaseciPlugin(TestCase):
         cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            node=f"n::{obj['id']}",
+            node=obj["id"],
             entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
@@ -107,14 +107,14 @@ class TestJaseciPlugin(TestCase):
             entrypoint="create",
         )
         obj = cli.get_object(session=session, id="root")
-        edge_obj = cli.get_object(session=session, id=obj["edges"][0])
-        a_obj = cli.get_object(session=session, id=edge_obj["target"])
+        edge_obj = cli.get_object(session=session, id=obj["edges"][0]["id"].hex)
+        a_obj = cli.get_object(session=session, id=edge_obj["target"]["id"].hex)
 
         self._output2buffer()
         cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            node=f"n:a:{a_obj['id']}",
+            node=a_obj["id"].hex,
             entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
@@ -131,9 +131,12 @@ class TestJaseciPlugin(TestCase):
         )
         obj = cli.get_object(session=session, id="root")
         self.assertEqual(len(obj["edges"]), 2)
-        edge_objs = [cli.get_object(session=session, id=e) for e in obj["edges"]]
+        edge_objs = [
+            cli.get_object(session=session, id=e["id"].hex) for e in obj["edges"]
+        ]
         node_objs = [
-            cli.get_object(session=session, id=edge["target"]) for edge in edge_objs
+            cli.get_object(session=session, id=edge["target"]["id"].hex)
+            for edge in edge_objs
         ]
         self.assertEqual(len(node_objs), 2)
         self.assertEqual(
@@ -496,8 +499,6 @@ class TestJaseciPlugin(TestCase):
         )
         nodes = self.capturedOutput.getvalue().strip().split("\n")
         self.assertTrue(len(nodes) == 2)
-        self.assertTrue(nodes[0].startswith("n:A:"))
-        self.assertTrue(nodes[1].startswith("n:A:"))
 
         ##############################################
         #           VISIT RESPECTIVE NODES           #
@@ -517,7 +518,7 @@ class TestJaseciPlugin(TestCase):
             root=root2,
         )
         archs = self.capturedOutput.getvalue().strip().split("\n")
-        self.assertTrue(len(archs) == 2)
+        self.assertEqual(2, len(archs))
         self.assertTrue(archs[0], "A(val=1)")
         self.assertTrue(archs[1], "A(val=2)")
 

@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from enum import Enum, IntEnum
 from json import JSONEncoder, dumps
 from os import getenv
-from re import IGNORECASE, compile
 from types import UnionType
 from typing import (
     Any,
@@ -26,24 +25,9 @@ from uuid import UUID, uuid4
 from jaclang.compiler.constant import EdgeDir, T
 from jaclang.runtimelib.utils import collect_node_connections
 
-GENERIC_ID_REGEX = compile(
-    r"^(g|n|e|w):([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
-    IGNORECASE,
-)
-NODE_ID_REGEX = compile(
-    r"^n:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
-    IGNORECASE,
-)
-EDGE_ID_REGEX = compile(
-    r"^e:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
-    IGNORECASE,
-)
-WALKER_ID_REGEX = compile(
-    r"^w:([^:]*):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
-    IGNORECASE,
-)
 MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
-TA = TypeVar("TA", bound="Architype")
+TARCH = TypeVar("TARCH", bound="Architype")
+TANCH = TypeVar("TANCH", bound="Anchor")
 
 
 def to_dataclass(cls: type[T], data: dict[str, Any], **kwargs: object) -> T:
@@ -199,24 +183,15 @@ class Anchor:
     @property
     def ref_id(self) -> str:
         """Return id in reference type."""
-        return f"{self.type.value}:{self.name}:{self.id}"
+        return str(self.id)
 
-    @staticmethod
-    def ref(ref_id: str) -> Optional[Anchor]:
+    @classmethod
+    def ref(cls: Type[TANCH], ref_id: str) -> TANCH | None:
         """Return Anchor instance if valid."""
-        if matched := GENERIC_ID_REGEX.search(ref_id):
-            anchor: type = Anchor
-            match AnchorType(matched.group(1)):
-                case AnchorType.node:
-                    anchor = NodeAnchor
-                case AnchorType.edge:
-                    anchor = EdgeAnchor
-                case AnchorType.walker:
-                    anchor = WalkerAnchor
-                case _:
-                    pass
-            return anchor(name=matched.group(2), id=UUID(matched.group(3)))
-        return None
+        try:
+            return cls(id=UUID(ref_id))
+        except Exception:
+            return None
 
     def whitelist_roots(self, whitelist: bool = True) -> None:
         """Toggle root whitelist/blacklist."""
@@ -398,24 +373,37 @@ class Anchor:
 
         return to.state.current_access_level
 
-    def serialize(self) -> dict[str, object]:
+    def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
         """Serialize Anchor."""
-        return {
+        state: dict[str, object] = {
             "type": self.type.value,
             "name": self.name,
             "id": self.id,
-            "root": self.root,
-            "access": self.access.serialize(),
-            "architype": (
-                asdict(self.architype)
-                if is_dataclass(self.architype) and not isinstance(self.architype, type)
-                else {}
-            ),
         }
+
+        if not unsynced:
+            state.update(
+                {
+                    "root": self.root,
+                    "access": self.access.serialize(),
+                    "architype": (
+                        asdict(self.architype)
+                        if is_dataclass(self.architype)
+                        and not isinstance(self.architype, type)
+                        else {}
+                    ),
+                }
+            )
+
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Deserialize Anchor."""
+        raise NotImplementedError("_save must be implemented in subclasses")
 
     def data_hash(self) -> int:
         """Get current serialization hash."""
-        return hash(dumps(self.serialize(), cls=UUIDEncoder))
+        return hash(dumps(self.__getstate__(), cls=UUIDEncoder))
 
     def sync_hash(self) -> None:
         """Sync current serialization hash."""
@@ -457,16 +445,6 @@ class NodeAnchor(Anchor):
     type: ClassVar[AnchorType] = AnchorType.node
     architype: Optional[NodeArchitype] = None
     edges: list[EdgeAnchor] = field(default_factory=list)
-
-    @classmethod
-    def ref(cls, ref_id: str) -> Optional[NodeAnchor]:
-        """Return NodeAnchor instance if valid."""
-        if match := NODE_ID_REGEX.search(ref_id):
-            return cls(
-                name=match.group(1),
-                id=UUID(match.group(2)),
-            )
-        return None
 
     def _save(self) -> None:
         from .context import ExecutionContext
@@ -602,9 +580,29 @@ class NodeAnchor(Anchor):
         """Invoke data spatial call."""
         return walk.spawn_call(self)
 
-    def serialize(self) -> dict[str, object]:
+    def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
         """Serialize Node Anchor."""
-        return {**super().serialize(), "edges": [edge.ref_id for edge in self.edges]}
+        state = super().__getstate__(unsynced)
+
+        if not unsynced:
+            state["edges"] = [edge.__getstate__(True) for edge in self.edges]
+
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Deserialize Node Anchor."""
+        self.id = cast(UUID, state.get("id"))
+        self.name = cast(str, state.get("name"))
+        self.root = cast(UUID, state.get("root"))
+        self.access = Permission.deserialize(state.get("access", {}))
+        self.state = AnchorState(connected=True)
+        self.edges = [
+            EdgeAnchor(e["name"], e["id"]) for e in cast(list[dict], state.get("edges"))
+        ]
+
+        narch = NodeArchitype.__get_class__(self.name or "Root")
+        self.architype = to_dataclass(narch, state.get("architype", {}), __jac__=self)
+        self.sync_hash()
 
 
 @dataclass(eq=False)
@@ -616,16 +614,6 @@ class EdgeAnchor(Anchor):
     source: Optional[NodeAnchor] = None
     target: Optional[NodeAnchor] = None
     is_undirected: bool = False
-
-    @classmethod
-    def ref(cls, ref_id: str) -> Optional[EdgeAnchor]:
-        """Return EdgeAnchor instance if valid."""
-        if match := EDGE_ID_REGEX.search(ref_id):
-            return cls(
-                name=match.group(1),
-                id=UUID(match.group(2)),
-            )
-        return None
 
     def _save(self) -> None:
         from .context import ExecutionContext
@@ -684,14 +672,37 @@ class EdgeAnchor(Anchor):
         else:
             raise ValueError("Edge has no target.")
 
-    def serialize(self) -> dict[str, object]:
+    def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
         """Serialize Node Anchor."""
-        return {
-            **super().serialize(),
-            "source": self.source.ref_id if self.source else None,
-            "target": self.target.ref_id if self.target else None,
-            "is_undirected": self.is_undirected,
-        }
+        state = super().__getstate__(unsynced)
+
+        if not unsynced:
+            state.update(
+                {
+                    "source": self.source.__getstate__(True) if self.source else None,
+                    "target": self.target.__getstate__(True) if self.target else None,
+                    "is_undirected": self.is_undirected,
+                }
+            )
+
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Deserialize Edge Anchor."""
+        self.id = cast(UUID, state.get("id"))
+        self.name = cast(str, state.get("name"))
+        self.root = cast(UUID, state.get("root"))
+        self.access = Permission.deserialize(state.get("access", {}))
+        self.state = AnchorState(connected=True)
+        if src := state.get("source"):
+            self.source = NodeAnchor(src["name"], src["id"])
+
+        if trg := state.get("target"):
+            self.target = NodeAnchor(trg["name"], trg["id"])
+
+        narch = EdgeArchitype.__get_class__(self.name or "GenericEdge")
+        self.architype = to_dataclass(narch, state.get("architype", {}), __jac__=self)
+        self.sync_hash()
 
 
 @dataclass(eq=False)
@@ -704,16 +715,6 @@ class WalkerAnchor(Anchor):
     next: list[Anchor] = field(default_factory=list)
     ignores: list[Anchor] = field(default_factory=list)
     state: WalkerAnchorState = field(default_factory=WalkerAnchorState)
-
-    @classmethod
-    def ref(cls, ref_id: str) -> Optional[WalkerAnchor]:
-        """Return WalkerAnchor instance if valid."""
-        if ref_id and (match := WALKER_ID_REGEX.search(ref_id)):
-            return cls(
-                name=match.group(1),
-                id=UUID(match.group(2)),
-            )
-        return None
 
     def _save(self) -> None:
         from .context import ExecutionContext
@@ -799,6 +800,18 @@ class WalkerAnchor(Anchor):
             return walker
         raise Exception(f"Invalid Reference {self.ref_id}")
 
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Deserialize Walker Anchor."""
+        self.id = cast(UUID, state.get("id"))
+        self.name = cast(str, state.get("name"))
+        self.root = cast(UUID, state.get("root"))
+        self.access = Permission.deserialize(state.get("access", {}))
+        self.state = WalkerAnchorState(connected=True)
+
+        warch = WalkerArchitype.__get_class__(self.name)
+        self.architype = to_dataclass(warch, state.get("architype", {}), __jac__=self)
+        self.sync_hash()
+
 
 class Architype:
     """Architype Protocol."""
@@ -835,7 +848,7 @@ class Architype:
         return jac_classes
 
     @classmethod
-    def __get_class__(cls: type[TA], name: str) -> type[TA]:
+    def __get_class__(cls: type[TARCH], name: str) -> type[TARCH]:
         """Build class map from subclasses."""
         jac_classes: dict[str, Any] | None = getattr(cls, "__jac_classes__", None)
         if not jac_classes or not (jac_class := jac_classes.get(name)):
