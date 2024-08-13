@@ -18,27 +18,12 @@ EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
 class ExecutionContext:
     """Execution Context."""
 
-    def __init__(
-        self,
-        base_path: str = "",
-        session: Optional[str] = None,
-        root: Optional[NodeAnchor] = None,
-        entry: Optional[NodeAnchor] = None,
-    ) -> None:
-        """Create JacContext."""
-        self.jac_machine = JacMachine(base_path)
-        self.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
-        self.datasource: ShelfStorage = ShelfStorage(session)
-        self.reports: list[Any] = []
-        self.system_root = self.load(
-            NodeAnchor(id=UUID(int=0)), self.generate_system_root
-        )
-        self.root: NodeAnchor = self.load(root, self.system_root)
-        self.entry: NodeAnchor = self.load(entry, self.root)
-
-        if ctx := EXECUTION_CONTEXT.get(None):
-            ctx.close()
-        EXECUTION_CONTEXT.set(self)
+    jac_machine: JacMachine
+    datasource: ShelfStorage
+    reports: list[Any]
+    system_root: NodeAnchor
+    root: NodeAnchor
+    entry: NodeAnchor
 
     def generate_system_root(self) -> NodeAnchor:
         """Generate default system root."""
@@ -71,6 +56,29 @@ class ExecutionContext:
     def validate_access(self) -> bool:
         """Validate access."""
         return self.root.has_read_access(self.entry)
+
+    @staticmethod
+    def create(
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[NodeAnchor] = None,
+        entry: Optional[NodeAnchor] = None,
+    ) -> ExecutionContext:
+        """Create JacContext."""
+        ctx = ExecutionContext()
+        ctx.jac_machine = JacMachine(base_path)
+        ctx.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
+        ctx.datasource = ShelfStorage(session)
+        ctx.reports = []
+        ctx.system_root = ctx.load(NodeAnchor(id=UUID(int=0)), ctx.generate_system_root)
+        ctx.root = ctx.load(root, ctx.system_root)
+        ctx.entry = ctx.load(entry, ctx.root)
+
+        if _ctx := EXECUTION_CONTEXT.get(None):
+            _ctx.close()
+        EXECUTION_CONTEXT.set(ctx)
+
+        return ctx
 
     @staticmethod
     def get() -> ExecutionContext:

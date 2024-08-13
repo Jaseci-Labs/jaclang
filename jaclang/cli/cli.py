@@ -21,7 +21,6 @@ from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.runtimelib.constructs import Anchor, NodeAnchor, WalkerArchitype
-from jaclang.runtimelib.context import ExecutionContext
 from jaclang.runtimelib.machine import JacProgram
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
@@ -85,7 +84,7 @@ def run(
     base = base if base else "./"
     mod = mod[:-4]
 
-    ctx = ExecutionContext(base_path=base, session=session)
+    ctx = Jac.new_context(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         jac_import(
@@ -117,7 +116,7 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    ctx = ExecutionContext(session=session)
+    ctx = Jac.new_context(session=session)
 
     response = {}
     if id == "root":
@@ -194,7 +193,7 @@ def enter(
     :param node: starting node if entrypoint is walker.
     :param args: Arguments to pass to the entrypoint function.
     """
-    ctx = ExecutionContext(
+    ctx = Jac.new_context(
         session=session, root=NodeAnchor.ref(root), entry=NodeAnchor.ref(node)
     )
 
@@ -241,7 +240,7 @@ def test(
 
     jac test => jac test -d .
     """
-    ctx = ExecutionContext()
+    ctx = Jac.new_context()
 
     failcount = Jac.run_test(
         filepath=filepath,
@@ -356,7 +355,7 @@ def dot(
     base = base if base else "./"
     mod = mod[:-4]
 
-    ctx = ExecutionContext(base_path=base, session=session)
+    ctx = Jac.new_context(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         jac_import(

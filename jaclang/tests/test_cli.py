@@ -9,17 +9,11 @@ import traceback
 
 from jaclang.cli import cli
 from jaclang.plugin.builtin import dotgen
-from jaclang.runtimelib.context import ExecutionContext
 from jaclang.utils.test import TestCase
 
 
 class JacCliTests(TestCase):
     """Test pass module."""
-
-    def setUp(self) -> None:
-        """Set up test."""
-        ExecutionContext()
-        return super().setUp()
 
     def test_jac_cli_run(self) -> None:
         """Basic test for pass."""

@@ -32,7 +32,7 @@ class PyastGenPassTests(TestCaseMicroSuite, AstSyncTestMixin):
 
     def setUp(self) -> None:
         """Set up test."""
-        ExecutionContext()
+        ExecutionContext.create()
         return super().setUp()
 
     def test_hodge_podge(self) -> None:

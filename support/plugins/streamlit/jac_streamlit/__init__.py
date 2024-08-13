@@ -6,9 +6,9 @@ from jac_streamlit.app_test import JacAppTest as AppTest
 def run_streamlit(basename: str, dirname: str) -> None:
     """Run the Streamlit application."""
     from jaclang import jac_import
-    from jaclang.runtimelib.context import ExecutionContext
+    from jaclang.plugin.feature import JacFeature
 
-    ExecutionContext(base_path=dirname)
+    JacFeature.new_context(base_path=dirname)
     jac_import(
         basename, base_path=dirname, reload_module=True
     )  # TODO: need flag to force reload here
