@@ -10,6 +10,7 @@ from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec
 from jaclang.runtimelib.constructs import (
     Architype,
     EdgeArchitype,
+    NodeAnchor,
     NodeArchitype,
     Root,
     WalkerArchitype,
@@ -39,9 +40,21 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context() -> ExecutionContext:
-        """Create execution context."""
-        return pm.hook.context()
+    def new_context(
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[NodeAnchor] = None,
+        entry: Optional[NodeAnchor] = None,
+    ) -> ExecutionContext:
+        """Create new execution context."""
+        return pm.hook.new_context(
+            base_path=base_path, session=session, root=root, entry=entry
+        )
+
+    @staticmethod
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
+        return pm.hook.current_context()
 
     @staticmethod
     def make_architype(

@@ -10,6 +10,7 @@ from jaclang.runtimelib.constructs import (
     Architype,
     DSFunc,
     EdgeArchitype,
+    NodeAnchor,
     NodeArchitype,
     Root,
     WalkerArchitype,
@@ -26,8 +27,19 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context() -> ExecutionContext:
-        """Get the execution context."""
+    def new_context(
+        base_path: str,
+        session: Optional[str],
+        root: Optional[NodeAnchor],
+        entry: Optional[NodeAnchor],
+    ) -> ExecutionContext:  # noqa: ANN401
+        """Create new execution context."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
         raise NotImplementedError
 
     @staticmethod

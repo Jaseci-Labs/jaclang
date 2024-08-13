@@ -63,8 +63,19 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context() -> ExecutionContext:
-        """Get the execution context."""
+    def new_context(
+        base_path: str,
+        session: Optional[str],
+        root: Optional[NodeAnchor],
+        entry: Optional[NodeAnchor],
+    ) -> ExecutionContext:
+        """Create new execution context."""
+        return ExecutionContext.create(base_path, session, root, entry)
+
+    @staticmethod
+    @hookimpl
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
         return ExecutionContext.get()
 
     @staticmethod
@@ -233,7 +244,7 @@ class JacFeatureDefaults:
         reload_module: Optional[bool],
     ) -> tuple[types.ModuleType, ...]:
         """Core Import Process."""
-        ctx = ExecutionContext.get()
+        ctx = Jac.current_context()
         spec = ImportPathSpec(
             target,
             base_path,
@@ -516,7 +527,7 @@ class JacFeatureDefaults:
     @hookimpl
     def get_root() -> Root:
         """Jac's assign comprehension feature."""
-        if architype := Jac.context().root.sync():
+        if architype := Jac.current_context().root.sync():
             return cast(Root, architype)
         raise Exception("No Available Root!")
 
