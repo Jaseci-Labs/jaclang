@@ -121,9 +121,9 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
     response = {}
     if id == "root":
         system_root = ctx.system_root
-        response = system_root.serialize()
-    elif (anchor := Anchor.ref(id)) and anchor.sync():
-        response = anchor.serialize()
+        response = system_root.__getstate__()
+    elif (anchor := Anchor.ref(id)) and (architype := anchor.sync()):
+        response = architype.__jac__.__getstate__()
 
     ctx.close()
     return response
