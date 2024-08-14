@@ -120,8 +120,7 @@ def get_object(id: str, session: str = "") -> dict[str, object]:
 
     response = {}
     if id == "root":
-        system_root = ctx.system_root
-        response = system_root.__getstate__()
+        response = ctx.root.__getstate__()
     elif (anchor := Anchor.ref(id)) and (architype := anchor.sync()):
         response = architype.__jac__.__getstate__()
 
