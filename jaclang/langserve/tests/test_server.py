@@ -108,6 +108,7 @@ class TestJacLangServer(TestCase):
         quick_status = lsp.quick_check(circle_impl_syn_err_file)
         deep_status = lsp.deep_check(circle_impl_syn_err_file, pos)
         self.assertEqual(True, quick_status)
+        self.assertEqual(False, deep_status)
 
         
 
