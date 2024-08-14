@@ -3,56 +3,20 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict, dataclass, field, fields, is_dataclass
+from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum, IntEnum
 from os import getenv
 from pickle import dumps
 from types import UnionType
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Iterable,
-    Optional,
-    Type,
-    TypeVar,
-    cast,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, ClassVar, Iterable, Optional, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
-from jaclang.compiler.constant import EdgeDir, T
+from jaclang.compiler.constant import EdgeDir
 from jaclang.runtimelib.utils import collect_node_connections
 
 MANUAL_SAVE = getenv("ENABLE_MANUAL_SAVE") == "true"
 TARCH = TypeVar("TARCH", bound="Architype")
 TANCH = TypeVar("TANCH", bound="Anchor")
-
-
-def to_dataclass(cls: type[T], data: dict[str, Any], **kwargs: object) -> T:
-    """Parse dict to dataclass."""
-    hintings = get_type_hints(cls)
-    for attr in fields(cls):  # type: ignore[arg-type]
-        if target := data.get(attr.name):
-            hint = hintings[attr.name]
-            if is_dataclass(hint):
-                data[attr.name] = to_dataclass(hint, target)
-            else:
-                origin = get_origin(hint)
-                if origin == dict and isinstance(target, dict):
-                    if is_dataclass(inner_cls := get_args(hint)[-1]):
-                        for key, value in target.items():
-                            target[key] = to_dataclass(inner_cls, value)
-                elif (
-                    origin == list
-                    and isinstance(target, list)
-                    and is_dataclass(inner_cls := get_args(hint)[-1])
-                ):
-                    for key, value in enumerate(target):
-                        target[key] = to_dataclass(inner_cls, value)
-    return cls(**data, **kwargs)
 
 
 class AnchorType(Enum):
@@ -100,22 +64,6 @@ class Access:
         else:
             return self.whitelist, self.anchors.get(anchor, AccessLevel.WRITE)
 
-    def serialize(self) -> dict[str, object]:
-        """Serialize Access."""
-        return {
-            "whitelist": self.whitelist,
-            "anchors": {key: val.name for key, val in self.anchors.items()},
-        }
-
-    @classmethod
-    def deserialize(cls, data: dict[str, Any]) -> Access:
-        """Deserialize Access."""
-        anchors = cast(dict[str, str], data.get("anchors"))
-        return Access(
-            whitelist=bool(data.get("whitelist")),
-            anchors={key: AccessLevel[val] for key, val in anchors.items()},
-        )
-
 
 @dataclass
 class Permission:
@@ -123,18 +71,6 @@ class Permission:
 
     all: AccessLevel = AccessLevel.NO_ACCESS
     roots: Access = field(default_factory=Access)
-
-    def serialize(self) -> dict[str, object]:
-        """Serialize Permission."""
-        return {"all": self.all.name, "roots": self.roots.serialize()}
-
-    @classmethod
-    def deserialize(cls, data: dict[str, Any]) -> Permission:
-        """Deserialize Permission."""
-        return Permission(
-            all=AccessLevel[data.get("all", AccessLevel.NO_ACCESS.name)],
-            roots=Access.deserialize(data.get("roots", {})),
-        )
 
 
 @dataclass
@@ -778,8 +714,6 @@ class Architype:
 
     _jac_entry_funcs_: list[DSFunc]
     _jac_exit_funcs_: list[DSFunc]
-    __jac_classes__: dict[str, type[Architype]]
-    __jac_hintings__: dict[str, type]
 
     def __init__(self, __jac__: Optional[Anchor] = None) -> None:
         """Create default architype."""
@@ -795,27 +729,6 @@ class Architype:
     def __repr__(self) -> str:
         """Override repr for architype."""
         return f"{self.__class__.__name__}"
-
-    @classmethod
-    def __set_classes__(cls) -> dict[str, Any]:
-        """Initialize Jac Classes."""
-        jac_classes = {}
-        for sub in cls.__subclasses__():
-            sub.__jac_hintings__ = get_type_hints(sub)
-            jac_classes[sub.__name__] = sub
-        cls.__jac_classes__ = jac_classes
-
-        return jac_classes
-
-    @classmethod
-    def __get_class__(cls: type[TARCH], name: str) -> type[TARCH]:
-        """Build class map from subclasses."""
-        jac_classes: dict[str, Any] | None = getattr(cls, "__jac_classes__", None)
-        if not jac_classes or not (jac_class := jac_classes.get(name)):
-            jac_classes = cls.__set_classes__()
-            jac_class = jac_classes.get(name, cls)
-
-        return jac_class
 
 
 class NodeArchitype(Architype):
