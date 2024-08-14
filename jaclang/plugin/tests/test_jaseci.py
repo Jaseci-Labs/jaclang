@@ -90,7 +90,7 @@ class TestJaseciPlugin(TestCase):
         cli.enter(
             filename=self.fixture_abs_path("simple_persistent.jac"),
             session=session,
-            node=obj["id"],
+            node=obj["id"].hex,
             entrypoint="traverse",
         )
         output = self.capturedOutput.getvalue().strip()
@@ -107,8 +107,8 @@ class TestJaseciPlugin(TestCase):
             entrypoint="create",
         )
         obj = cli.get_object(session=session, id="root")
-        edge_obj = cli.get_object(session=session, id=obj["edges"][0]["id"].hex)
-        a_obj = cli.get_object(session=session, id=edge_obj["target"]["id"].hex)
+        edge_obj = cli.get_object(session=session, id=obj["edges"][0].id.hex)
+        a_obj = cli.get_object(session=session, id=edge_obj["target"].id.hex)
 
         self._output2buffer()
         cli.enter(
@@ -131,16 +131,14 @@ class TestJaseciPlugin(TestCase):
         )
         obj = cli.get_object(session=session, id="root")
         self.assertEqual(len(obj["edges"]), 2)
-        edge_objs = [
-            cli.get_object(session=session, id=e["id"].hex) for e in obj["edges"]
-        ]
+        edge_objs = [cli.get_object(session=session, id=e.id.hex) for e in obj["edges"]]
         node_objs = [
-            cli.get_object(session=session, id=edge["target"]["id"].hex)
+            cli.get_object(session=session, id=edge["target"].id.hex)
             for edge in edge_objs
         ]
         self.assertEqual(len(node_objs), 2)
         self.assertEqual(
-            {obj["architype"]["tag"] for obj in node_objs}, {"first", "second"}
+            {obj["architype"].tag for obj in node_objs}, {"first", "second"}
         )
         self._del_session(session)
 

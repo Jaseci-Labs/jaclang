@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from enum import Enum, IntEnum
-from json import JSONEncoder, dumps
 from os import getenv
+from pickle import dumps
 from types import UnionType
 from typing import (
     Any,
@@ -52,16 +53,6 @@ def to_dataclass(cls: type[T], data: dict[str, Any], **kwargs: object) -> T:
                     for key, value in enumerate(target):
                         target[key] = to_dataclass(inner_cls, value)
     return cls(**data, **kwargs)
-
-
-class UUIDEncoder(JSONEncoder):
-    """UUID JSON Handler."""
-
-    def default(self, obj: object) -> Any:  # noqa: ANN401
-        """Override default handler."""
-        if isinstance(obj, UUID):
-            return obj.hex
-        return super().default(obj)
 
 
 class AnchorType(Enum):
@@ -172,6 +163,7 @@ class WalkerAnchorState(AnchorState):
 class Anchor:
     """Object Anchor."""
 
+    state_class: ClassVar[Type[AnchorState]] = AnchorState
     type: ClassVar[AnchorType] = AnchorType.generic
     name: str = ""
     id: UUID = field(default_factory=uuid4)
@@ -275,6 +267,13 @@ class Anchor:
             self.state.deleted = False
             ctx_src.remove(self)
 
+    def unsync(self: TANCH) -> TANCH:
+        """Return unsynced copy of anchor."""
+        unsynced = object.__new__(self.__class__)
+        unsynced.name = self.name
+        unsynced.id = self.id
+        return unsynced
+
     def sync(self, node: Optional["NodeAnchor"] = None) -> Optional[Architype]:
         """Retrieve the Architype from db and return."""
         if self.state.deleted is not None:
@@ -373,25 +372,20 @@ class Anchor:
 
         return to.state.current_access_level
 
-    def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
+    def __getstate__(self) -> dict[str, object]:
         """Serialize Anchor."""
-        state: dict[str, object] = {
-            "type": self.type.value,
-            "name": self.name,
-            "id": self.id,
-        }
+        state: dict[str, object] = {"name": self.name, "id": self.id}
 
-        if not unsynced:
+        if self.architype:
+            # clone architype excluding __jac__
+            architype = deepcopy(self.architype, memo={id(self): self})
+            architype.__dict__.pop("__jac__")
+
             state.update(
                 {
                     "root": self.root,
-                    "access": self.access.serialize(),
-                    "architype": (
-                        asdict(self.architype)
-                        if is_dataclass(self.architype)
-                        and not isinstance(self.architype, type)
-                        else {}
-                    ),
+                    "access": self.access,
+                    "architype": architype,
                 }
             )
 
@@ -399,11 +393,20 @@ class Anchor:
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         """Deserialize Anchor."""
-        raise NotImplementedError("_save must be implemented in subclasses")
+        self.__dict__.update(state)
+        self.state = self.state_class(connected=True)
+
+        if self.architype:
+            self.architype.__jac__ = self
+            self.sync_hash()
+        else:
+            self.root = None
+            self.access = Permission()
+            self.architype = None
 
     def data_hash(self) -> int:
         """Get current serialization hash."""
-        return hash(dumps(self.__getstate__(), cls=UUIDEncoder))
+        return hash(dumps(self.__getstate__()))
 
     def sync_hash(self) -> None:
         """Sync current serialization hash."""
@@ -580,29 +583,14 @@ class NodeAnchor(Anchor):
         """Invoke data spatial call."""
         return walk.spawn_call(self)
 
-    def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
+    def __getstate__(self) -> dict[str, object]:
         """Serialize Node Anchor."""
-        state = super().__getstate__(unsynced)
+        state = super().__getstate__()
 
-        if not unsynced:
-            state["edges"] = [edge.__getstate__(True) for edge in self.edges]
+        if self.architype:
+            state["edges"] = [edge.unsync() for edge in self.edges]
 
         return state
-
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        """Deserialize Node Anchor."""
-        self.id = cast(UUID, state.get("id"))
-        self.name = cast(str, state.get("name"))
-        self.root = cast(UUID, state.get("root"))
-        self.access = Permission.deserialize(state.get("access", {}))
-        self.state = AnchorState(connected=True)
-        self.edges = [
-            EdgeAnchor(e["name"], e["id"]) for e in cast(list[dict], state.get("edges"))
-        ]
-
-        narch = NodeArchitype.__get_class__(self.name or "Root")
-        self.architype = to_dataclass(narch, state.get("architype", {}), __jac__=self)
-        self.sync_hash()
 
 
 @dataclass(eq=False)
@@ -674,41 +662,25 @@ class EdgeAnchor(Anchor):
 
     def __getstate__(self, unsynced: bool = False) -> dict[str, object]:
         """Serialize Node Anchor."""
-        state = super().__getstate__(unsynced)
+        state = super().__getstate__()
 
-        if not unsynced:
+        if self.architype:
             state.update(
                 {
-                    "source": self.source.__getstate__(True) if self.source else None,
-                    "target": self.target.__getstate__(True) if self.target else None,
+                    "source": self.source.unsync() if self.source else None,
+                    "target": self.target.unsync() if self.target else None,
                     "is_undirected": self.is_undirected,
                 }
             )
 
         return state
 
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        """Deserialize Edge Anchor."""
-        self.id = cast(UUID, state.get("id"))
-        self.name = cast(str, state.get("name"))
-        self.root = cast(UUID, state.get("root"))
-        self.access = Permission.deserialize(state.get("access", {}))
-        self.state = AnchorState(connected=True)
-        if src := state.get("source"):
-            self.source = NodeAnchor(src["name"], src["id"])
-
-        if trg := state.get("target"):
-            self.target = NodeAnchor(trg["name"], trg["id"])
-
-        narch = EdgeArchitype.__get_class__(self.name or "GenericEdge")
-        self.architype = to_dataclass(narch, state.get("architype", {}), __jac__=self)
-        self.sync_hash()
-
 
 @dataclass(eq=False)
 class WalkerAnchor(Anchor):
     """Walker Anchor."""
 
+    state_class: ClassVar[Type[AnchorState]] = WalkerAnchorState
     type: ClassVar[AnchorType] = AnchorType.walker
     architype: Optional[WalkerArchitype] = None
     path: list[Anchor] = field(default_factory=list)
@@ -799,18 +771,6 @@ class WalkerAnchor(Anchor):
             self.ignores = []
             return walker
         raise Exception(f"Invalid Reference {self.ref_id}")
-
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        """Deserialize Walker Anchor."""
-        self.id = cast(UUID, state.get("id"))
-        self.name = cast(str, state.get("name"))
-        self.root = cast(UUID, state.get("root"))
-        self.access = Permission.deserialize(state.get("access", {}))
-        self.state = WalkerAnchorState(connected=True)
-
-        warch = WalkerArchitype.__get_class__(self.name)
-        self.architype = to_dataclass(warch, state.get("architype", {}), __jac__=self)
-        self.sync_hash()
 
 
 class Architype:
