@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum, IntEnum
 from os import getenv
@@ -203,6 +202,16 @@ class Anchor:
             self.state.deleted = False
             ctx_src.remove(self)
 
+    def unlinked_architype(self) -> Architype | None:
+        """Unlink architype."""
+        # this is to avoid using copy/deepcopy as it can be overriden by architypes in language level
+        if self.architype:
+            cloned = object.__new__(self.architype.__class__)
+            cloned.__dict__.update(self.architype.__dict__)
+            cloned.__dict__.pop("__jac__", None)
+            return cloned
+        return None
+
     def unsync(self: TANCH) -> TANCH:
         """Return unsynced copy of anchor."""
         unsynced = object.__new__(self.__class__)
@@ -312,11 +321,7 @@ class Anchor:
         """Serialize Anchor."""
         state: dict[str, object] = {"name": self.name, "id": self.id}
 
-        if self.architype:
-            # clone architype excluding __jac__
-            architype = deepcopy(self.architype, memo={id(self): self})
-            architype.__dict__.pop("__jac__")
-
+        if architype := self.unlinked_architype():
             state.update(
                 {
                     "root": self.root,
