@@ -80,7 +80,7 @@ class TestJacLangServer(TestCase):
             lsp.get_hover_info(circle_impl_file, pos).contents.value,
         )
 
-    def test_impl_syntax_diagnosis(self) ->None:
+    def test_impl_syntax_diagnosis(self) -> None:
         """Test that the server shows an error if there is a syntax error in impl."""
         lsp = JacLangServer()
         # Set up the workspace path to "fixtures/"
@@ -93,7 +93,7 @@ class TestJacLangServer(TestCase):
         status = lsp.quick_check(circle_impl_syn_err_impl_file)
         self.assertEqual(False, status)
 
-    def test_syntax_diagnosis(self) ->None:
+    def test_syntax_diagnosis(self) -> None:
         """Test that the server shows an error if there is a syntax error."""
         lsp = JacLangServer()
         # Set up the workspace path to "fixtures/"
@@ -109,8 +109,6 @@ class TestJacLangServer(TestCase):
         deep_status = lsp.deep_check(circle_impl_syn_err_file, pos)
         self.assertEqual(True, quick_status)
         self.assertEqual(False, deep_status)
-
-        
 
     def test_show_type_impl(self) -> None:
         """Test that the server doesn't run if there is a syntax error."""
