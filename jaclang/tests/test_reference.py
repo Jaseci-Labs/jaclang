@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 import jaclang
 from jaclang.compiler.compile import jac_file_to_pass
-from jaclang.runtimelib.context import ExecutionContext
+from jaclang.plugin.feature import JacFeature
 from jaclang.utils.test import TestCase
 
 
@@ -52,7 +52,7 @@ class JacReferenceTests(TestCase):
         """Test file."""
 
         def execute_and_capture_output(code: str | bytes, filename: str = "") -> str:
-            ctx = ExecutionContext.create(
+            ctx = JacFeature.new_context(
                 base_path=os.path.join(
                     os.path.dirname(os.path.dirname(jaclang.__file__)),
                     "examples/reference",
