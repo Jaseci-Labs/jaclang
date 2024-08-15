@@ -117,7 +117,7 @@ class JacFeature:
     @staticmethod
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: NodeArchitype | list[NodeArchitype] | None,
+        target_cls: NodeArchitype | list[NodeArchitype] | None,
         dir: EdgeDir,
         filter_func: Callable[[list[EdgeArchitype]], list[EdgeArchitype]] | None,
         edges_only: bool = False,

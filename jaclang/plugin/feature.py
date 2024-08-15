@@ -7,17 +7,18 @@ import types
 from typing import Any, Callable, Mapping, Optional, Sequence, Type, TypeAlias, Union
 
 import jaclang.compiler.absyntree as ast
+from jaclang.compiler.constant import P, T
 from jaclang.compiler.passes.main.pyast_gen_pass import PyastGenPass
-from jaclang.plugin.default import ExecutionContext
-from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec, P, T
+from jaclang.plugin.spec import JacBuiltin, JacCmdSpec, JacFeatureSpec
 from jaclang.runtimelib.constructs import (
     Architype,
     EdgeArchitype,
-    Memory,
+    NodeAnchor,
     NodeArchitype,
     Root,
     WalkerArchitype,
 )
+from jaclang.runtimelib.context import ExecutionContext
 
 import pluggy
 
@@ -42,19 +43,21 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(session: str = "") -> ExecutionContext:
-        """Create execution context."""
-        return pm.hook.context(session=session)
+    def new_context(
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[NodeAnchor] = None,
+        entry: Optional[NodeAnchor] = None,
+    ) -> ExecutionContext:
+        """Create new execution context."""
+        return pm.hook.new_context(
+            base_path=base_path, session=session, root=root, entry=entry
+        )
 
     @staticmethod
-    def reset_context() -> None:
-        """Reset execution context."""
-        return pm.hook.reset_context()
-
-    @staticmethod
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
-        return pm.hook.memory_hook()
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
+        return pm.hook.current_context()
 
     @staticmethod
     def make_architype(
@@ -208,7 +211,7 @@ class JacFeature:
     @staticmethod
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool = False,
@@ -216,7 +219,7 @@ class JacFeature:
         """Jac's apply_dir stmt feature."""
         return pm.hook.edge_ref(
             node_obj=node_obj,
-            target_obj=target_obj,
+            target_cls=target_cls,
             dir=dir,
             filter_func=filter_func,
             edges_only=edges_only,

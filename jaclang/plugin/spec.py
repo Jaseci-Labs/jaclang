@@ -4,40 +4,25 @@ from __future__ import annotations
 
 import ast as ast3
 import types
-from typing import (
-    Any,
-    Callable,
-    Mapping,
-    Optional,
-    ParamSpec,
-    Sequence,
-    TYPE_CHECKING,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Mapping, Optional, Sequence, Type, Union
 
 import jaclang.compiler.absyntree as ast
+from jaclang.compiler.constant import EdgeDir, P, T
 from jaclang.compiler.passes.main.pyast_gen_pass import PyastGenPass
-
-if TYPE_CHECKING:
-    from jaclang.runtimelib.constructs import EdgeArchitype, NodeArchitype
-    from jaclang.plugin.default import (
-        Architype,
-        EdgeDir,
-        ExecutionContext,
-        WalkerArchitype,
-        Root,
-        DSFunc,
-    )
-    from jaclang.runtimelib.memory import Memory
+from jaclang.runtimelib.constructs import (
+    Architype,
+    DSFunc,
+    EdgeArchitype,
+    NodeAnchor,
+    NodeArchitype,
+    Root,
+    WalkerArchitype,
+)
+from jaclang.runtimelib.context import ExecutionContext
 
 import pluggy
 
 hookspec = pluggy.HookspecMarker("jac")
-
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 class JacFeatureSpec:
@@ -45,20 +30,19 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
-        """Get the execution context."""
+    def new_context(
+        base_path: str,
+        session: Optional[str],
+        root: Optional[NodeAnchor],
+        entry: Optional[NodeAnchor],
+    ) -> ExecutionContext:  # noqa: ANN401
+        """Create new execution context."""
         raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
-        raise NotImplementedError
-
-    @staticmethod
-    @hookspec(firstresult=True)
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
         raise NotImplementedError
 
     @staticmethod
@@ -211,7 +195,7 @@ class JacFeatureSpec:
     @hookspec(firstresult=True)
     def edge_ref(
         node_obj: NodeArchitype | list[NodeArchitype],
-        target_obj: Optional[NodeArchitype | list[NodeArchitype]],
+        target_cls: Optional[Type[NodeArchitype] | list[Type[NodeArchitype]]],
         dir: EdgeDir,
         filter_func: Optional[Callable[[list[EdgeArchitype]], list[EdgeArchitype]]],
         edges_only: bool,

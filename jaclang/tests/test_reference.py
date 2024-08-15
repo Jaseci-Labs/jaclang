@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 import jaclang
 from jaclang.compiler.compile import jac_file_to_pass
-from jaclang.plugin.feature import JacFeature as Jac
+from jaclang.plugin.feature import JacFeature
 from jaclang.utils.test import TestCase
 
 
@@ -52,8 +52,7 @@ class JacReferenceTests(TestCase):
         """Test file."""
 
         def execute_and_capture_output(code: str | bytes, filename: str = "") -> str:
-            Jac.get_root().reset()
-            Jac.context().init_memory(
+            ctx = JacFeature.new_context(
                 base_path=os.path.join(
                     os.path.dirname(os.path.dirname(jaclang.__file__)),
                     "examples/reference",
@@ -69,6 +68,8 @@ class JacReferenceTests(TestCase):
                         "__jac_mod_bundle__": None,
                     },
                 )
+
+            ctx.close()
             return f.getvalue()
 
         try:
