@@ -474,14 +474,16 @@ class JacFeatureDefaults:
         right = [right] if isinstance(right, NodeArchitype) else right
         edges = []
         for i in left:
+            _left = i.__jac__
             for j in right:
+                _right = j.__jac__
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
-                i.__jac__.connect_node(j.__jac__, conn_edge.__jac__)
-                if i.__jac__.persistent or j.__jac__.persistent:
+                _left.connect_node(_right, conn_edge.__jac__)
+                if _left.state.persistent or _right.state.persistent:
                     conn_edge.__jac__.save()
-                    j.__jac__.save()
-                    i.__jac__.save()
+                    _right.save()
+                    _left.save()
         return right if not edges_only else edges
 
     @staticmethod
@@ -500,26 +502,26 @@ class JacFeatureDefaults:
             node = i.__jac__
             for anchor in set(node.edges):
                 if (
-                    (architype := anchor.architype)
+                    (architype := anchor.sync(node))
                     and (source := anchor.source)
                     and (target := anchor.target)
                     and (not filter_func or filter_func([architype]))
-                    and (src_arch := source.architype)
-                    and (trg_arch := target.architype)
+                    and (src_arch := source.sync())
+                    and (trg_arch := target.sync())
                 ):
                     if (
                         dir in [EdgeDir.OUT, EdgeDir.ANY]
                         and node == source
                         and trg_arch in right
                     ):
-                        anchor.detach()
+                        anchor.destroy()
                         disconnect_occurred = True
                     if (
                         dir in [EdgeDir.IN, EdgeDir.ANY]
                         and node == target
                         and src_arch in right
                     ):
-                        anchor.detach()
+                        anchor.destroy()
                         disconnect_occurred = True
 
         return disconnect_occurred
