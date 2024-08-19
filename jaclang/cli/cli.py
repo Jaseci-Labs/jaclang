@@ -124,7 +124,7 @@ def run(
     if not node or node == "root":
         entrypoint: Architype = Jac.get_root()
     else:
-        obj = Jac.context().mem.find_one(UUID(node))
+        obj = Jac.context().mem.find_by_id(UUID(node))
         if not isinstance(obj, Anchor) or obj.architype is None:
             print(f"Entrypoint {node} not found.")
             return
@@ -154,7 +154,7 @@ def get_object(id: str, session: str = "") -> dict:
     else:
         id_uuid = UUID(id)
 
-    obj = Jac.context().mem.find_one(id_uuid)
+    obj = Jac.context().mem.find_by_id(id_uuid)
     if obj is None:
         print(f"Object with id {id} not found.")
         Jac.reset_context()

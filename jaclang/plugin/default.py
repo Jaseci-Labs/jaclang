@@ -480,7 +480,7 @@ class JacFeatureDefaults:
                 conn_edge = edge_spec()
                 edges.append(conn_edge)
                 _left.connect_node(_right, conn_edge.__jac__)
-                if _left.state.persistent or _right.state.persistent:
+                if _left.persistent or _right.persistent:
                     conn_edge.__jac__.save()
                     _right.save()
                     _left.save()
@@ -502,12 +502,12 @@ class JacFeatureDefaults:
             node = i.__jac__
             for anchor in set(node.edges):
                 if (
-                    (architype := anchor.sync(node))
+                    (architype := anchor.architype)
                     and (source := anchor.source)
                     and (target := anchor.target)
                     and (not filter_func or filter_func([architype]))
-                    and (src_arch := source.sync())
-                    and (trg_arch := target.sync())
+                    and (src_arch := source.architype)
+                    and (trg_arch := target.architype)
                 ):
                     if (
                         dir in [EdgeDir.OUT, EdgeDir.ANY]

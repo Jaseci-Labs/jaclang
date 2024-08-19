@@ -37,7 +37,7 @@ class ExecutionContext:
     def get_root(self) -> Root:
         """Get the root object."""
         if not self.root:
-            root = self.mem.find_one(UUID(int=0))
+            root = self.mem.find_by_id(UUID(int=0))
             if root is None:
                 root = Root().__jac__
                 self.mem.set(root.id, root)

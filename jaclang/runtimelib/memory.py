@@ -48,6 +48,10 @@ class Memory(Generic[ID, TANCH]):
         """Find one anchor from memory by ids with filter."""
         return next(self.find(ids, filter), None)
 
+    def find_by_id(self, id: ID) -> TANCH | None:
+        """Find one by id."""
+        return self.__mem__.get(id)
+
     def set(self, id: ID, data: TANCH) -> None:
         """Save anchor to memory."""
         self.__mem__[id] = data
@@ -80,38 +84,20 @@ class ShelfStorage(Memory[UUID, Anchor]):
                 self.__shelf__.pop(str(id), None)
                 self.__mem__.pop(id, None)
 
-            self.sync(set(self.__mem__.values()))
-            self.__shelf__.close()
-        super().close()
-
-    def sync(self, data: Anchor | Iterable[Anchor]) -> None:
-        """Sync data to Shelf."""
-        if isinstance(self.__shelf__, Shelf):
-            if not isinstance(data, Iterable):
-                data = [data]
-
-            for d in data:
-                _id = str(d.id)
-                if d.architype and d.state.persistent:
-                    if d.state.deleted is False:
-                        d.state.deleted = True
-                        self.__shelf__.pop(_id, None)
-                    elif not d.state.connected:
-                        d.state.connected = True
-                        d.state.hash = hash(dumps(d))
-                        self.__shelf__[_id] = d
-                    elif (
+            for d in self.__mem__.values():
+                if d.persistent and d.hash != (new_hash := hash(dumps(d))):
+                    if (
                         isinstance(d, NodeAnchor)
                         and not isinstance(d.architype, Root)
                         and not d.edges
                     ):
-                        d.state.deleted = True
-                        self.__shelf__.pop(_id, None)
-                    elif d.state.hash != (new_hash := hash(dumps(d))):
-                        d.state.hash = new_hash
-                        self.__shelf__[_id] = d
+                        self.__shelf__.pop(str(d.id), None)
+                    else:
+                        d.hash = new_hash
+                        self.__shelf__[str(d.id)] = d
 
-            self.__shelf__.sync()
+            self.__shelf__.close()
+        super().close()
 
     def find(
         self,
@@ -136,3 +122,16 @@ class ShelfStorage(Memory[UUID, Anchor]):
                     yield anchor
         else:
             yield from super().find(ids, filter)
+
+    def find_by_id(self, id: UUID) -> Anchor | None:
+        """Find one by id."""
+        data = super().find_by_id(id)
+
+        if (
+            not data
+            and isinstance(self.__shelf__, Shelf)
+            and (data := self.__shelf__.get(str(id)))
+        ):
+            self.__mem__[id] = data
+
+        return data
