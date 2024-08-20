@@ -1,24 +1,34 @@
 import unittest
-from .architype import Architype as Architype, Root as Root
-from .machine import JacMachine as JacMachine
-from .memory import Memory as Memory, ShelveStorage as ShelveStorage
+from .architype import NodeAnchor as NodeAnchor, Root as Root
+from .machine import JacMachine as JacMachine, JacProgram as JacProgram
+from .memory import ShelfStorage as ShelfStorage
 from _typeshed import Incomplete
-from contextvars import ContextVar
-from typing import Callable
-from uuid import UUID
+from typing import Any, Callable
+
+EXECUTION_CONTEXT: Incomplete
+SUPER_ROOT_UUID: str
 
 class ExecutionContext:
-    mem: Memory | None
-    root: Root | None
-    jac_machine: Incomplete
-    def __init__(self) -> None: ...
-    def init_memory(self, base_path: str = "", session: str = "") -> None: ...
-    def get_root(self) -> Root: ...
-    def get_obj(self, obj_id: UUID) -> Architype | None: ...
-    def save_obj(self, item: Architype, persistent: bool) -> None: ...
-    def reset(self) -> None: ...
-
-exec_context: ContextVar[ExecutionContext | None]
+    jac_machine: JacMachine
+    datasource: ShelfStorage
+    reports: list[Any]
+    system_root: NodeAnchor
+    root: NodeAnchor
+    entry: NodeAnchor
+    def generate_system_root(self) -> NodeAnchor: ...
+    def load(
+        self, anchor_id: str | None, default: NodeAnchor | Callable[[], NodeAnchor]
+    ) -> NodeAnchor: ...
+    def close(self) -> None: ...
+    @staticmethod
+    def create(
+        base_path: str = "",
+        session: str | None = None,
+        root: str | None = None,
+        entry: str | None = None,
+    ) -> ExecutionContext: ...
+    @staticmethod
+    def get() -> ExecutionContext: ...
 
 class JacTestResult(unittest.TextTestResult):
     failures_count: Incomplete

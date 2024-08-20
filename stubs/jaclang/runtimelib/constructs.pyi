@@ -11,8 +11,11 @@ from .architype import (
     WalkerAnchor as WalkerAnchor,
     WalkerArchitype as WalkerArchitype,
 )
-from .context import ExecutionContext as ExecutionContext, exec_context as exec_context
-from .memory import Memory as Memory, ShelveStorage as ShelveStorage
+from .context import (
+    EXECUTION_CONTEXT as EXECUTION_CONTEXT,
+    ExecutionContext as ExecutionContext,
+)
+from .memory import Memory as Memory, ShelfStorage as ShelfStorage
 from .test import (
     JacTestCheck as JacTestCheck,
     JacTestResult as JacTestResult,
@@ -32,9 +35,9 @@ __all__ = [
     "Root",
     "DSFunc",
     "Memory",
-    "ShelveStorage",
+    "ShelfStorage",
+    "EXECUTION_CONTEXT",
     "ExecutionContext",
-    "exec_context",
     "JacTestResult",
     "JacTextTestRunner",
     "JacTestCheck",
