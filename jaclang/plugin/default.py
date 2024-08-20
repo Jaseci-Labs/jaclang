@@ -68,7 +68,7 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def new_context(
+    def create_context(
         base_path: str,
         session: Optional[str],
         root: Optional[str],
@@ -79,13 +79,19 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def current_context() -> ExecutionContext:
+    def get_context() -> ExecutionContext:
         """Get current execution context."""
         return ExecutionContext.get()
 
     @staticmethod
     @hookimpl
-    def current_context_datasource() -> Memory:
+    def close_context() -> None:
+        """Close current execution context."""
+        ExecutionContext.close()
+
+    @staticmethod
+    @hookimpl
+    def get_datasource() -> Memory:
         """Get current execution context."""
         return ExecutionContext.get().datasource
 
@@ -260,7 +266,7 @@ class JacFeatureDefaults:
             lng,
             items,
         )
-        jctx = Jac.current_context()
+        jctx = Jac.get_context()
         if lng == "py":
             import_result = PythonImporter(jctx.jac_machine).run_import(spec)
         else:
@@ -539,7 +545,7 @@ class JacFeatureDefaults:
     @hookimpl
     def get_root() -> Root:
         """Jac's assign comprehension feature."""
-        return cast(Root, Jac.current_context().root.architype)
+        return cast(Root, Jac.get_context().root.architype)
 
     @staticmethod
     @hookimpl

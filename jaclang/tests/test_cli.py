@@ -9,6 +9,7 @@ import traceback
 
 from jaclang.cli import cli
 from jaclang.plugin.builtin import dotgen
+from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.test import TestCase
 
 
@@ -41,6 +42,7 @@ class JacCliTests(TestCase):
         try:
             cli.enter(self.fixture_abs_path("err2.jac"), entrypoint="speak", args=[])
         except Exception as e:
+            Jac.close_context()
             print(f"Error: {e}")
 
         sys.stdout = sys.__stdout__
@@ -58,6 +60,7 @@ class JacCliTests(TestCase):
         try:
             cli.run(self.fixture_abs_path("err_runtime.jac"))
         except Exception as e:
+            Jac.close_context()
             print(f"Error: {e}")
 
         sys.stdout = sys.__stdout__
@@ -87,6 +90,7 @@ class JacCliTests(TestCase):
         try:
             cli.enter(self.fixture_abs_path("err.jac"), entrypoint="speak", args=[])
         except Exception:
+            Jac.close_context()
             traceback.print_exc()
 
         sys.stdout = sys.__stdout__

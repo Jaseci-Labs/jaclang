@@ -28,14 +28,12 @@ class ExecutionContext:
 
     def generate_system_root(self) -> NodeAnchor:
         """Generate default system root."""
-        architype = object.__new__(Root)
-        system_root = architype.__jac__ = NodeAnchor(
-            architype, id=UUID(SUPER_ROOT_UUID), persistent=True
-        )
-        self.datasource.set(system_root.id, system_root)
-        return system_root
+        root = Root().__jac__
+        root.id = UUID(SUPER_ROOT_UUID)
+        self.datasource.set(root.id, root)
+        return root
 
-    def load(
+    def init_anchor(
         self,
         anchor_id: str | None,
         default: NodeAnchor | Callable[[], NodeAnchor],
@@ -47,10 +45,6 @@ class ExecutionContext:
             return anchor
         return default() if callable(default) else default
 
-    def close(self) -> None:
-        """Clean up context."""
-        self.datasource.close()
-
     @staticmethod
     def create(
         base_path: str = "",
@@ -59,17 +53,17 @@ class ExecutionContext:
         entry: Optional[str] = None,
     ) -> ExecutionContext:
         """Create JacContext."""
+        if ctx := EXECUTION_CONTEXT.get(None):
+            raise Exception("ExecutionContext is already created!")
+
         ctx = ExecutionContext()
         ctx.jac_machine = JacMachine(base_path)
         ctx.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
         ctx.datasource = ShelfStorage(session)
         ctx.reports = []
-        ctx.system_root = ctx.load(SUPER_ROOT_UUID, ctx.generate_system_root)
-        ctx.root = ctx.load(root, ctx.system_root)
-        ctx.entry = ctx.load(entry, ctx.root)
-
-        if _ctx := EXECUTION_CONTEXT.get(None):
-            _ctx.close()
+        ctx.system_root = ctx.init_anchor(SUPER_ROOT_UUID, ctx.generate_system_root)
+        ctx.root = ctx.init_anchor(root, ctx.system_root)
+        ctx.entry = ctx.init_anchor(entry, ctx.root)
         EXECUTION_CONTEXT.set(ctx)
 
         return ctx
@@ -77,9 +71,16 @@ class ExecutionContext:
     @staticmethod
     def get() -> ExecutionContext:
         """Get current ExecutionContext."""
-        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
-            raise Exception("ExecutionContext is not yet available!")
-        return ctx
+        if ctx := EXECUTION_CONTEXT.get(None):
+            return ctx
+        raise Exception("ExecutionContext is not yet available!")
+
+    @staticmethod
+    def close() -> None:
+        """Close current ExecutionContext."""
+        ctx = ExecutionContext.get()
+        ctx.datasource.close()
+        EXECUTION_CONTEXT.set(None)
 
 
 class JacTestResult(unittest.TextTestResult):

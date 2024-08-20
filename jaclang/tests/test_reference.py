@@ -52,7 +52,7 @@ class JacReferenceTests(TestCase):
         """Test file."""
 
         def execute_and_capture_output(code: str | bytes, filename: str = "") -> str:
-            Jac.new_context(
+            Jac.create_context(
                 base_path=os.path.join(
                     os.path.dirname(os.path.dirname(jaclang.__file__)),
                     "examples/reference",
@@ -68,6 +68,7 @@ class JacReferenceTests(TestCase):
                         "__jac_mod_bundle__": None,
                     },
                 )
+            Jac.close_context()
             return f.getvalue()
 
         try:

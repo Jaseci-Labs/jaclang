@@ -8,6 +8,7 @@ import types
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.compile import jac_file_to_pass
 from jaclang.compiler.passes.main import PyastGenPass, SubNodeTabPass
+from jaclang.plugin.feature import JacFeature as Jac
 from jaclang.utils.test import AstSyncTestMixin, TestCaseMicroSuite
 
 
@@ -29,10 +30,6 @@ class PyastGenPassTests(TestCaseMicroSuite, AstSyncTestMixin):
 
     TargetPass = PyastGenPass
 
-    def setUp(self) -> None:
-        """Set up test."""
-        return super().setUp()
-
     def test_hodge_podge(self) -> None:
         """Basic test for pass."""
         code_gen = jac_file_to_pass(
@@ -53,6 +50,7 @@ class PyastGenPassTests(TestCaseMicroSuite, AstSyncTestMixin):
         if code_gen.ir.gen.py_ast and isinstance(
             code_gen.ir.gen.py_ast[0], ast3.Module
         ):
+            Jac.create_context()
             prog = compile(code_gen.ir.gen.py_ast[0], filename="<ast>", mode="exec")
             captured_output = io.StringIO()
             sys.stdout = captured_output
@@ -70,6 +68,7 @@ class PyastGenPassTests(TestCaseMicroSuite, AstSyncTestMixin):
                 "Area of a Circle with radius 5 using class: 78",
                 stdout_value,
             )
+            Jac.close_context()
 
         self.assertFalse(code_gen.errors_had)
 

@@ -22,7 +22,7 @@ from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
-from jaclang.runtimelib.constructs import Architype
+from jaclang.runtimelib.constructs import Architype, WalkerArchitype
 from jaclang.runtimelib.machine import JacProgram
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
@@ -91,7 +91,7 @@ def run(
     base = base if base else "./"
     mod = mod[:-4]
 
-    jctx = Jac.new_context(base_path=base, session=session)
+    jctx = Jac.create_context(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         ret_module = jac_import(
@@ -129,6 +129,7 @@ def run(
         entrypoint = obj.architype
     else:
         print(f"Entrypoint {node} not found.")
+        Jac.close_context()
         return
 
     # TODO: handle no override name
@@ -139,7 +140,7 @@ def run(
         else:
             print(f"Walker {walker} not found.")
 
-    jctx.close()
+    Jac.close_context()
 
 
 @cmd_registry.register
@@ -148,7 +149,7 @@ def get_object(id: str, session: str = "") -> dict:
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    jctx = Jac.new_context(session=session)
+    jctx = Jac.create_context(session=session)
 
     data = {}
     if id == "root":
@@ -158,7 +159,7 @@ def get_object(id: str, session: str = "") -> dict:
     else:
         print(f"Object with id {id} not found.")
 
-    jctx.close()
+    Jac.close_context()
     return data
 
 
@@ -209,13 +210,26 @@ def lsp() -> None:
 
 
 @cmd_registry.register
-def enter(filename: str, entrypoint: str, args: list) -> None:
-    """Run the specified entrypoint function in the given .jac file.
+def enter(
+    filename: str,
+    entrypoint: str,
+    args: list,
+    session: str = "",
+    root: str = "",
+    node: str = "",
+) -> None:
+    """
+    Run the specified entrypoint function in the given .jac file.
 
     :param filename: The path to the .jac file.
     :param entrypoint: The name of the entrypoint function.
     :param args: Arguments to pass to the entrypoint function.
+    :param session: shelve.Shelf file path.
+    :param root: root executor.
+    :param node: starting node.
     """
+    jctx = Jac.create_context(session=session, root=root, entry=node)
+
     if filename.endswith(".jac"):
         base, mod_name = os.path.split(filename)
         base = base if base else "./"
@@ -223,11 +237,15 @@ def enter(filename: str, entrypoint: str, args: list) -> None:
         (mod,) = jac_import(target=mod_name, base_path=base)
         if not mod:
             print("Errors occurred while importing the module.")
-            return
         else:
-            getattr(mod, entrypoint)(*args)
+            architype = getattr(mod, entrypoint)(*args)
+            if isinstance(architype, WalkerArchitype):
+                Jac.spawn_call(jctx.entry.architype, architype)
+
     else:
         print("Not a .jac file.")
+
+    Jac.close_context()
 
 
 @cmd_registry.register
@@ -250,7 +268,7 @@ def test(
 
     jac test => jac test -d .
     """
-    jctx = Jac.new_context()
+    Jac.create_context()
 
     failcount = Jac.run_test(
         filepath=filepath,
@@ -261,7 +279,7 @@ def test(
         verbose=verbose,
     )
 
-    jctx.close()
+    Jac.close_context()
 
     if failcount:
         raise SystemExit(f"Tests failed: {failcount}")
@@ -365,7 +383,7 @@ def dot(
     base = base if base else "./"
     mod = mod[:-4]
 
-    jctx = Jac.new_context(base_path=base, session=session)
+    Jac.create_context(base_path=base, session=session)
 
     if filename.endswith(".jac"):
         jac_import(
@@ -390,7 +408,7 @@ def dot(
             import traceback
 
             traceback.print_exc()
-            jctx.close()
+            Jac.close_context()
             return
         file_name = saveto if saveto else f"{mod}.dot"
         with open(file_name, "w") as file:
@@ -399,7 +417,7 @@ def dot(
     else:
         print("Not a .jac file.")
 
-    jctx.close()
+    Jac.close_context()
 
 
 @cmd_registry.register

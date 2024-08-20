@@ -45,7 +45,7 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def new_context(
+    def create_context(
         base_path: str,
         session: Optional[str],
         root: Optional[str],
@@ -56,13 +56,19 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def current_context() -> ExecutionContext:
+    def get_context() -> ExecutionContext:
         """Get current execution context."""
         raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)
-    def current_context_datasource() -> Memory:
+    def close_context() -> None:
+        """Get current execution context."""
+        raise NotImplementedError
+
+    @staticmethod
+    @hookspec(firstresult=True)
+    def get_datasource() -> Memory:
         """Get current execution context datasource."""
         raise NotImplementedError
 

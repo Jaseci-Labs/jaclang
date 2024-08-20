@@ -16,7 +16,7 @@ TANCH = TypeVar("TANCH", bound="Anchor")
 
 
 @dataclass
-class Report:
+class AnchorReport:
     """Report Handler."""
 
     id: str
@@ -37,13 +37,13 @@ class Anchor:
         from jaclang.plugin.feature import JacFeature as Jac
 
         self.persistent = True
-        Jac.current_context_datasource().set(self.id, self)
+        Jac.get_datasource().set(self.id, self)
 
     def destroy(self) -> None:
         """Destroy Anchor."""
         from jaclang.plugin.feature import JacFeature as Jac
 
-        Jac.current_context_datasource().remove(self.id)
+        Jac.get_datasource().remove(self.id)
 
     def unlinked_architype(self) -> Architype | None:
         """Unlink architype."""
@@ -69,9 +69,9 @@ class Anchor:
         self.architype.__jac__ = self
         self.hash = hash(dumps(self))
 
-    def report(self) -> Report:
+    def report(self) -> AnchorReport:
         """Report Anchor."""
-        return Report(
+        return AnchorReport(
             id=self.id.hex,
             context=(
                 asdict(self.architype)
@@ -109,7 +109,7 @@ class NodeAnchor(Anchor):
         from jaclang.plugin.feature import JacFeature as Jac
 
         if self.edge_ids:
-            jsrc = Jac.current_context_datasource()
+            jsrc = Jac.get_datasource()
 
             edges = [
                 edge for e_id in self.edge_ids if (edge := jsrc.find_by_id(e_id))
@@ -224,7 +224,7 @@ class NodeAnchor(Anchor):
         for edge in self.edges:
             edge.destroy()
 
-        Jac.current_context_datasource().remove(self.id)
+        Jac.get_datasource().remove(self.id)
 
     def __getstate__(self) -> dict[str, object]:
         """Serialize Node Anchor."""
@@ -254,7 +254,7 @@ class EdgeAnchor(Anchor):
         """Populate nodes for the edges from node ids."""
         from jaclang.plugin.feature import JacFeature as Jac
 
-        jsrc = Jac.current_context_datasource()
+        jsrc = Jac.get_datasource()
 
         if self.source_id:
             self.source = jsrc.find_by_id(self.source_id)
@@ -295,7 +295,7 @@ class EdgeAnchor(Anchor):
 
         self.populate_nodes()
         self.detach()
-        Jac.current_context_datasource().remove(self.id)
+        Jac.get_datasource().remove(self.id)
 
     def __getstate__(self) -> dict[str, object]:
         """Serialize Node Anchor."""

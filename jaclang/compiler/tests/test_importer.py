@@ -12,23 +12,20 @@ from jaclang.utils.test import TestCase
 class TestLoader(TestCase):
     """Test Jac self.prse."""
 
-    def setUp(self) -> None:
-        """Set up test."""
-        Jac.new_context()
-        return super().setUp()
-
     def test_import_basic_python(self) -> None:
         """Test basic self loading."""
-        Jac.new_context(base_path=self.fixture_abs_path(__file__))
+        Jac.create_context(base_path=self.fixture_abs_path(__file__))
         (h,) = jac_import("fixtures.hello_world", base_path=__file__)
         self.assertEqual(h.hello(), "Hello World!")  # type: ignore
+        Jac.close_context()
 
     def test_modules_correct(self) -> None:
         """Test basic self loading."""
-        Jac.new_context(base_path=self.fixture_abs_path(__file__))
+        Jac.create_context(base_path=self.fixture_abs_path(__file__))
         jac_import("fixtures.hello_world", base_path=__file__)
         self.assertIn("module 'fixtures.hello_world'", str(sys.modules))
         self.assertIn("/tests/fixtures/hello_world.jac", str(sys.modules))
+        Jac.close_context()
 
     def test_jac_py_import(self) -> None:
         """Basic test for pass."""
