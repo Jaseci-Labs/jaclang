@@ -45,20 +45,25 @@ class JacFeatureSpec:
 
     @staticmethod
     @hookspec(firstresult=True)
-    def context(session: str = "") -> ExecutionContext:
-        """Get the execution context."""
+    def new_context(
+        base_path: str,
+        session: Optional[str],
+        root: Optional[str],
+        entry: Optional[str],
+    ) -> ExecutionContext:  # noqa: ANN401
+        """Create new execution context."""
         raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)
-    def reset_context() -> None:
-        """Reset the execution context."""
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
         raise NotImplementedError
 
     @staticmethod
     @hookspec(firstresult=True)
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
+    def current_context_datasource() -> Memory:
+        """Get current execution context datasource."""
         raise NotImplementedError
 
     @staticmethod

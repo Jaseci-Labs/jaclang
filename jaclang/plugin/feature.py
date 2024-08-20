@@ -42,19 +42,26 @@ class JacFeature:
     Walker: TypeAlias = WalkerArchitype
 
     @staticmethod
-    def context(session: str = "") -> ExecutionContext:
-        """Create execution context."""
-        return pm.hook.context(session=session)
+    def new_context(
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[str] = None,
+        entry: Optional[str] = None,
+    ) -> ExecutionContext:
+        """Create new execution context."""
+        return pm.hook.new_context(
+            base_path=base_path, session=session, root=root, entry=entry
+        )
 
     @staticmethod
-    def reset_context() -> None:
-        """Reset execution context."""
-        return pm.hook.reset_context()
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
+        return pm.hook.current_context()
 
     @staticmethod
-    def memory_hook() -> Memory | None:
-        """Create memory abstraction."""
-        return pm.hook.memory_hook()
+    def current_context_datasource() -> Memory:
+        """Get current execution context."""
+        return pm.hook.current_context_datasource()
 
     @staticmethod
     def make_architype(

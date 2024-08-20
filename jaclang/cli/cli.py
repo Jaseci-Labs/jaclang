@@ -22,7 +22,7 @@ from jaclang.compiler.passes.tool.schedules import format_pass
 from jaclang.plugin.builtin import dotgen
 from jaclang.plugin.feature import JacCmd as Cmd
 from jaclang.plugin.feature import JacFeature as Jac
-from jaclang.runtimelib.constructs import Anchor, Architype
+from jaclang.runtimelib.constructs import Architype
 from jaclang.runtimelib.machine import JacProgram
 from jaclang.utils.helpers import debugger as db
 from jaclang.utils.lang_tools import AstTool
@@ -90,7 +90,9 @@ def run(
     base, mod = os.path.split(filename)
     base = base if base else "./"
     mod = mod[:-4]
-    Jac.context().init_memory(base_path=base, session=session)
+
+    jctx = Jac.new_context(base_path=base, session=session)
+
     if filename.endswith(".jac"):
         ret_module = jac_import(
             target=mod,
@@ -106,7 +108,7 @@ def run(
         with open(filename, "rb") as f:
             ir = pickle.load(f)
             jac_program = JacProgram(mod_bundle=ir, bytecode=None)
-            Jac.context().jac_machine.attach_program(jac_program)
+            jctx.jac_machine.attach_program(jac_program)
             ret_module = jac_import(
                 target=mod,
                 base_path=base,
@@ -122,13 +124,12 @@ def run(
         return
 
     if not node or node == "root":
-        entrypoint: Architype = Jac.get_root()
-    else:
-        obj = Jac.context().mem.find_by_id(UUID(node))
-        if not isinstance(obj, Anchor) or obj.architype is None:
-            print(f"Entrypoint {node} not found.")
-            return
+        entrypoint: Architype = jctx.root.architype
+    elif obj := jctx.datasource.find_by_id(UUID(node)):
         entrypoint = obj.architype
+    else:
+        print(f"Entrypoint {node} not found.")
+        return
 
     # TODO: handle no override name
     if walker:
@@ -138,7 +139,7 @@ def run(
         else:
             print(f"Walker {walker} not found.")
 
-    Jac.reset_context()
+    jctx.close()
 
 
 @cmd_registry.register
@@ -147,21 +148,18 @@ def get_object(id: str, session: str = "") -> dict:
     if session == "":
         session = cmd_registry.args.session if "session" in cmd_registry.args else ""
 
-    Jac.context().init_memory(session=session)
+    jctx = Jac.new_context(session=session)
 
+    data = {}
     if id == "root":
-        id_uuid = UUID(int=0)
+        data = jctx.root.__getstate__()
+    elif obj := jctx.datasource.find_by_id(UUID(id)):
+        data = obj.__getstate__()
     else:
-        id_uuid = UUID(id)
-
-    obj = Jac.context().mem.find_by_id(id_uuid)
-    if obj is None:
         print(f"Object with id {id} not found.")
-        Jac.reset_context()
-        return {}
-    else:
-        Jac.reset_context()
-        return obj.__getstate__()
+
+    jctx.close()
+    return data
 
 
 @cmd_registry.register
@@ -252,6 +250,8 @@ def test(
 
     jac test => jac test -d .
     """
+    jctx = Jac.new_context()
+
     failcount = Jac.run_test(
         filepath=filepath,
         filter=filter,
@@ -260,6 +260,9 @@ def test(
         directory=directory,
         verbose=verbose,
     )
+
+    jctx.close()
+
     if failcount:
         raise SystemExit(f"Tests failed: {failcount}")
 
@@ -361,7 +364,9 @@ def dot(
     base, mod = os.path.split(filename)
     base = base if base else "./"
     mod = mod[:-4]
-    Jac.context().init_memory(base_path=base, session=session)
+
+    jctx = Jac.new_context(base_path=base, session=session)
+
     if filename.endswith(".jac"):
         jac_import(
             target=mod,
@@ -385,7 +390,7 @@ def dot(
             import traceback
 
             traceback.print_exc()
-            Jac.reset_context()
+            jctx.close()
             return
         file_name = saveto if saveto else f"{mod}.dot"
         with open(file_name, "w") as file:
@@ -394,7 +399,7 @@ def dot(
     else:
         print("Not a .jac file.")
 
-    Jac.reset_context()
+    jctx.close()
 
 
 @cmd_registry.register

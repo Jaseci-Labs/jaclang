@@ -11,7 +11,7 @@ import types
 from collections import OrderedDict
 from dataclasses import field
 from functools import wraps
-from typing import Any, Callable, Mapping, Optional, Sequence, Type, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, Type, Union, cast
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.constant import EdgeDir, colors
@@ -32,7 +32,6 @@ from jaclang.runtimelib.constructs import (
     Root,
     WalkerAnchor,
     WalkerArchitype,
-    exec_context,
 )
 from jaclang.runtimelib.importer import ImportPathSpec, JacImporter, PythonImporter
 from jaclang.runtimelib.utils import traverse_graph
@@ -69,28 +68,26 @@ class JacFeatureDefaults:
 
     @staticmethod
     @hookimpl
-    def context(session: str = "") -> ExecutionContext:
-        """Get the execution context."""
-        ctx = exec_context.get()
-        if ctx is None:
-            ctx = ExecutionContext()
-            exec_context.set(ctx)
-        return ctx
+    def new_context(
+        base_path: str,
+        session: Optional[str],
+        root: Optional[str],
+        entry: Optional[str],
+    ) -> ExecutionContext:
+        """Create new execution context."""
+        return ExecutionContext.create(base_path, session, root, entry)
 
     @staticmethod
     @hookimpl
-    def reset_context() -> None:
-        """Reset the execution context."""
-        ctx = exec_context.get()
-        if ctx:
-            ctx.reset()
-        exec_context.set(None)
+    def current_context() -> ExecutionContext:
+        """Get current execution context."""
+        return ExecutionContext.get()
 
     @staticmethod
     @hookimpl
-    def memory_hook() -> Memory | None:
-        """Return the memory hook."""
-        return Jac.context().mem
+    def current_context_datasource() -> Memory:
+        """Get current execution context."""
+        return ExecutionContext.get().datasource
 
     @staticmethod
     @hookimpl
@@ -263,10 +260,11 @@ class JacFeatureDefaults:
             lng,
             items,
         )
+        jctx = Jac.current_context()
         if lng == "py":
-            import_result = PythonImporter(Jac.context().jac_machine).run_import(spec)
+            import_result = PythonImporter(jctx.jac_machine).run_import(spec)
         else:
-            import_result = JacImporter(Jac.context().jac_machine).run_import(
+            import_result = JacImporter(jctx.jac_machine).run_import(
                 spec, reload_module
             )
         return (
@@ -541,7 +539,7 @@ class JacFeatureDefaults:
     @hookimpl
     def get_root() -> Root:
         """Jac's assign comprehension feature."""
-        return Jac.context().get_root()
+        return cast(Root, Jac.current_context().root.architype)
 
     @staticmethod
     @hookimpl

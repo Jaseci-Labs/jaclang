@@ -37,13 +37,13 @@ class Anchor:
         from jaclang.plugin.feature import JacFeature as Jac
 
         self.persistent = True
-        Jac.context().mem.set(self.id, self)
+        Jac.current_context_datasource().set(self.id, self)
 
     def destroy(self) -> None:
         """Destroy Anchor."""
         from jaclang.plugin.feature import JacFeature as Jac
 
-        Jac.context().mem.remove(self.id)
+        Jac.current_context_datasource().remove(self.id)
 
     def unlinked_architype(self) -> Architype | None:
         """Unlink architype."""
@@ -109,10 +109,10 @@ class NodeAnchor(Anchor):
         from jaclang.plugin.feature import JacFeature as Jac
 
         if self.edge_ids:
-            jmem = Jac.context().mem
+            jsrc = Jac.current_context_datasource()
 
             edges = [
-                edge for e_id in self.edge_ids if (edge := jmem.find_by_id(e_id))
+                edge for e_id in self.edge_ids if (edge := jsrc.find_by_id(e_id))
             ] + self.edges
 
             self.edge_ids.clear()
@@ -224,7 +224,7 @@ class NodeAnchor(Anchor):
         for edge in self.edges:
             edge.destroy()
 
-        Jac.context().mem.remove(self.id)
+        Jac.current_context_datasource().remove(self.id)
 
     def __getstate__(self) -> dict[str, object]:
         """Serialize Node Anchor."""
@@ -254,14 +254,14 @@ class EdgeAnchor(Anchor):
         """Populate nodes for the edges from node ids."""
         from jaclang.plugin.feature import JacFeature as Jac
 
-        jmem = Jac.context().mem
+        jsrc = Jac.current_context_datasource()
 
         if self.source_id:
-            self.source = jmem.find_by_id(self.source_id)
+            self.source = jsrc.find_by_id(self.source_id)
             self.source_id = None
 
         if self.target_id:
-            self.target = jmem.find_by_id(self.target_id)
+            self.target = jsrc.find_by_id(self.target_id)
             self.target_id = None
 
     def attach(
@@ -295,7 +295,7 @@ class EdgeAnchor(Anchor):
 
         self.populate_nodes()
         self.detach()
-        Jac.context().mem.remove(self.id)
+        Jac.current_context_datasource().remove(self.id)
 
     def __getstate__(self) -> dict[str, object]:
         """Serialize Node Anchor."""
@@ -469,7 +469,7 @@ class Root(NodeArchitype):
 
     def __init__(self) -> None:
         """Create root node."""
-        self.__jac__ = NodeAnchor(architype=self, id=UUID(int=0), persistent=True)
+        self.__jac__ = NodeAnchor(architype=self, persistent=True)
 
     def reset(self) -> None:
         """Reset the root."""

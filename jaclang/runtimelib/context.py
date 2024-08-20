@@ -4,60 +4,82 @@ from __future__ import annotations
 
 import unittest
 from contextvars import ContextVar
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 from uuid import UUID
 
-from .architype import Root
+from .architype import NodeAnchor, Root
 from .machine import JacMachine, JacProgram
-from .memory import Memory, ShelfStorage
+from .memory import ShelfStorage
+
+
+EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
+SUPER_ROOT_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class ExecutionContext:
-    """Default Execution Context implementation."""
+    """Execution Context."""
 
-    mem: Memory
-    root: Optional[Root]
+    jac_machine: JacMachine
+    datasource: ShelfStorage
+    reports: list[Any]
+    system_root: NodeAnchor
+    root: NodeAnchor
+    entry: NodeAnchor
 
-    def __init__(self) -> None:
-        """Create execution context."""
-        super().__init__()
-        self.mem = ShelfStorage()
-        self.root = None
-        self.jac_machine = JacMachine()
-        jac_program = JacProgram(mod_bundle=None, bytecode=None)
-        self.jac_machine.attach_program(jac_program)
+    def generate_system_root(self) -> NodeAnchor:
+        """Generate default system root."""
+        architype = object.__new__(Root)
+        system_root = architype.__jac__ = NodeAnchor(
+            architype, id=UUID(SUPER_ROOT_UUID), persistent=True
+        )
+        self.datasource.set(system_root.id, system_root)
+        return system_root
 
-    def init_memory(self, base_path: str = "", session: str = "") -> None:
-        """Initialize memory."""
-        self.mem = ShelfStorage(session)
-        self.jac_machine = JacMachine(base_path)
-        jac_program = JacProgram(mod_bundle=None, bytecode=None)
-        self.jac_machine.attach_program(jac_program)
+    def load(
+        self,
+        anchor_id: str | None,
+        default: NodeAnchor | Callable[[], NodeAnchor],
+    ) -> NodeAnchor:
+        """Load initial anchors."""
+        if anchor_id and isinstance(
+            anchor := self.datasource.find_by_id(UUID(anchor_id)), NodeAnchor
+        ):
+            return anchor
+        return default() if callable(default) else default
 
-    def get_root(self) -> Root:
-        """Get the root object."""
-        if not self.root:
-            root = self.mem.find_by_id(UUID(int=0))
-            if root is None:
-                root = Root().__jac__
-                self.mem.set(root.id, root)
+    def close(self) -> None:
+        """Clean up context."""
+        self.datasource.close()
 
-            if not isinstance(root.architype, Root):
-                raise ValueError(f"Invalid root object: {root}")
-            else:
-                self.root = root.architype
-        return self.root
+    @staticmethod
+    def create(
+        base_path: str = "",
+        session: Optional[str] = None,
+        root: Optional[str] = None,
+        entry: Optional[str] = None,
+    ) -> ExecutionContext:
+        """Create JacContext."""
+        ctx = ExecutionContext()
+        ctx.jac_machine = JacMachine(base_path)
+        ctx.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
+        ctx.datasource = ShelfStorage(session)
+        ctx.reports = []
+        ctx.system_root = ctx.load(SUPER_ROOT_UUID, ctx.generate_system_root)
+        ctx.root = ctx.load(root, ctx.system_root)
+        ctx.entry = ctx.load(entry, ctx.root)
 
-    def reset(self) -> None:
-        """Reset the execution context."""
-        if self.mem:
-            self.mem.close()
-        self.root = None
+        if _ctx := EXECUTION_CONTEXT.get(None):
+            _ctx.close()
+        EXECUTION_CONTEXT.set(ctx)
 
+        return ctx
 
-exec_context: ContextVar[ExecutionContext | None] = ContextVar(
-    "ExecutionContext", default=None
-)
+    @staticmethod
+    def get() -> ExecutionContext:
+        """Get current ExecutionContext."""
+        if not isinstance(ctx := EXECUTION_CONTEXT.get(None), ExecutionContext):
+            raise Exception("ExecutionContext is not yet available!")
+        return ctx
 
 
 class JacTestResult(unittest.TextTestResult):

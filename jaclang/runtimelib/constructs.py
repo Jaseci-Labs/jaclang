@@ -16,7 +16,7 @@ from .architype import (
     WalkerAnchor,
     WalkerArchitype,
 )
-from .context import ExecutionContext, exec_context
+from .context import EXECUTION_CONTEXT, ExecutionContext
 from .memory import Memory, ShelfStorage
 from .test import JacTestCheck, JacTestResult, JacTextTestRunner
 
@@ -34,8 +34,8 @@ __all__ = [
     "DSFunc",
     "Memory",
     "ShelfStorage",
+    "EXECUTION_CONTEXT",
     "ExecutionContext",
-    "exec_context",
     "JacTestResult",
     "JacTextTestRunner",
     "JacTestCheck",
