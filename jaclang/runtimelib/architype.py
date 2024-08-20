@@ -464,18 +464,10 @@ class Root(NodeArchitype):
 
     _jac_entry_funcs_ = []
     _jac_exit_funcs_ = []
-    reachable_nodes: list[NodeArchitype] = []
-    connections: set[tuple[NodeArchitype, NodeArchitype, EdgeArchitype]] = set()
 
     def __init__(self) -> None:
         """Create root node."""
         self.__jac__ = NodeAnchor(architype=self, persistent=True)
-
-    def reset(self) -> None:
-        """Reset the root."""
-        self.reachable_nodes = []
-        self.connections = set()
-        self.__jac__.edges = []
 
 
 @dataclass(eq=False)
