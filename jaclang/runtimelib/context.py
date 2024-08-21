@@ -7,13 +7,13 @@ from contextvars import ContextVar
 from typing import Any, Callable, Optional
 from uuid import UUID
 
-from .architype import NodeAnchor, Root
+from .architype import AccessLevel, NodeAnchor, Root
 from .machine import JacMachine, JacProgram
 from .memory import ShelfStorage
 
 
 EXECUTION_CONTEXT = ContextVar[Optional["ExecutionContext"]]("ExecutionContext")
-SUPER_ROOT_UUID = "00000000-0000-0000-0000-000000000000"
+SUPER_ROOT_UUID = UUID("00000000-0000-0000-0000-000000000000")
 
 
 class ExecutionContext:
@@ -24,26 +24,38 @@ class ExecutionContext:
     reports: list[Any]
     system_root: NodeAnchor
     root: NodeAnchor
-    entry: NodeAnchor
 
-    def generate_system_root(self) -> NodeAnchor:
-        """Generate default system root."""
-        root = Root().__jac__
-        root.id = UUID(SUPER_ROOT_UUID)
-        self.datasource.set(root.id, root)
-        return root
+    __entry__: NodeAnchor | str | None
+
+    @property
+    def entry(self) -> NodeAnchor:
+        """Get entry lazy load."""
+        match self.__entry__:
+            case NodeAnchor():
+                pass
+            case str():
+                self.__entry__ = self.init_anchor(self.__entry__, self.root)
+            case _:
+                self.__entry__ = self.root
+        return self.__entry__
 
     def init_anchor(
         self,
         anchor_id: str | None,
-        default: NodeAnchor | Callable[[], NodeAnchor],
+        default: NodeAnchor,
     ) -> NodeAnchor:
         """Load initial anchors."""
-        if anchor_id and isinstance(
-            anchor := self.datasource.find_by_id(UUID(anchor_id)), NodeAnchor
-        ):
-            return anchor
-        return default() if callable(default) else default
+        if anchor_id:
+            if isinstance(
+                anchor := self.datasource.find_by_id(UUID(anchor_id)), NodeAnchor
+            ):
+                return anchor
+            raise ValueError(f"Invalid anchor id {anchor_id} !")
+        return default
+
+    def validate_access(self) -> bool:
+        """Validate access."""
+        return self.root.has_read_access(self.entry)
 
     @staticmethod
     def create(
@@ -61,9 +73,21 @@ class ExecutionContext:
         ctx.jac_machine.attach_program(JacProgram(mod_bundle=None, bytecode=None))
         ctx.datasource = ShelfStorage(session)
         ctx.reports = []
-        ctx.system_root = ctx.init_anchor(SUPER_ROOT_UUID, ctx.generate_system_root)
+
+        if not isinstance(
+            system_root := ctx.datasource.find_by_id(SUPER_ROOT_UUID), NodeAnchor
+        ):
+            system_root = Root().__jac__
+            system_root.id = SUPER_ROOT_UUID
+            ctx.datasource.set(system_root.id, system_root)
+
+        ctx.system_root = system_root
+
         ctx.root = ctx.init_anchor(root, ctx.system_root)
-        ctx.entry = ctx.init_anchor(entry, ctx.root)
+        ctx.root.current_access_level = AccessLevel.WRITE
+
+        ctx.__entry__ = entry
+
         EXECUTION_CONTEXT.set(ctx)
 
         return ctx

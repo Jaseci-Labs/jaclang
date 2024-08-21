@@ -481,13 +481,14 @@ class JacFeatureDefaults:
             _left = i.__jac__
             for j in right:
                 _right = j.__jac__
-                conn_edge = edge_spec()
-                edges.append(conn_edge)
-                _left.connect_node(_right, conn_edge.__jac__)
-                if _left.persistent or _right.persistent:
-                    conn_edge.__jac__.save()
-                    _right.save()
-                    _left.save()
+                if _left.has_connect_access(_right):
+                    conn_edge = edge_spec()
+                    edges.append(conn_edge)
+                    _left.connect_node(_right, conn_edge.__jac__)
+                    if _left.persistent or _right.persistent:
+                        conn_edge.__jac__.save()
+                        _right.save()
+                        _left.save()
         return right if not edges_only else edges
 
     @staticmethod
@@ -516,6 +517,7 @@ class JacFeatureDefaults:
                         dir in [EdgeDir.OUT, EdgeDir.ANY]
                         and node == source
                         and target.architype in right
+                        and source.has_write_access(target)
                     ):
                         anchor.destroy()
                         disconnect_occurred = True
@@ -523,6 +525,7 @@ class JacFeatureDefaults:
                         dir in [EdgeDir.IN, EdgeDir.ANY]
                         and node == target
                         and source.architype in right
+                        and target.has_write_access(source)
                     ):
                         anchor.destroy()
                         disconnect_occurred = True
