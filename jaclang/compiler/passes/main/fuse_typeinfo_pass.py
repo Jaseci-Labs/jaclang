@@ -6,14 +6,15 @@ mypy apis into Jac and use jac py ast in it.
 
 from __future__ import annotations
 
-from typing import Callable, TypeVar
+from types import MethodType
+from typing import Callable, Optional, TypeVar
 
 import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
+from jaclang.compiler.passes.transform import Transform
 from jaclang.settings import settings
 from jaclang.utils.helpers import pascal_to_snake
 from jaclang.vendor.mypy.nodes import Node as VNode  # bit of a hack
-
 
 import mypy.nodes as MypyNodes  # noqa N812
 import mypy.types as MypyTypes  # noqa N812
@@ -23,10 +24,81 @@ from mypy.checkexpr import Type as MyType
 T = TypeVar("T", bound=ast.AstSymbolNode)
 
 
+# List of expression nodes which we'll be extracting the type info from.
+JAC_EXPR_NODES = (
+    ast.AwaitExpr,
+    ast.BinaryExpr,
+    ast.CompareExpr,
+    ast.BoolExpr,
+    ast.LambdaExpr,
+    ast.UnaryExpr,
+    ast.IfElseExpr,
+    ast.AtomTrailer,
+    ast.AtomUnit,
+    ast.YieldExpr,
+    ast.YieldExpr,
+    ast.FuncCall,
+    ast.EdgeRefTrailer,
+    ast.ListVal,
+    ast.SetVal,
+    ast.TupleVal,
+    ast.DictVal,
+    ast.ListCompr,
+    ast.DictCompr,
+)
+
+
 class FuseTypeInfoPass(Pass):
     """Python and bytecode file self.__debug_printing pass."""
 
     node_type_hash: dict[MypyNodes.Node | VNode, MyType] = {}
+
+    @staticmethod
+    def enter_expr(self: FuseTypeInfoPass, node: ast.Expr) -> None:
+        """
+        Enter an expression node.
+
+        This function is dynamically bound as a method on insntace of this class, since the
+        group of functions to handle expressions has a the exact same logic.
+        """
+        if len(node.gen.mypy_ast) == 0:
+            return
+
+        # If the corrosponding mypy ast node type has stored here, get the values.
+        mypy_node = node.gen.mypy_ast[0]
+        if mypy_node in self.node_type_hash:
+            mytype: MyType = self.node_type_hash[mypy_node]
+            node.expr_type = str(mytype)
+
+        # TODO: Maybe move this out of the function otherwise it'll construct this dict every time it entered an
+        # expression. Time and memory wasted here.
+        collection_types_map = {
+            ast.ListVal: "builtins.list",
+            ast.SetVal: "builtins.set",
+            ast.TupleVal: "builtins.tuple",
+            ast.DictVal: "builtins.dict",
+            ast.ListCompr: None,
+            ast.DictCompr: None,
+        }
+
+        # Set they symbol type for collection expression.
+        if type(node) in tuple(collection_types_map.keys()):
+            assert isinstance(node, ast.AtomExpr)  # To make mypy happy.
+            if mypy_node in self.node_type_hash:
+                node.name_spec.sym_type = str(mytype)
+            collection_type = collection_types_map[type(node)]
+            if collection_type is not None:
+                node.name_spec.sym_type = collection_type
+
+    def __init__(self, input_ir: T, prior: Optional[Transform]) -> None:
+        """Initialize the FuseTpeInfoPass instance."""
+        for expr_node in JAC_EXPR_NODES:
+            method_name = "enter_" + pascal_to_snake(expr_node.__name__)
+            method = MethodType(
+                FuseTypeInfoPass.__handle_node(FuseTypeInfoPass.enter_expr), self
+            )
+            setattr(self, method_name, method)
+        super().__init__(input_ir, prior)
 
     def __debug_print(self, *argv: object) -> None:
         if settings.fuse_type_info_debug:
@@ -309,54 +381,6 @@ class FuseTypeInfoPass(Pass):
     def enter_f_string(self, node: ast.FString) -> None:
         """Pass handler for FString nodes."""
         self.__debug_print("Getting type not supported in", type(node))
-
-    @__handle_node
-    def enter_list_val(self, node: ast.ListVal) -> None:
-        """Pass handler for ListVal nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        if mypy_node in self.node_type_hash:
-            node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
-        else:
-            node.name_spec.sym_type = "builtins.list"
-
-    @__handle_node
-    def enter_set_val(self, node: ast.SetVal) -> None:
-        """Pass handler for SetVal nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        if mypy_node in self.node_type_hash:
-            node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
-        else:
-            node.name_spec.sym_type = "builtins.set"
-
-    @__handle_node
-    def enter_tuple_val(self, node: ast.TupleVal) -> None:
-        """Pass handler for TupleVal nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        if mypy_node in self.node_type_hash:
-            node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
-        else:
-            node.name_spec.sym_type = "builtins.tuple"
-
-    @__handle_node
-    def enter_dict_val(self, node: ast.DictVal) -> None:
-        """Pass handler for DictVal nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        if mypy_node in self.node_type_hash:
-            node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
-        else:
-            node.name_spec.sym_type = "builtins.dict"
-
-    @__handle_node
-    def enter_list_compr(self, node: ast.ListCompr) -> None:
-        """Pass handler for ListCompr nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
-
-    @__handle_node
-    def enter_dict_compr(self, node: ast.DictCompr) -> None:
-        """Pass handler for DictCompr nodes."""
-        mypy_node = node.gen.mypy_ast[0]
-        node.name_spec.sym_type = str(self.node_type_hash[mypy_node])
 
     @__handle_node
     def enter_index_slice(self, node: ast.IndexSlice) -> None:

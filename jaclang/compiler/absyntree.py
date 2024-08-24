@@ -50,6 +50,10 @@ class AstNode:
         self.meta: dict[str, str] = {}
         self.loc: CodeLocInfo = CodeLocInfo(*self.resolve_tok_range())
 
+        # NOTE: This is only applicable for Expr, However adding it there needs to call the constructor in all the
+        # subclasses, Adding it here, this needs a review.
+        self.expr_type: str = ""
+
     @property
     def sym_tab(self) -> SymbolTable:
         """Get symbol table."""
