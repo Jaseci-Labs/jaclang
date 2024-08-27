@@ -130,7 +130,7 @@ To represent the above scenario, we can use a graph to show connections between 
 > + Nodes: Geographic features like cities, tourist attractions, restaurants, and landmarks will be represented as nodes.
 > + Edges: Represent spatial relationships or connections between these nodes, such as roads, paths, or distance metrics.
 
-Now let's make some general nodes about cities and landmarks;
+Now let's make some general nodes about cities and landmarks; The `city` node is to represent cities. Each `city` node has two attributes: `name` and `location`.
 
 ```jac
 node city{
@@ -138,6 +138,10 @@ node city{
     has location;
 }
 
+```
+The `attraction` represent landmarks or points of interest within or near the cities. Each attraction node has three attributes: `name`, `location` and `description`.
+
+```
 node attraction{
     has name;
     has location;
@@ -145,7 +149,7 @@ node attraction{
 }
 ```
 
-lets create the distance edge;
+lets create the distance edge; `edge` keyword creates edges, the edge `road` represent the roads connecting the cities and landmarks. Each road has a single attribute: `distance`.
 
 ```jac
 edge road{
@@ -155,3 +159,65 @@ edge road{
 
 > NOTE:
 > + Walkers: Walkers are agents that traverse the graph to perform specific tasks. In spatial programming in jaclang, walkers can be used to execute spatial queries and operations. 
+
+The structure of the graph can create as follows; The `creator` walker is responsible for creating the graph. Inside the create method of the walker:
+
+- **Cities**: Ten city nodes (`city_a` to `city_j`) are created with unique names and locations.
+- **Landmarks**: Five attraction nodes (`landmark_1` to `landmark_5`) are created, each with a unique name, location, and description.
+- **Roads**: Roads (edges) are established between various city and landmark nodes to form a network. For example:
+`city_a` is connected to `city_b` with a road of distance 15 units. `city_a` is also connected to `city_c` and `landmark_1` with roads of distances 20 and 10 units, respectively. The connections are made using the syntax `city_a +: road(distance=15) :+> city_b;`, which creates a road edge between `city_a` and `city_b` with a specified distance.
+
+```
+walker creator {
+    can create with `root entry {
+        city_a = city(name="City A", location=(10.0, 20.0));
+        city_b = city(name="City B", location=(10.1, 20.1));
+        city_c = city(name="City C", location=(10.2, 20.2));
+        city_d = city(name="City D", location=(10.3, 20.3));
+        city_e = city(name="City E", location=(10.4, 20.4));
+        city_f = city(name="City F", location=(10.5, 20.5));
+        city_g = city(name="City G", location=(10.6, 20.6));
+        city_h = city(name="City H", location=(10.7, 20.7));
+        city_i = city(name="City I", location=(10.8, 20.8));
+        city_j = city(name="City J", location=(10.9, 20.9));
+
+        # Create landmarks
+        landmark_1 = attraction(name="Landmark 1", location=(11.0, 21.0), description="Beautiful spot.");
+        landmark_2 = attraction(name="Landmark 2", location=(11.1, 21.1), description="Historic place.");
+        landmark_3 = attraction(name="Landmark 3", location=(11.2, 21.2), description="Popular tourist spot.");
+        landmark_4 = attraction(name="Landmark 4", location=(11.3, 21.3), description="Iconic landmark.");
+        landmark_5 = attraction(name="Landmark 5", location=(11.4, 21.4), description="Must-visit place.");
+
+        # Create roads between cities and landmarks
+        city_a +: road(distance=15) :+> city_b;
+        city_a +: road(distance=20) :+> city_c;
+        city_a +: road(distance=10) :+> landmark_1;
+
+        city_b +: road(distance=25) :+> city_d;
+        city_b +: road(distance=30) :+> landmark_2;
+
+        city_c +: road(distance=35) :+> city_e;
+        city_c +: road(distance=20) :+> landmark_3;
+
+        city_d +: road(distance=40) :+> city_f;
+        city_e +: road(distance=45) :+> city_g;
+
+        city_f +: road(distance=50) :+> landmark_4;
+        city_g +: road(distance=55) :+> city_h;
+        city_h +: road(distance=60) :+> landmark_5;
+
+        city_i +: road(distance=10) :+> city_j;
+        city_i +: road(distance=70) :+> city_g;
+
+        city_j +: road(distance=25) :+> landmark_2;
+        city_j +: road(distance=30) :+> landmark_3;
+
+        landmark_1 +: road(distance=5) :+> landmark_2;
+        landmark_2 +: road(distance=15) :+> landmark_3;
+        landmark_3 +: road(distance=20) :+> landmark_4;
+        landmark_4 +: road(distance=25) :+> landmark_5;
+        landmark_5 +: road(distance=40) :+> city_a;
+    }
+}
+```
+
