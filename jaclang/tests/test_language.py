@@ -232,7 +232,7 @@ class JacLanguageTests(TestCase):
         Jac.get_root().__jac__.edges.clear()
         Jac.context().init_memory(base_path=self.fixture_abs_path("./"))
         jac_import("deep_import_mods", base_path=self.fixture_abs_path("./"))
-        mods = Jac.context().jac_machine.loaded_modules.keys()
+        mods = Jac.context().jac_machine.jac_program.loaded_modules.keys()
         for i in targets:
             self.assertIn(i, mods)
         self.assertEqual(len([i for i in mods if i.startswith("deep")]), 6)
