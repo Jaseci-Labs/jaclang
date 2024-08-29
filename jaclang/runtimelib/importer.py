@@ -6,6 +6,7 @@ import importlib
 import os
 import sys
 import types
+from importlib import util
 from os import getcwd, path
 from typing import Optional, Union
 
@@ -138,8 +139,11 @@ class ImportReturn:
                 if hasattr(module, "__path__")
                 else module.__name__
             )
-            if isinstance(self.importer, JacImporter):
-                new_module = self.importer.jac_machine.loaded_modules.get(
+            if (
+                isinstance(self.importer, JacImporter)
+                and self.importer.jac_machine.jac_program
+            ):
+                new_module = self.importer.jac_machine.jac_program.loaded_modules.get(
                     package_name,
                     self.importer.create_jac_py_module(
                         self.importer.get_sys_mod_name(jac_file_path),
@@ -177,7 +181,10 @@ class Importer:
 
     def update_sys(self, module: types.ModuleType, spec: ImportPathSpec) -> None:
         """Update sys.modules with the newly imported module."""
-        if spec.module_name not in self.jac_machine.loaded_modules:
+        if (
+            self.jac_machine.jac_program
+            and spec.module_name not in self.jac_machine.jac_program.loaded_modules
+        ):
             self.jac_machine.load_module(spec.module_name, module)
 
 
@@ -195,11 +202,11 @@ class PythonImporter(Importer):
             if spec.target.startswith("."):
                 spec.target = spec.target.lstrip(".")
                 full_target = path.normpath(path.join(spec.caller_dir, spec.target))
-                imp_spec = importlib.util.spec_from_file_location(
+                imp_spec = util.spec_from_file_location(
                     spec.target, full_target + ".py"
                 )
                 if imp_spec and imp_spec.loader:
-                    imported_module = importlib.util.module_from_spec(imp_spec)
+                    imported_module = util.module_from_spec(imp_spec)
                     sys.modules[imp_spec.name] = imported_module
                     imp_spec.loader.exec_module(imported_module)
                 else:
@@ -280,7 +287,10 @@ class JacImporter(Importer):
         module.__path__ = [full_mod_path]
         module.__file__ = None
 
-        if module_name not in self.jac_machine.loaded_modules:
+        if (
+            self.jac_machine.jac_program
+            and module_name not in self.jac_machine.jac_program.loaded_modules
+        ):
             self.jac_machine.load_module(module_name, module)
         return module
 
@@ -299,7 +309,10 @@ class JacImporter(Importer):
             parts = package_path.split(".")
             for i in range(len(parts)):
                 package_name = ".".join(parts[: i + 1])
-                if package_name not in self.jac_machine.loaded_modules:
+                if (
+                    self.jac_machine.jac_program
+                    and package_name not in self.jac_machine.jac_program.loaded_modules
+                ):
                     full_mod_path = path.join(
                         base_path, package_name.replace(".", path.sep)
                     )
@@ -321,8 +334,8 @@ class JacImporter(Importer):
             module_name = spec.override_name if spec.override_name else module_name
         else:
             module_name = self.get_sys_mod_name(spec.full_target)
-
-        module = self.jac_machine.loaded_modules.get(module_name)
+        if self.jac_machine.jac_program:
+            module = self.jac_machine.jac_program.loaded_modules.get(module_name)
 
         if not module or module.__name__ == "__main__" or reload:
             if os.path.isdir(spec.full_target):

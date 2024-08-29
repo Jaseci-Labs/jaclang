@@ -28,11 +28,11 @@ class TestLoader(TestCase):
         jac_import("fixtures.hello_world", base_path=__file__)
         self.assertIn(
             "module 'fixtures.hello_world'",
-            str(Jac.context().jac_machine.loaded_modules),
+            str(Jac.context().jac_machine.jac_program.loaded_modules),
         )
         self.assertIn(
             "/tests/fixtures/hello_world.jac",
-            str(Jac.context().jac_machine.loaded_modules),
+            str(Jac.context().jac_machine.jac_program.loaded_modules),
         )
 
     def test_jac_py_import(self) -> None:

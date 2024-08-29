@@ -367,7 +367,11 @@ def dot(
             target=mod,
             base_path=base,
         )
-        module = Jac.context().jac_machine.loaded_modules.get(mod)
+        jac_program = Jac.context().jac_machine.jac_program
+        if jac_program:
+            module = jac_program.loaded_modules.get(mod)
+        else:
+            module = None
         globals().update(vars(module))
         try:
             node = globals().get(initial, eval(initial)) if initial else None
