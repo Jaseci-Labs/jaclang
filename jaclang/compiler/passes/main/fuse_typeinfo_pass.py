@@ -32,7 +32,10 @@ class FuseTypeInfoPass(Pass):
         """Run on entering node."""
         if hasattr(self, f"enter_{pascal_to_snake(type(node).__name__)}"):
             getattr(self, f"enter_{pascal_to_snake(type(node).__name__)}")(node)
-        elif isinstance(node, ast.Expr):
+
+        # TODO: Make (AstSymbolNode::name_spec.sym_typ and Expr::expr_type) the same
+        # TODO: Introduce AstTypedNode to be a common parent for Expr and AstSymbolNode
+        if isinstance(node, ast.Expr):
             self.enter_expr(node)
 
     def __debug_print(self, *argv: object) -> None:
@@ -49,7 +52,8 @@ class FuseTypeInfoPass(Pass):
         )
         return None
 
-    def __set_sym_table_link(self, node: ast.AstSymbolNode) -> None:
+    # TODO: Need to chsnge node type to be AstNode or a common parent
+    def __set_type_sym_table_link(self, node: ast.AstSymbolNode) -> None:
         typ = node.sym_type.split(".")
         typ_sym_table = self.ir.sym_tab
 
@@ -118,7 +122,7 @@ class FuseTypeInfoPass(Pass):
                 # Jac node has only one mypy node linked to it
                 if len(node.gen.mypy_ast) == 1:
                     func(self, node)
-                    self.__set_sym_table_link(node)
+                    self.__set_type_sym_table_link(node)
                     self.__collect_python_dependencies(node)
 
                 # Jac node has multiple mypy nodes linked to it
@@ -142,7 +146,7 @@ class FuseTypeInfoPass(Pass):
                             jac_node_str, "has duplicate mypy nodes associated to it"
                         )
                         func(self, node)
-                        self.__set_sym_table_link(node)
+                        self.__set_type_sym_table_link(node)
                         self.__collect_python_dependencies(node)
 
                 # Jac node doesn't have mypy nodes linked to it
@@ -205,7 +209,7 @@ class FuseTypeInfoPass(Pass):
         else:
             if isinstance(mypy_node, MypyNodes.ClassDef):
                 node.name_spec.sym_type = mypy_node.fullname
-                self.__set_sym_table_link(node)
+                self.__set_type_sym_table_link(node)
             elif isinstance(mypy_node, MypyNodes.FuncDef):
                 node.name_spec.sym_type = (
                     self.__call_type_handler(mypy_node.type) or node.name_spec.sym_type
@@ -226,17 +230,22 @@ class FuseTypeInfoPass(Pass):
                     type(mypy_node),
                 )
 
-    # NOTE: Since expression nodes are not AstSymbolNodes, I'm not decorating this with __handle_node
+    collection_types_map = {
+        ast.ListVal: "builtins.list",
+        ast.SetVal: "builtins.set",
+        ast.TupleVal: "builtins.tuple",
+        ast.DictVal: "builtins.dict",
+        ast.ListCompr: None,
+        ast.DictCompr: None,
+    }
+
+    # NOTE (Thakee): Since expression nodes are not AstSymbolNodes, I'm not decorating this with __handle_node
     # and IMO instead of checking if it's a symbol node or an expression, we somehow mark expressions as
     # valid nodes that can have symbols. At this point I'm leaving this like this and lemme know
     # otherwise.
+    # NOTE (GAMAL): This will be fixed through the AstTypedNode
     def enter_expr(self: FuseTypeInfoPass, node: ast.Expr) -> None:
-        """
-        Enter an expression node.
-
-        This function is dynamically bound as a method on insntace of this class, since the
-        group of functions to handle expressions has a the exact same logic.
-        """
+        """Enter an expression node."""
         if len(node.gen.mypy_ast) == 0:
             return
 
@@ -246,21 +255,10 @@ class FuseTypeInfoPass(Pass):
             mytype: MyType = self.node_type_hash[mypy_node]
             node.expr_type = self.__call_type_handler(mytype) or ""
 
-        # TODO: Maybe move this out of the function otherwise it'll construct this dict every time it entered an
-        # expression. Time and memory wasted here.
-        collection_types_map = {
-            ast.ListVal: "builtins.list",
-            ast.SetVal: "builtins.set",
-            ast.TupleVal: "builtins.tuple",
-            ast.DictVal: "builtins.dict",
-            ast.ListCompr: None,
-            ast.DictCompr: None,
-        }
-
         # Set they symbol type for collection expression.
-        if type(node) in tuple(collection_types_map.keys()):
+        if isinstance(node, tuple(self.collection_types_map.keys())):
             assert isinstance(node, ast.AtomExpr)  # To make mypy happy.
-            collection_type = collection_types_map[type(node)]
+            collection_type = self.collection_types_map[type(node)]
             if collection_type is not None:
                 node.name_spec.sym_type = collection_type
             if mypy_node in self.node_type_hash:
@@ -392,7 +390,7 @@ class FuseTypeInfoPass(Pass):
         if isinstance(node.gen.mypy_ast[0], MypyNodes.ClassDef):
             mypy_node: MypyNodes.ClassDef = node.gen.mypy_ast[0]
             node.name_spec.sym_type = mypy_node.fullname
-            self.__set_sym_table_link(node)
+            self.__set_type_sym_table_link(node)
         elif isinstance(node.gen.mypy_ast[0], MypyNodes.FuncDef):
             mypy_node2: MypyNodes.FuncDef = node.gen.mypy_ast[0]
             node.name_spec.sym_type = (
