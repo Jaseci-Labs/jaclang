@@ -2,10 +2,7 @@
 
 import asyncio
 import builtins
-import importlib.util
-import os
 import re
-import sys
 from functools import wraps
 from typing import Any, Awaitable, Callable, Coroutine, Optional, ParamSpec, TypeVar
 
@@ -273,55 +270,11 @@ def label_map(sub_tab: SymbolType) -> lspt.CompletionItemKind:
     )
 
 
-def get_mod_path(
-    mod_path: ast.ModulePath, name_node: ast.Name
-) -> str | None:  # TODO: This should go away
-    """Get path for a module import name."""
-    ret_target = None
-    if mod_path.parent and (
-        (
-            isinstance(mod_path.parent.parent, ast.Import)
-            and mod_path.parent.parent.is_py
-        )
-        or (
-            isinstance(mod_path.parent, ast.Import)
-            and mod_path.parent.from_loc
-            and mod_path.parent.is_py
-        )
-    ):
-        if mod_path.path and name_node in mod_path.path:
-            temporary_path_str = ("." * mod_path.level) + ".".join(
-                [p.value for p in mod_path.path[: mod_path.path.index(name_node) + 1]]
-                if mod_path.path
-                else ""
-            )
-        else:
-            temporary_path_str = mod_path.dot_path_str
-        sys.path.append(os.path.dirname(mod_path.loc.mod_path))
-        spec = importlib.util.find_spec(temporary_path_str)
-        sys.path.remove(os.path.dirname(mod_path.loc.mod_path))
-        if spec and spec.origin and spec.origin.endswith(".py"):
-            ret_target = spec.origin
-    elif mod_path.parent and (
-        (
-            isinstance(mod_path.parent.parent, ast.Import)
-            and mod_path.parent.parent.is_jac
-        )
-        or (
-            isinstance(mod_path.parent, ast.Import)
-            and mod_path.parent.from_loc
-            and mod_path.parent.is_jac
-        )
-    ):
-        ret_target = mod_path.resolve_relative_path()
-    return ret_target
-
-
 def get_item_path(mod_item: ast.ModuleItem) -> tuple[str, tuple[int, int]] | None:
     """Get path."""
     item_name = mod_item.name.value
     if mod_item.from_parent.is_py and mod_item.from_parent.from_loc:
-        path = get_mod_path(mod_item.from_parent.from_loc, mod_item.name)
+        path = mod_item.from_mod_path.xpath
         if path:
             return get_definition_range(path, item_name)
     elif mod_item.from_parent.is_jac:

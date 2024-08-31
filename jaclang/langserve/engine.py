@@ -22,7 +22,6 @@ from jaclang.langserve.utils import (
     find_index,
     gen_diagnostics,
     get_item_path,
-    get_mod_path,
     get_symbols_for_outline,
     parse_symbol_path,
     resolve_completion_symbol_table,
@@ -334,7 +333,7 @@ class JacLangServer(LanguageServer):
                 and node_selected.parent
                 and isinstance(node_selected.parent, ast.ModulePath)
             ):
-                spec = get_mod_path(node_selected.parent, node_selected)
+                spec = node_selected.parent.xpath
                 if spec:
                     return lspt.Location(
                         uri=uris.from_fs_path(spec),

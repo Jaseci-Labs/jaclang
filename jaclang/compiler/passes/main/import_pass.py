@@ -54,6 +54,7 @@ class JacImportPass(Pass):
     ) -> None:
         """Attach a module to a node."""
         if mod:
+            node.xpath = mod.loc.mod_path
             self.run_again = True
             node.sub_module = mod
             self.annex_impl(mod)
@@ -283,6 +284,7 @@ class PyImportPass(JacImportPass):
                     ).ir
                     SubNodeTabPass(input_ir=mod, prior=self)
                 if mod:
+                    parent_node.xpath = file_to_raise
                     mod.name = imported_mod_name
                     self.import_table[file_to_raise] = mod
                     self.attach_mod_to_node(parent_node, mod)

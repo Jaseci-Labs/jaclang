@@ -953,11 +953,13 @@ class ModulePath(AstSymbolNode):
         level: int,
         alias: Optional[Name],
         kid: Sequence[AstNode],
+        xpath: Optional[str] = None,
     ) -> None:
         """Initialize module path node."""
         self.path = path
         self.level = level
         self.alias = alias
+        self.xpath = xpath
         self.sub_module: Optional[Module] = None
 
         name_spec = alias if alias else path[0] if path else None
@@ -1039,10 +1041,12 @@ class ModuleItem(AstSymbolNode):
         name: Name,
         alias: Optional[Name],
         kid: Sequence[AstNode],
+        xpath: Optional[str] = None,
     ) -> None:
         """Initialize module item node."""
         self.name = name
         self.alias = alias
+        self.xpath = xpath
         self.sub_module: Optional[Module] = None
         AstNode.__init__(self, kid=kid)
         AstSymbolNode.__init__(
