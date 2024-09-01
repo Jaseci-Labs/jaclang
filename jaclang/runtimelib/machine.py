@@ -13,10 +13,9 @@ from typing import Optional
 from jaclang.compiler.absyntree import Module
 from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
+from jaclang.compiler.semtable import SemRegistry
 from jaclang.runtimelib.architype import EdgeArchitype, NodeArchitype, WalkerArchitype
 from jaclang.utils.log import logging
-from jaclang.compiler.semtable import SemRegistry
-
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +66,12 @@ class JacMachine:
         return None
 
     def get_semtable(self, semtable: SemRegistry | None):
+        """Updating semtable on the attached JacProgram."""
         if self.jac_program:
             if self.jac_program.semtable:
                 self.jac_program.semtable.registry.update(semtable.registry)
             else:
                 self.jac_program.semtable = semtable
-        else:
-            None
 
     def load_module(self, module_name: str, module: types.ModuleType) -> None:
         """Load a module into the machine."""
