@@ -39,6 +39,7 @@ class RegistryPass(Pass):
             ) as f:
                 pickle.dump(node.registry, f)
                 from jaclang.runtimelib.machine import JacMachine
+
                 JacMachine.get().get_semtable(node.registry)
         except Exception as e:
             self.warning(f"Can't save registry for {module_name}: {e}")
