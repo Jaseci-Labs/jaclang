@@ -1,5 +1,7 @@
 """Jac Machine module."""
 
+from __future__ import annotations
+
 import inspect
 import marshal
 import os
@@ -13,6 +15,7 @@ from jaclang.compiler.compile import compile_jac
 from jaclang.compiler.constant import Constants as Con
 from jaclang.runtimelib.architype import EdgeArchitype, NodeArchitype, WalkerArchitype
 from jaclang.utils.log import logging
+from jaclang.compiler.semtable import SemRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +65,15 @@ class JacMachine:
                 module_name, full_target, caller_dir, cachable
             )
         return None
+
+    def get_semtable(self, semtable: SemRegistry | None):
+        if self.jac_program:
+            if self.jac_program.semtable:
+                self.jac_program.semtable.registry.update(semtable.registry)
+            else:
+                self.jac_program.semtable = semtable
+        else:
+            None
 
     def load_module(self, module_name: str, module: types.ModuleType) -> None:
         """Load a module into the machine."""
@@ -122,11 +134,15 @@ class JacProgram:
     """Class to hold the mod_bundle and bytecode for Jac modules."""
 
     def __init__(
-        self, mod_bundle: Optional[Module], bytecode: Optional[dict[str, bytes]]
+        self,
+        mod_bundle: Optional[Module],
+        bytecode: Optional[dict[str, bytes]],
+        semtable: Optional[SemRegistry | None],
     ) -> None:
         """Initialize the JacProgram object."""
         self.mod_bundle = mod_bundle
         self.bytecode = bytecode or {}
+        self.semtable = semtable if semtable else None
 
     def get_bytecode(
         self,
