@@ -67,7 +67,7 @@ class JacMachine:
 
     def get_semtable(self, semtable: SemRegistry | None):
         """Updating semtable on the attached JacProgram."""
-        if self.jac_program:
+        if self.jac_program and semtable:
             if self.jac_program.semtable:
                 self.jac_program.semtable.registry.update(semtable.registry)
             else:
