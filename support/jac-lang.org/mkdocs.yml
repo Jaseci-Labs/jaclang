@@ -15,6 +15,7 @@ nav:
         - 'learn/with_llm.md'
         - 'learn/tips_tricks.md'
         - 'learn/jac_plugins.md'
+        - 'learn/jac_dataspatial.md'
       - For contributors:
         - 'learn/contrib.md'
       - W.I.P:
