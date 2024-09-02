@@ -1,14 +1,17 @@
 # Geographic Information System for Travelers Using Data Spatial Programming
 
-In this example, we are developing a Geographic Information System designed for travelers. The system will be capable of handling tasks such as:
+Imagine you're on a adventure, exploring new cities, and discovering hidden gems along the way you want to;
 
-    - Locating tourist attractions within a specific distance of a given location.
-    - Estimating travel times between different points of interest.
-    - Identifying restaurants situated within a designated area near a tourist attraction.
+    - Locate tourist attractions within a specific distance of a given location.
+    - Estimate travel times between different points of interest.
+    - Identify restaurants situated within a designated area near a tourist attraction.
 
 ## Why we prefer data spatial programming over OOP
 
-In an object-oriented programming approach, each feature can be represented with a class, and operations can be performed using custom methods. For example lets look at how we can implement, the above example using OOP;
+
+When building a GIS system, a common approach might be to use Object-Oriented Programming (OOP). For example, you could create classes to represent cities, landmarks, and roads, and use methods to perform tasks like finding distances or connections between locations.
+
+Here's a quick look at an OOP example for GIS:
 
 ```python
 from math import radians, sin, cos, sqrt, atan2
@@ -118,13 +121,23 @@ distance = calculate_distance(cities['A'].location, cities['B'].location)
 print(f"Distance between {cities['A'].name} and {cities['B'].name}: {distance:.2f} km")
 ```
 
-Consider the above scenario: initially, you might manually perform distance calculations and other spatial operations. However, as the dataset grows, this becomes increasingly complex and inefficient. By utilizing nodes, edges, and walkers, you can enhance the management and querying of geographical data, especially for a travel-oriented system. For instance, let's envision a GIS system intended to aid travelers by providing details about tourist attractions, restaurants, and other points of interest. This system should effectively handle tasks such as locating nearby attractions, estimating travel times, and identifying points within specific areas.
+Imagine having to manually calculate distances and perform spatial operations to find tourist attractions and restaurants. Initially, this may seem feasible. However, as the number of locations increases, the process becomes complex and inefficient.
 
-The issue can be represented as a graph with nodes and edges using the spatial programming capabilities of Jaclang. By leveraging these structures, spatial operations can be carried out. The graphical representation is highly expressive and easy to grasp, making it well-suited for conceptualizing and solving computational problems. Some argue that their preferred programming language already includes graph libraries, rendering the concept unnecessary. However, I counter this argument by stating that fundamental design languages are built upon their inherent abstractions. Since graphs are not part of these abstractions, the language is not optimized to take advantage of the rich semantics that graphs offer.
+This is where spatial programming comes into play. By utilizing this concept, managing and querying large sets of geographical data becomes efficient, making it perfect for travel-oriented systems. Specifically, in a GIS designed for travelers, where the system can provide detailed information about tourist spots, restaurants, and other points of interest.
+
+By using a graph-based structure with nodes representing cities and landmarks, edges representing roads or paths, and walkers as agents that traverse the graph, the system can efficiently perform tasks and provide the user with real-time, accurate travel information.
+
+Representing the problem as a graph using nodes and edges, leveraging the spatial programming features of Jaclang, allows us to perform spatial operations in a more intuitive way. A graphical representation is both expressive and easy to understand, making it ideal for visualizing and solving complex computational problems.
+
+While some argue that traditional programming languages already offer graph libraries, I believe that most programming languages are not optimized to fully utilize the advantages and rich semantics that graphs provide due to being built around specific design abstractions that do not natively include graph structures.
+
+By using a language like Jaclang, which inherently understands and optimizes graph-based data structures, we can take full advantage of these powerful spatial representations, allowing for more efficient and effective solutions to travel-related queries and problems.
 
 ### Graph representation of the problem
 
-To represent the above scenario, we can use a graph to show connections between cities and their attractions. The graph's cities and attractions are nodes, and the edges connecting them show the distances between them. These lines are bidirectional so that you can travel back and forth, see the following picture;
+To represent the above scenario, we can use a graph to show connections between cities and their attractions as mentioned above. The graph's cities and attractions are nodes, and the edges connecting them show the distances between them. These lines are bidirectional so that you can travel back and forth, see the following picture;
+
+![Example Graph](img/example_graph.png)
 
 > NOTE:
 > + Nodes: Geographic features like cities, tourist attractions, restaurants, and landmarks will be represented as nodes.
@@ -158,7 +171,7 @@ edge road{
 ```
 
 > NOTE:
-> + Walkers: Walkers are agents that traverse the graph to perform specific tasks. In spatial programming in jaclang, walkers can be used to execute spatial queries and operations. 
+> + Walkers: Walkers are agents that traverse the graph to perform specific tasks. In spatial programming in jaclang, walkers can be used to execute spatial queries and operations.
 
 The structure of the graph can create as follows; The `creator` walker is responsible for creating the graph. Inside the create method of the walker:
 
@@ -180,6 +193,18 @@ walker creator {
         city_h = city(name="City H", location=(10.7, 20.7));
         city_i = city(name="City I", location=(10.8, 20.8));
         city_j = city(name="City J", location=(10.9, 20.9));
+
+        end=root;
+        end++>(end:=[city_a]);
+        end++>(end:=[city_b]);
+        end++>(end:=[city_c]);
+        end++>(end:=[city_d]);
+        end++>(end:=[city_e]);
+        end++>(end:=[city_f]);
+        end++>(end:=[city_g]);
+        end++>(end:=[city_h]);
+        end++>(end:=[city_i]);
+        end++>(end:=[city_j]);
 
         # Create landmarks
         landmark_1 = attraction(name="Landmark 1", location=(11.0, 21.0), description="Beautiful spot.");
@@ -221,3 +246,15 @@ walker creator {
 }
 ```
 
+### View Graph on Jac Streamlit
+
+To visualize the graph of in Jac streamlit, you can use the following command:
+
+```shell
+jac dot_view app.jac
+```
+
+This will open up a Streamlit app in your browser, displaying the graph as following figure.
+
+
+![Streamlit Graph](img/streamlit_graph.png)

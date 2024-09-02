@@ -45,6 +45,18 @@ walker creator {
         city_i = city(name="City I", location=(10.8, 20.8));
         city_j = city(name="City J", location=(10.9, 20.9));
 
+        end=root;
+        end++>(end:=[city_a]);
+        end++>(end:=[city_b]);
+        end++>(end:=[city_c]);
+        end++>(end:=[city_d]);
+        end++>(end:=[city_e]);
+        end++>(end:=[city_f]);
+        end++>(end:=[city_g]);
+        end++>(end:=[city_h]);
+        end++>(end:=[city_i]);
+        end++>(end:=[city_j]);
+
         # Create landmarks
         landmark_1 = attraction(name="Landmark 1", location=(11.0, 21.0), description="Beautiful spot.");
         landmark_2 = attraction(name="Landmark 2", location=(11.1, 21.1), description="Historic place.");
@@ -86,10 +98,11 @@ walker creator {
 
 with entry {
     print("Welcome to City Traffic!");
-    `root spawn creator();
+    root spawn creator();
 
-    d1=dotgen();l1=d1|>len;  #generate dot for all connected with root
-    d3=dotgen(city_a[1],edge_limit=5,depth=5);l3=d3|>len;
+    d1=dotgen();
+    l1=d1|>len;
+    print(d1);
 
+    }
 
-}
