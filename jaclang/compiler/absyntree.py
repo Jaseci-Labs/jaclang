@@ -959,6 +959,7 @@ class ModulePath(AstSymbolNode):
         self.level = level
         self.alias = alias
         self.sub_module: Optional[Module] = None
+        self.abs_path: Optional[str] = None
 
         name_spec = alias if alias else path[0] if path else None
 
@@ -980,7 +981,7 @@ class ModulePath(AstSymbolNode):
         )
 
     @property
-    def path_str(self) -> str:
+    def dot_path_str(self) -> str:
         """Get path string."""
         return ("." * self.level) + ".".join(
             [p.value for p in self.path] if self.path else [self.name_spec.sym_name]
@@ -988,7 +989,7 @@ class ModulePath(AstSymbolNode):
 
     def resolve_relative_path(self, target_item: Optional[str] = None) -> str:
         """Convert an import target string into a relative file path."""
-        target = self.path_str
+        target = self.dot_path_str
         if target_item:
             target += f".{target_item}"
         base_path = os.path.dirname(self.loc.mod_path)
@@ -1051,6 +1052,7 @@ class ModuleItem(AstSymbolNode):
             name_spec=alias if alias else name,
             sym_category=SymbolType.MOD_VAR,
         )
+        self.abs_path: Optional[str] = None
 
     @property
     def from_parent(self) -> Import:
