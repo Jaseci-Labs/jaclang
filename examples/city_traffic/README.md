@@ -8,7 +8,6 @@ Imagine you're on a adventure, exploring new cities, and discovering hidden gems
 
 ## Why we prefer data spatial programming over OOP
 
-
 When building a GIS system, a common approach might be to use Object-Oriented Programming (OOP). For example, you could create classes to represent cities, landmarks, and roads, and use methods to perform tasks like finding distances or connections between locations.
 
 Here's a quick look at an OOP example for GIS:
@@ -214,34 +213,34 @@ walker creator {
         landmark_5 = attraction(name="Landmark 5", location=(11.4, 21.4), description="Must-visit place.");
 
         # Create roads between cities and landmarks
-        city_a +: road(distance=15) :+> city_b;
-        city_a +: road(distance=20) :+> city_c;
-        city_a +: road(distance=10) :+> landmark_1;
+        city_a <+: road(distance=15) :+> city_b;
+        city_a <+: road(distance=20) :+> city_c;
+        city_a <+: road(distance=10) :+> landmark_1;
 
-        city_b +: road(distance=25) :+> city_d;
-        city_b +: road(distance=30) :+> landmark_2;
+        city_b <+: road(distance=25) :+> city_d;
+        city_b <+: road(distance=30) :+> landmark_2;
 
-        city_c +: road(distance=35) :+> city_e;
-        city_c +: road(distance=20) :+> landmark_3;
+        city_c <+: road(distance=35) :+> city_e;
+        city_c <+: road(distance=20) :+> landmark_3;
 
-        city_d +: road(distance=40) :+> city_f;
-        city_e +: road(distance=45) :+> city_g;
+        city_d <+: road(distance=40) :+> city_f;
+        city_e <+: road(distance=45) :+> city_g;
 
-        city_f +: road(distance=50) :+> landmark_4;
-        city_g +: road(distance=55) :+> city_h;
-        city_h +: road(distance=60) :+> landmark_5;
+        city_f <+: road(distance=50) :+> landmark_4;
+        city_g <+: road(distance=55) :+> city_h;
+        city_h <+: road(distance=60) :+> landmark_5;
 
-        city_i +: road(distance=10) :+> city_j;
-        city_i +: road(distance=70) :+> city_g;
+        city_i <+: road(distance=10) :+> city_j;
+        city_i <+: road(distance=70) :+> city_g;
 
-        city_j +: road(distance=25) :+> landmark_2;
-        city_j +: road(distance=30) :+> landmark_3;
+        city_j <+: road(distance=25) :+> landmark_2;
+        city_j <+: road(distance=30) :+> landmark_3;
 
-        landmark_1 +: road(distance=5) :+> landmark_2;
-        landmark_2 +: road(distance=15) :+> landmark_3;
-        landmark_3 +: road(distance=20) :+> landmark_4;
-        landmark_4 +: road(distance=25) :+> landmark_5;
-        landmark_5 +: road(distance=40) :+> city_a;
+        landmark_1 <+: road(distance=5) :+> landmark_2;
+        landmark_2 <+: road(distance=15) :+> landmark_3;
+        landmark_3 <+: road(distance=20) :+> landmark_4;
+        landmark_4 <+: road(distance=25) :+> landmark_5;
+        landmark_5 <+: road(distance=40) :+> city_a;
     }
 }
 ```
@@ -258,3 +257,57 @@ This will open up a Streamlit app in your browser, displaying the graph as follo
 
 
 ![Streamlit Graph](img/streamlit_graph.png)
+
+## Practical Example Use of the graph
+
+Now that we have created the structure of the problem and have the basics, in the following section we will few practical examples;
+
+Imagine you're in "City A" and you want to find all the cities and landmarks you can visit from there. You can use the following code snippet in Jaclang:
+
+```
+visitable = [cities[0]-->];
+print(visitable);
+print([x.name for x in visitable]);
+```
+
+Explanation:
+
+* `cities[0]` refers to City A (assuming it is stored in the first index of the cities list).
+* `-->` operator is used to find all nodes (cities or landmarks) that are directly reachable from "City A". If you want to filter out only reachable landmarks, change the code to `[cities[0]-->landmarks]`.
+* The result shows all destinations accessible from "City A" and their names.
+
+Suppose you want to know all the landmarks you can visit starting from "City J". We can do it as follows;
+
+```
+print([i.distance for i in (:e:[cities[9] --> landmarks])]);
+```
+
+Explanation:
+* `cities[9]` refers to City J.
+* `:e:` is used to indicate an edge (a road or connection) between nodes.
+* `[cities[9] --> landmarks]` retrieves all landmarks directly reachable from City J.
+* The result shows the distances to all landmarks that can be visited from City J.
+
+
+If you want to know how long it takes to get from "City B" to Landmark 2, it is simple as this:
+
+```
+print([i.distance for i in (:e:[cities[1] --> landmark_2])]);
+```
+
+Explanation:
+* `cities[1]` represents City B.
+* `:e:[cities[1] --> landmark_2]` retrieves the distance along the edge (road) connecting City B and Landmark 2.
+* The result provides the exact distance from City B to Landmark 2.
+
+
+> Notes:
+> The `:e:` prefix in Jaclang is used to specify an edge between nodes, allowing you to explore connections and distances between different points in the graph.
+
+Unlike traditional programming paradigms, Jaclang is designed to handle spatial data naturally, using graphs to represent real-world relationships. 
+This approach makes it easier to create dynamic, scalable, and efficient GIS solutions tailored for travel enthusiasts like you!
+
+If you’re excited about building your own GIS for travelers, try Jaclang! Whether you’re a developer, data scientist, or just a curious traveler, Jaclang makes it fun and engaging to create intelligent, spatially aware applications.
+
+
+
