@@ -65,13 +65,10 @@ class JacMachine:
             )
         return None
 
-    def get_semtable(self, semtable: SemRegistry | None) -> None:
+    def get_semtable(self, module_path: str, semtable: SemRegistry | None) -> None:
         """Update semtable on the attached JacProgram."""
         if self.jac_program and semtable:
-            if self.jac_program.semtable:
-                self.jac_program.semtable.registry.update(semtable.registry)
-            else:
-                self.jac_program.semtable = semtable
+            self.jac_program.semtable[module_path] = semtable
 
     def load_module(self, module_name: str, module: types.ModuleType) -> None:
         """Load a module into the machine."""
@@ -135,12 +132,12 @@ class JacProgram:
         self,
         mod_bundle: Optional[Module],
         bytecode: Optional[dict[str, bytes]],
-        semtable: Optional[SemRegistry | None],
+        semtable: Optional[dict[SemRegistry]],
     ) -> None:
         """Initialize the JacProgram object."""
         self.mod_bundle = mod_bundle
         self.bytecode = bytecode or {}
-        self.semtable = semtable if semtable else None
+        self.semtable = semtable or {}
 
     def get_bytecode(
         self,
