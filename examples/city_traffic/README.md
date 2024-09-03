@@ -13,8 +13,6 @@ When building a GIS system, a common approach might be to use Object-Oriented Pr
 Here's a quick look at an OOP example for GIS:
 
 ```python
-from math import radians, sin, cos, sqrt, atan2
-
 class City:
     def __init__(self, id, name, location):
         self.id = id
@@ -40,21 +38,6 @@ class Road:
         self.start = start
         self.end = end
         self.distance = distance
-
-def calculate_distance(loc1, loc2):
-    # Haversine formula to calculate distance between two points on the Earth
-    R = 6371.0  # Radius of the Earth in kilometers
-
-    lat1, lon1 = loc1
-    lat2, lon2 = loc2
-
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
-
-    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    return R * c
 
 def find_connections(entity):
     return [(road.end.name, road.distance) for road in entity.connections]
@@ -114,10 +97,6 @@ landmarks['5'].add_connection(cities['A'], 40)
 # Example usage: Finding connections for City A
 connections = find_connections(cities['A'])
 print(f"Connections for {cities['A'].name}: {connections}")
-
-# Example usage: Calculating distance between two cities
-distance = calculate_distance(cities['A'].location, cities['B'].location)
-print(f"Distance between {cities['A'].name} and {cities['B'].name}: {distance:.2f} km")
 ```
 
 Imagine having to manually calculate distances and perform spatial operations to find tourist attractions and restaurants. Initially, this may seem feasible. However, as the number of locations increases, the process becomes complex and inefficient.
@@ -134,9 +113,7 @@ By using a language like Jaclang, which inherently understands and optimizes gra
 
 ### Graph representation of the problem
 
-To represent the above scenario, we can use a graph to show connections between cities and their attractions as mentioned above. The graph's cities and attractions are nodes, and the edges connecting them show the distances between them. These lines are bidirectional so that you can travel back and forth, see the following picture;
-
-![Example Graph](img/example_graph.png)
+To represent the above scenario, we can use a graph to show connections between cities and their attractions as mentioned above. The graph's cities and attractions are nodes, and the edges connecting them show the distances between them.
 
 > NOTE:
 > + Nodes: Geographic features like cities, tourist attractions, restaurants, and landmarks will be represented as nodes.
@@ -180,68 +157,54 @@ The structure of the graph can create as follows; The `creator` walker is respon
 `city_a` is connected to `city_b` with a road of distance 15 units. `city_a` is also connected to `city_c` and `landmark_1` with roads of distances 20 and 10 units, respectively. The connections are made using the syntax `city_a +: road(distance=15) :+> city_b;`, which creates a road edge between `city_a` and `city_b` with a specified distance.
 
 ```
-walker creator {
-    can create with `root entry {
-        city_a = city(name="City A", location=(10.0, 20.0));
-        city_b = city(name="City B", location=(10.1, 20.1));
-        city_c = city(name="City C", location=(10.2, 20.2));
-        city_d = city(name="City D", location=(10.3, 20.3));
-        city_e = city(name="City E", location=(10.4, 20.4));
-        city_f = city(name="City F", location=(10.5, 20.5));
-        city_g = city(name="City G", location=(10.6, 20.6));
-        city_h = city(name="City H", location=(10.7, 20.7));
-        city_i = city(name="City I", location=(10.8, 20.8));
-        city_j = city(name="City J", location=(10.9, 20.9));
+with entry {
+    print("Welcome to City Traffic!");
 
-        end=root;
-        end++>(end:=[city_a]);
-        end++>(end:=[city_b]);
-        end++>(end:=[city_c]);
-        end++>(end:=[city_d]);
-        end++>(end:=[city_e]);
-        end++>(end:=[city_f]);
-        end++>(end:=[city_g]);
-        end++>(end:=[city_h]);
-        end++>(end:=[city_i]);
-        end++>(end:=[city_j]);
-
-        # Create landmarks
-        landmark_1 = attraction(name="Landmark 1", location=(11.0, 21.0), description="Beautiful spot.");
-        landmark_2 = attraction(name="Landmark 2", location=(11.1, 21.1), description="Historic place.");
-        landmark_3 = attraction(name="Landmark 3", location=(11.2, 21.2), description="Popular tourist spot.");
-        landmark_4 = attraction(name="Landmark 4", location=(11.3, 21.3), description="Iconic landmark.");
-        landmark_5 = attraction(name="Landmark 5", location=(11.4, 21.4), description="Must-visit place.");
-
-        # Create roads between cities and landmarks
-        city_a <+: road(distance=15) :+> city_b;
-        city_a <+: road(distance=20) :+> city_c;
-        city_a <+: road(distance=10) :+> landmark_1;
-
-        city_b <+: road(distance=25) :+> city_d;
-        city_b <+: road(distance=30) :+> landmark_2;
-
-        city_c <+: road(distance=35) :+> city_e;
-        city_c <+: road(distance=20) :+> landmark_3;
-
-        city_d <+: road(distance=40) :+> city_f;
-        city_e <+: road(distance=45) :+> city_g;
-
-        city_f <+: road(distance=50) :+> landmark_4;
-        city_g <+: road(distance=55) :+> city_h;
-        city_h <+: road(distance=60) :+> landmark_5;
-
-        city_i <+: road(distance=10) :+> city_j;
-        city_i <+: road(distance=70) :+> city_g;
-
-        city_j <+: road(distance=25) :+> landmark_2;
-        city_j <+: road(distance=30) :+> landmark_3;
-
-        landmark_1 <+: road(distance=5) :+> landmark_2;
-        landmark_2 <+: road(distance=15) :+> landmark_3;
-        landmark_3 <+: road(distance=20) :+> landmark_4;
-        landmark_4 <+: road(distance=25) :+> landmark_5;
-        landmark_5 <+: road(distance=40) :+> city_a;
+    cities = [];
+    for i in range(10){
+        city_name = f"City {chr(65 + i)}";
+        location = (10.0 + i * 0.1, 20.0 + i * 0.1);
+        cities.append(city(name=city_name, location=location));
     }
+
+    end=root;
+    end++>(end:=[cities[0]]);
+
+    # Create landmarks
+    landmark_1 = attraction(name="Landmark 1", location=(11.0, 21.0), description="Beautiful spot.");
+    landmark_2 = attraction(name="Landmark 2", location=(11.1, 21.1), description="Historic place.");
+    landmark_3 = attraction(name="Landmark 3", location=(11.2, 21.2), description="Popular tourist spot.");
+    landmark_4 = attraction(name="Landmark 4", location=(11.3, 21.3), description="Iconic landmark.");
+    landmark_5 = attraction(name="Landmark 5", location=(11.4, 21.4), description="Must-visit place.");
+
+    landmarks = [landmark_1, landmark_2, landmark_3, landmark_4, landmark_5];
+
+    # Create roads between cities and landmarks
+    cities[0] +: road(distance=15) :+> cities[1];
+    cities[0] <+: road(distance=20) :+> cities[2];
+    cities[0] <+: road(distance=10) :+> landmark_1;
+
+    cities[1] <+: road(distance=25) :+> cities[3];
+    cities[1] <+: road(distance=30) :+> landmark_2;
+    landmark_2 <+: road(distance=40) :+> cities[0];
+
+    cities[2] <+: road(distance=35) :+> cities[4];
+    cities[2] <+: road(distance=20) :+> landmark_3;
+
+    cities[3] <+: road(distance=40) :+> cities[5];
+    cities[4] <+: road(distance=45) :+> cities[6];
+
+    cities[5] <+: road(distance=50) :+> landmark_4;
+    cities[6] <+: road(distance=55) :+> cities[7];
+    cities[7] <+: road(distance=60) :+> landmark_5;
+
+    cities[8] <+: road(distance=10) :+> cities[9];
+    cities[8] <+: road(distance=70) :+> cities[6];
+
+    cities[9] <+: road(distance=25) :+> landmark_2;
+    cities[9] <+: road(distance=30) :+> landmark_3;
+
+    landmark_5 <+: road(distance=40) :+> cities[0];
 }
 ```
 
@@ -252,8 +215,9 @@ To visualize the graph of in Jac streamlit, you can use the following command:
 ```shell
 jac dot_view app.jac
 ```
-
 This will open up a Streamlit app in your browser, displaying the graph as following figure.
+
+To view the graph in .dot format, you can also use the `jac dot app.jac` command to generate a `.dot` file. Use the Graphviz extension in VS Code to visualize the graph.
 
 
 ![Streamlit Graph](img/streamlit_graph.png)
@@ -270,7 +234,7 @@ print(visitable);
 print([x.name for x in visitable]);
 ```
 
-Explanation:
+*Explanation*:
 
 * `cities[0]` refers to City A (assuming it is stored in the first index of the cities list).
 * `-->` operator is used to find all nodes (cities or landmarks) that are directly reachable from "City A". If you want to filter out only reachable landmarks, change the code to `[cities[0]-->landmarks]`.
@@ -282,7 +246,7 @@ Suppose you want to know all the landmarks you can visit starting from "City J".
 print([i.distance for i in (:e:[cities[9] --> landmarks])]);
 ```
 
-Explanation:
+*Explanation*:
 * `cities[9]` refers to City J.
 * `:e:` is used to indicate an edge (a road or connection) between nodes.
 * `[cities[9] --> landmarks]` retrieves all landmarks directly reachable from City J.
@@ -295,7 +259,7 @@ If you want to know how long it takes to get from "City B" to Landmark 2, it is 
 print([i.distance for i in (:e:[cities[1] --> landmark_2])]);
 ```
 
-Explanation:
+*Explanation*:
 * `cities[1]` represents City B.
 * `:e:[cities[1] --> landmark_2]` retrieves the distance along the edge (road) connecting City B and Landmark 2.
 * The result provides the exact distance from City B to Landmark 2.
@@ -303,6 +267,13 @@ Explanation:
 
 > Notes:
 > The `:e:` prefix in Jaclang is used to specify an edge between nodes, allowing you to explore connections and distances between different points in the graph.
+
+
+If you wanna know which cities you can visit after visiting landmark 2 you can do the following, output will show you which cities possible to visit;
+
+```
+print([landmark_2-->cities]);
+```
 
 Unlike traditional programming paradigms, Jaclang is designed to handle spatial data naturally, using graphs to represent real-world relationships.
 This approach makes it easier to create dynamic, scalable, and efficient GIS solutions tailored for travel enthusiasts like you!

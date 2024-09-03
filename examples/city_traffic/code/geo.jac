@@ -17,55 +17,6 @@ edge road{
     has distance:float;
 }
 
-walker traveller{
-    has name:str;
-    has location:str;
-    has destination:str;
-
-    can travel with entry{
-        print("Distance travelled: ", distance);
-    }
-
-    can find_path with entry{
-        print("Finding path to ", destination);
-    }
-
-    can visit with entry{
-        print("Visiting ", location);
-    }
-
-    can leave with exit{
-        print("Leaving ", location);
-    }
-
-    can find_nearest_landmark with entry{
-        print("Finding nearest landmark");
-    }
-
-    can visit_landmark with entry{
-        print("Visiting landmark");
-
-    }
-}
-
-:walker:traveller:can:travel {
-    print(self.name, " is travelling from ", self.location, " to ", self.destination);
-    visit [-->](?location == self.destination) else{
-
-    #####
-    }
-}
-
-
-walker creator {
-
-}
-
-can create{
-
-
-}
-
 with entry {
 
     print("Welcome to City Traffic!");
@@ -90,12 +41,13 @@ with entry {
     landmarks = [landmark_1, landmark_2, landmark_3, landmark_4, landmark_5];
 
     # Create roads between cities and landmarks
-    cities[0] <+: road(distance=15) :+> cities[1];
+    cities[0] +: road(distance=15) :+> cities[1];
     cities[0] <+: road(distance=20) :+> cities[2];
     cities[0] <+: road(distance=10) :+> landmark_1;
 
     cities[1] <+: road(distance=25) :+> cities[3];
     cities[1] <+: road(distance=30) :+> landmark_2;
+    landmark_2 <+: road(distance=40) :+> cities[0];
 
     cities[2] <+: road(distance=35) :+> cities[4];
     cities[2] <+: road(distance=20) :+> landmark_3;
@@ -113,14 +65,9 @@ with entry {
     cities[9] <+: road(distance=25) :+> landmark_2;
     cities[9] <+: road(distance=30) :+> landmark_3;
 
-    landmark_1 <+: road(distance=5) :+> landmark_2;
-    landmark_2 <+: road(distance=15) :+> landmark_3;
-    landmark_3 <+: road(distance=20) :+> landmark_4;
-    landmark_4 <+: road(distance=25) :+> landmark_5;
     landmark_5 <+: road(distance=40) :+> cities[0];
 
     # Create a traveller
-    traveller_1 = traveller(name="Traveller 1", location=cities[0], destination=landmark_3);
     #root spawn traveller_1();
 
     #d1=dotgen();
@@ -131,18 +78,21 @@ with entry {
 
     #print([cities-->landmarks-->cities]);
 
-    visitable = [cities[0]-->];
-    print(visitable);
-    print([x.name for x in visitable]);
+    #visitable = [cities[0]-->];
+    #print(visitable);
+    #print([x.name for x in visitable]);
 
     #print([i.distance for i in (:e:[cities[0] -->])]);
 
-    print([i.distance for i in (:e:[cities[9] --> landmarks])]);
+    #print([i.distance for i in (:e:[cities[9] --> landmarks])]);
 
     l1=d1|>len;
     #print(d1);
 
-    print([i.distance for i in (:e:[cities[1] --> landmark_2])]);
+    #print([i.distance for i in (:e:[cities[1] --> landmark_2])]);
+
+    print([landmarks-->cities]);
+
 
     }
 
