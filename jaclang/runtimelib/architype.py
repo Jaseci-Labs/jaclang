@@ -161,7 +161,7 @@ class Anchor:
 
         # if target anchor's root have set allowed roots
         # if current root is allowed to the whole graph of target anchor's root
-        if to.root and isinstance(to_root := jctx.mem.find_one(to.root), Anchor):
+        if to.root and isinstance(to_root := jctx.mem.find_by_id(to.root), Anchor):
             if to_root.access.all > access_level:
                 access_level = to_root.access.all
 
