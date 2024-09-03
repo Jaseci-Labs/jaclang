@@ -304,7 +304,7 @@ Explanation:
 > Notes:
 > The `:e:` prefix in Jaclang is used to specify an edge between nodes, allowing you to explore connections and distances between different points in the graph.
 
-Unlike traditional programming paradigms, Jaclang is designed to handle spatial data naturally, using graphs to represent real-world relationships. 
+Unlike traditional programming paradigms, Jaclang is designed to handle spatial data naturally, using graphs to represent real-world relationships.
 This approach makes it easier to create dynamic, scalable, and efficient GIS solutions tailored for travel enthusiasts like you!
 
 If you’re excited about building your own GIS for travelers, try Jaclang! Whether you’re a developer, data scientist, or just a curious traveler, Jaclang makes it fun and engaging to create intelligent, spatially aware applications.

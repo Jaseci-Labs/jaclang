@@ -52,18 +52,18 @@ walker traveller{
     print(self.name, " is travelling from ", self.location, " to ", self.destination);
     visit [-->](?location == self.destination) else{
 
-    ##### 
+    #####
     }
 }
 
 
 walker creator {
-        
+
 }
 
 can create{
 
-    
+
 }
 
 with entry {
@@ -74,7 +74,7 @@ with entry {
     for i in range(10){
         city_name = f"City {chr(65 + i)}";
         location = (10.0 + i * 0.1, 20.0 + i * 0.1);
-        cities.append(city(name=city_name, location=location)); 
+        cities.append(city(name=city_name, location=location));
     }
 
     end=root;
@@ -118,7 +118,7 @@ with entry {
     landmark_3 <+: road(distance=20) :+> landmark_4;
     landmark_4 <+: road(distance=25) :+> landmark_5;
     landmark_5 <+: road(distance=40) :+> cities[0];
-    
+
     # Create a traveller
     traveller_1 = traveller(name="Traveller 1", location=cities[0], destination=landmark_3);
     #root spawn traveller_1();
