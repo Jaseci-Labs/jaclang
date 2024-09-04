@@ -256,7 +256,10 @@ class FuseTypeInfoPass(Pass):
             node.expr_type = self.__call_type_handler(mytype) or ""
 
         # Set they symbol type for collection expression.
-        if isinstance(node, tuple(self.collection_types_map.keys())):
+        #
+        # GenCompr is an instance of ListCompr but we don't handle it here.
+        # so the isinstace (node, <classes>) doesn't work, I'm going with type(...) == ...
+        if type(node) in self.collection_types_map:
             assert isinstance(node, ast.AtomExpr)  # To make mypy happy.
             collection_type = self.collection_types_map[type(node)]
             if collection_type is not None:
