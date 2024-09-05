@@ -195,8 +195,27 @@ class SymTabBuildPass(Pass):
         sub_module: Optional[Module],
         """
         if not node.is_absorb:
+            # if node.from_loc:
+            #     print('--',node.from_loc.sym_name    )
             for i in node.items.items:
-                i.sym_tab.def_insert(i, single_decl="import item")
+                # print('i.symname ----',i.sym_name)
+                if not isinstance(i, ast.ModuleItem):
+                    # print('-mod path----',i.sym_name)
+                    continue
+                if not i.from_mod_path.sub_module:
+                    # print('-no sub mod----',i.sym_name)
+                    continue
+                lookup = i.from_mod_path.sub_module.sym_tab.lookup(i.name.value)
+                if lookup:
+                    lookup.add_use(i.name_spec)
+                    node.sym_tab.insert(lookup.decl, lookup.access)
+                else:
+                    i.sym_tab.def_insert(i, single_decl="import item")
+                    # print(i.sym_name)
+
+        # if not node.is_absorb:
+        #     for i in node.items.items:
+        #         i.sym_tab.def_insert(i, single_decl="import item")
         elif node.is_absorb and node.is_jac:
             source = node.items.items[0]
             if not isinstance(source, ast.ModulePath) or not source.sub_module:
@@ -206,6 +225,8 @@ class SymTabBuildPass(Pass):
                 )
             else:
                 node.sym_tab.inherit_sym_tab(source.sub_module.sym_tab)
+        else:
+            print("elseeeeeee")
 
     def enter_module_path(self, node: ast.ModulePath) -> None:
         """Sub objects.
