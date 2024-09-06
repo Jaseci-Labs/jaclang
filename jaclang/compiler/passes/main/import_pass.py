@@ -14,7 +14,7 @@ import jaclang.compiler.absyntree as ast
 from jaclang.compiler.passes import Pass
 from jaclang.compiler.passes.main import SubNodeTabPass, SymTabBuildPass
 from jaclang.utils.log import logging
-
+from jaclang.compiler.constant import SymbolType
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +287,14 @@ class PyImportPass(JacImportPass):
                     self.import_table[file_to_raise] = mod
                     self.attach_mod_to_node(parent_node, mod)
                     SymTabBuildPass(input_ir=mod, prior=self)
+                    parent_node.sym_tab.insert(
+                        ast.AstSymbolNode(
+                            sym_name=imported_mod_name,
+                            name_spec=mod.kid[0].name_spec,
+                            sym_category=SymbolType.MOD_VAR,
+                        ),
+                        access_spec=None,
+                    )
                     return mod
                 else:
                     raise self.ice(f"Failed to import python module {mod_path}")

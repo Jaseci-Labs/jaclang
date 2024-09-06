@@ -195,15 +195,10 @@ class SymTabBuildPass(Pass):
         sub_module: Optional[Module],
         """
         if not node.is_absorb:
-            # if node.from_loc:
-            #     print('--',node.from_loc.sym_name    )
             for i in node.items.items:
-                # print('i.symname ----',i.sym_name)
                 if not isinstance(i, ast.ModuleItem):
-                    # print('-mod path----',i.sym_name)
                     continue
                 if not i.from_mod_path.sub_module:
-                    # print('-no sub mod----',i.sym_name)
                     continue
                 lookup = i.from_mod_path.sub_module.sym_tab.lookup(i.name.value)
                 if lookup:
@@ -211,7 +206,6 @@ class SymTabBuildPass(Pass):
                     node.sym_tab.insert(lookup.decl, lookup.access)
                 else:
                     i.sym_tab.def_insert(i, single_decl="import item")
-                    # print(i.sym_name)
 
         # if not node.is_absorb:
         #     for i in node.items.items:
