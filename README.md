@@ -9,8 +9,11 @@
 
 [Jac Website] | [Getting started] | [Learn] | [Documentation] | [Contributing]
 
-  [![PyPI version](https://img.shields.io/pypi/v/jaclang.svg)](https://pypi.org/project/jaclang/) [![Tests](https://github.com/Jaseci-Labs/jaclang/actions/workflows/run_pytest.yml/badge.svg)](https://github.com/Jaseci-Labs/jaclang/actions/workflows/run_pytest.yml) [![codecov](https://codecov.io/github/chandralegend/jaclang/graph/badge.svg?token=OAX26B0FE4)](https://codecov.io/github/chandralegend/jaclang)
+[![PyPI version](https://img.shields.io/pypi/v/jaclang.svg)](https://pypi.org/project/jaclang/) [![Tests](https://github.com/Jaseci-Labs/jaclang/actions/workflows/run_pytest.yml/badge.svg)](https://github.com/Jaseci-Labs/jaclang/actions/workflows/run_pytest.yml) [![codecov](https://codecov.io/github/chandralegend/jaclang/graph/badge.svg?token=OAX26B0FE4)](https://codecov.io/github/chandralegend/jaclang)
+
 </div>
+
+#### This repo has been moved to the [`jaseci` repo](https://github.com/Jaseci-Labs/jaseci/tree/main/jac)
 
 This is the main source code repository for the [Jac] programming language. It contains the compiler, language server, and documentation.
 
@@ -31,7 +34,6 @@ This is the main source code repository for the [Jac] programming language. It c
 
 - **Jac Improves on Python** - Jac makes multiple thoughtful quality-of-life improvements/additions to Python. These include new modern operators, new types of comprehensions, new ways of organizing modules (i.e., separating implementations from declarations), etc.
 
-
 ## Quick Start
 
 To install Jac, run:
@@ -39,11 +41,12 @@ To install Jac, run:
 ```bash
 pip install jaclang
 ```
+
 Run `jac` in the terminal to see whether it is installed correctly.
 
 Read ["Getting Started"] from [Docs] for more information.
 
-["Getting Started"]:https://www.jac-lang.org//start/
+["Getting Started"]: https://www.jac-lang.org//start/
 [Docs]: https://www.jac-lang.org//learn/guide/
 
 ## Installing from Source
