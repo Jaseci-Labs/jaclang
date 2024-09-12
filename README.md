@@ -1,3 +1,5 @@
+#### This repo has been moved to the [`jaseci` repo](https://github.com/Jaseci-Labs/jaseci/tree/main/jac)
+
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://www.jac-lang.org//assets/logo.png">
