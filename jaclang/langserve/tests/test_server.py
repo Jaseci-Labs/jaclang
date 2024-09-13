@@ -80,6 +80,36 @@ class TestJacLangServer(TestCase):
             lsp.get_hover_info(circle_impl_file, pos).contents.value,
         )
 
+    def test_impl_syntax_diagnosis(self) -> None:
+        """Test that the server shows an error if there is a syntax error in impl."""
+        lsp = JacLangServer()
+        # Set up the workspace path to "fixtures/"
+        workspace_path = self.fixture_abs_path("")
+        workspace = Workspace(workspace_path, lsp)
+        lsp.lsp._workspace = workspace
+        circle_impl_syn_err_impl_file = uris.from_fs_path(
+            self.fixture_abs_path("circle_pure_syntax_err.impl.jac")
+        )
+        status = lsp.quick_check(circle_impl_syn_err_impl_file)
+        self.assertEqual(False, status)
+
+    def test_syntax_diagnosis(self) -> None:
+        """Test that the server shows an error if there is a syntax error."""
+        lsp = JacLangServer()
+        # Set up the workspace path to "fixtures/"
+        workspace_path = self.fixture_abs_path("")
+        workspace = Workspace(workspace_path, lsp)
+        lsp.lsp._workspace = workspace
+        circle_impl_syn_err_file = uris.from_fs_path(
+            self.fixture_abs_path("circle_pure_syntax_err.jac")
+        )
+        lsp.deep_check(circle_impl_syn_err_file)
+        pos = lspt.Position(10, 5)
+        quick_status = lsp.quick_check(circle_impl_syn_err_file)
+        deep_status = lsp.deep_check(circle_impl_syn_err_file, pos)
+        self.assertEqual(True, quick_status)
+        self.assertEqual(False, deep_status)
+
     def test_show_type_impl(self) -> None:
         """Test that the server doesn't run if there is a syntax error."""
         lsp = JacLangServer()
