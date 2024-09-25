@@ -44,3 +44,14 @@ with entry {
     einstein_age += 1;
     einstein = Person('Albert Einstein', einstein_age);
 }
+
+
+::py::
+from jaclang.runtimelib.machine import JacMachine
+
+semtable = JacMachine.get().jac_program.semtable
+print(semtable)
+
+::py::
+
+
